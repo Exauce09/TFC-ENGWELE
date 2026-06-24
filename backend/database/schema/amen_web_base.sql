@@ -1,0 +1,205 @@
+-- Base de demarrage web - Centre Medical AMEN
+-- MySQL 8.0
+
+CREATE TABLE IF NOT EXISTS departements (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  nom VARCHAR(100) NOT NULL,
+  code VARCHAR(20) UNIQUE NOT NULL,
+  description TEXT,
+  chef_dept_id BIGINT UNSIGNED NULL,
+  is_active BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(150) UNIQUE NOT NULL,
+  phone VARCHAR(25),
+  password VARCHAR(255) NOT NULL,
+  role ENUM(
+    'patient',
+    'medecin_generaliste',
+    'medecin_interne',
+    'pediatre',
+    'gynecologue',
+    'sage_femme',
+    'chirurgien',
+    'anesthesiste',
+    'ophtalmologue',
+    'laborantin',
+    'echographiste',
+    'kinesitherapeute',
+    'dentiste',
+    'pharmacien',
+    'infirmier',
+    'urgentiste',
+    'caissier',
+    'receptionniste',
+    'admin'
+  ) NOT NULL,
+  departement_id BIGINT UNSIGNED NULL,
+  avatar VARCHAR(255),
+  is_active BOOLEAN DEFAULT TRUE,
+  fcm_token VARCHAR(255),
+  email_verified_at TIMESTAMP NULL,
+  remember_token VARCHAR(100),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  INDEX idx_users_role (role),
+  INDEX idx_users_departement (departement_id),
+  CONSTRAINT fk_users_departement FOREIGN KEY (departement_id) REFERENCES departements(id)
+);
+
+CREATE TABLE IF NOT EXISTS patients (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  numero_patient VARCHAR(20) UNIQUE,
+  date_naissance DATE,
+  sexe ENUM('M','F') NOT NULL,
+  adresse TEXT,
+  commune VARCHAR(100),
+  quartier VARCHAR(100),
+  groupe_sanguin ENUM('A+','A-','B+','B-','AB+','AB-','O+','O-'),
+  allergies TEXT,
+  antecedents_medicaux TEXT,
+  antecedents_familiaux TEXT,
+  mutuelle VARCHAR(100),
+  numero_mutuelle VARCHAR(50),
+  contact_urgence_nom VARCHAR(100),
+  contact_urgence_tel VARCHAR(25),
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  INDEX idx_patients_user (user_id),
+  CONSTRAINT fk_patients_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS medecins (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  departement_id BIGINT UNSIGNED NOT NULL,
+  numero_ordre VARCHAR(50) UNIQUE,
+  specialite VARCHAR(100) NOT NULL,
+  grade VARCHAR(100),
+  diplomes TEXT,
+  disponibilites JSON,
+  tarif_consultation DECIMAL(10,2),
+  duree_consultation INT DEFAULT 30,
+  bio TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted_at TIMESTAMP NULL,
+  INDEX idx_medecins_user (user_id),
+  INDEX idx_medecins_dept (departement_id),
+  CONSTRAINT fk_medecins_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  CONSTRAINT fk_medecins_dept FOREIGN KEY (departement_id) REFERENCES departements(id)
+);
+
+CREATE TABLE IF NOT EXISTS rendez_vous (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  patient_id BIGINT UNSIGNED NOT NULL,
+  medecin_id BIGINT UNSIGNED NOT NULL,
+  departement_id BIGINT UNSIGNED NOT NULL,
+  date_rdv DATE NOT NULL,
+  heure_rdv TIME NOT NULL,
+  heure_fin TIME,
+  motif TEXT,
+  statut ENUM('en_attente','confirme','en_cours','termine','annule','absent') DEFAULT 'en_attente',
+  type ENUM('presentiel','teleconsultation') DEFAULT 'presentiel',
+  lien_video VARCHAR(255),
+  priorite ENUM('normal','urgent','tres_urgent') DEFAULT 'normal',
+  notes_rdv TEXT,
+  montant DECIMAL(10,2),
+  paiement_statut ENUM('non_paye','paye','rembourse') DEFAULT 'non_paye',
+  paiement_mode ENUM('cash','airtel_money','mpesa') NULL,
+  rappel_24h_envoye BOOLEAN DEFAULT FALSE,
+  rappel_1h_envoye BOOLEAN DEFAULT FALSE,
+  cree_par BIGINT UNSIGNED NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_rdv_patient (patient_id),
+  INDEX idx_rdv_medecin (medecin_id),
+  INDEX idx_rdv_date (date_rdv),
+  INDEX idx_rdv_statut (statut),
+  CONSTRAINT fk_rdv_patient FOREIGN KEY (patient_id) REFERENCES patients(id),
+  CONSTRAINT fk_rdv_medecin FOREIGN KEY (medecin_id) REFERENCES medecins(id),
+  CONSTRAINT fk_rdv_dept FOREIGN KEY (departement_id) REFERENCES departements(id)
+);
+
+CREATE TABLE IF NOT EXISTS dossiers_medicaux (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  patient_id BIGINT UNSIGNED NOT NULL,
+  medecin_id BIGINT UNSIGNED NOT NULL,
+  departement_id BIGINT UNSIGNED NOT NULL,
+  rendez_vous_id BIGINT UNSIGNED NULL,
+  date_consultation DATE NOT NULL,
+  motif TEXT,
+  anamnese TEXT,
+  examen_clinique TEXT,
+  observations TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_dossiers_patient (patient_id),
+  INDEX idx_dossiers_medecin (medecin_id),
+  CONSTRAINT fk_dossiers_patient FOREIGN KEY (patient_id) REFERENCES patients(id),
+  CONSTRAINT fk_dossiers_medecin FOREIGN KEY (medecin_id) REFERENCES medecins(id),
+  CONSTRAINT fk_dossiers_dept FOREIGN KEY (departement_id) REFERENCES departements(id),
+  CONSTRAINT fk_dossiers_rdv FOREIGN KEY (rendez_vous_id) REFERENCES rendez_vous(id)
+);
+
+CREATE TABLE IF NOT EXISTS factures (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  numero_facture VARCHAR(30) UNIQUE,
+  patient_id BIGINT UNSIGNED NOT NULL,
+  rendez_vous_id BIGINT UNSIGNED NULL,
+  caissier_id BIGINT UNSIGNED NULL,
+  date_facture DATE NOT NULL,
+  date_echeance DATE,
+  lignes JSON NOT NULL,
+  sous_total DECIMAL(12,2) NOT NULL,
+  remise DECIMAL(12,2) DEFAULT 0,
+  montant_total DECIMAL(12,2) NOT NULL,
+  montant_paye DECIMAL(12,2) DEFAULT 0,
+  reste_a_payer DECIMAL(12,2),
+  statut ENUM('brouillon','emise','partiellement_payee','payee','annulee') DEFAULT 'emise',
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX idx_factures_patient (patient_id),
+  CONSTRAINT fk_factures_patient FOREIGN KEY (patient_id) REFERENCES patients(id)
+);
+
+CREATE TABLE IF NOT EXISTS paiements (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  facture_id BIGINT UNSIGNED NOT NULL,
+  patient_id BIGINT UNSIGNED NOT NULL,
+  caissier_id BIGINT UNSIGNED NULL,
+  montant DECIMAL(12,2) NOT NULL,
+  mode_paiement ENUM('cash','airtel_money','mpesa','virement') NOT NULL,
+  reference_transaction VARCHAR(100),
+  date_paiement DATETIME NOT NULL,
+  statut ENUM('en_attente','confirme','echoue','rembourse') DEFAULT 'confirme',
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_paiements_facture (facture_id),
+  CONSTRAINT fk_paiements_facture FOREIGN KEY (facture_id) REFERENCES factures(id),
+  CONSTRAINT fk_paiements_patient FOREIGN KEY (patient_id) REFERENCES patients(id)
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  titre VARCHAR(255) NOT NULL,
+  message TEXT NOT NULL,
+  type ENUM('rdv_confirme','rdv_rappel','rdv_annule','resultat_disponible','prescription_nouvelle','paiement','urgence','system'),
+  data JSON,
+  canal ENUM('app','push','sms','email') DEFAULT 'app',
+  lu BOOLEAN DEFAULT FALSE,
+  lu_at TIMESTAMP NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_notifications_user (user_id),
+  CONSTRAINT fk_notifications_user FOREIGN KEY (user_id) REFERENCES users(id)
+);

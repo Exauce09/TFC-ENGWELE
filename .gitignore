@@ -1,0 +1,38 @@
+# Dependencies
+**/node_modules/
+**/vendor/
+
+# Environment & secrets
+**/.env
+**/.env.local
+**/.env.*.local
+!**/.env.example
+
+# Build outputs
+frontend/dist/
+backend-runtime/public/build/
+backend-runtime/public/hot
+
+# Laravel runtime
+backend-runtime/storage/*.key
+backend-runtime/storage/logs/
+backend-runtime/storage/framework/cache/
+backend-runtime/storage/framework/sessions/
+backend-runtime/storage/framework/views/
+backend-runtime/bootstrap/cache/*.php
+!backend-runtime/bootstrap/cache/.gitignore
+
+# SQLite local database
+backend-runtime/database/*.sqlite
+backend-runtime/database/*.sqlite-journal
+
+# IDE & OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+
+# PHP
+.phpunit.result.cache
+.phpunit.cache

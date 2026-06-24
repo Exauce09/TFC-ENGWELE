@@ -1,0 +1,31 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class Departement extends Model
+{
+    protected $fillable = [
+        'nom',
+        'code',
+        'description',
+        'chef_dept_id',
+        'is_active',
+    ];
+
+    protected $casts = [
+        'is_active' => 'boolean',
+    ];
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
+    public function medecins(): HasMany
+    {
+        return $this->hasMany(Medecin::class);
+    }
+}
