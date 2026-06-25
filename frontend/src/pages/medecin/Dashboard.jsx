@@ -1,48 +1,127 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import { useAuth } from '../../context/AuthContext';
-
-const PLANNING = [
-  { id: 1, heure: '08:00', patient: 'Angélique Tshimanga', motif: 'Consultation générale', statut: 'en_cours', age: 34, type: 'presentiel' },
-  { id: 2, heure: '08:30', patient: 'Marcel Nkolo', motif: 'Suivi diabète type 2', statut: 'en_attente', age: 52, type: 'presentiel' },
-  { id: 3, heure: '09:00', patient: 'Sandrine Mbuyamba', motif: 'Douleurs abdominales', statut: 'en_attente', age: 28, type: 'teleconsultation' },
-  { id: 4, heure: '09:30', patient: 'Pierre Mukendi', motif: 'Bilan de santé annuel', statut: 'en_attente', age: 45, type: 'presentiel' },
-  { id: 5, heure: '10:00', patient: 'Christelle Ilunga', motif: 'Fièvre persistante', statut: 'en_attente', age: 23, type: 'presentiel' },
-  { id: 6, heure: '10:30', patient: 'Jean-Paul Lumbala', motif: 'Hypertension artérielle', statut: 'en_attente', age: 61, type: 'presentiel' },
-  { id: 7, heure: '07:30', patient: 'Marie Kasongo', motif: 'Résultats analyses', statut: 'termine', age: 38, type: 'presentiel' },
-];
-
-const DOSSIERS_RECENTS = [
-  { id: 1, patient: 'Angélique Tshimanga', date: '2026-06-24', diagnostic: 'Hypertension artérielle', dept: 'Médecine Interne' },
-  { id: 2, patient: 'Marcel Nkolo', date: '2026-06-23', diagnostic: 'Diabète type 2 mal équilibré', dept: 'Médecine Interne' },
-  { id: 3, patient: 'Sandrine Mbuyamba', date: '2026-06-22', diagnostic: 'Gastrite chronique', dept: 'Médecine Interne' },
-];
+import api from '../../services/api';
 
 const STATUT_CONFIG = {
-  en_cours: { bg: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500', label: 'En cours' },
+  confirme: { bg: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', label: 'Confirmé' },
   en_attente: { bg: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500', label: 'En attente' },
+  en_cours: { bg: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500', label: 'En cours' },
   termine: { bg: 'bg-slate-100 text-slate-500', dot: 'bg-slate-400', label: 'Terminé' },
+  annule: { bg: 'bg-red-100 text-red-700', dot: 'bg-red-400', label: 'Annulé' },
+  absent: { bg: 'bg-orange-100 text-orange-700', dot: 'bg-orange-400', label: 'Absent' },
 };
+
+function patientAge(patient) {
+  if (!patient?.date_naissance) return null;
+  const birth = new Date(patient.date_naissance);
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return age;
+}
+
+function patientName(rdv) {
+  return rdv?.patient?.user?.name || 'Patient';
+}
+
+function formatHeure(heure) {
+  return heure ? String(heure).slice(0, 5) : '—';
+}
+
+function primaryDiagnostic(dossier) {
+  return dossier?.diagnostics?.[0]?.libelle || '—';
+}
 
 export default function MedecinDashboard() {
   const { user } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [planning, setPlanning] = useState([]);
+  const [dossiersRecents, setDossiersRecents] = useState([]);
   const [selected, setSelected] = useState(null);
   const [noteForm, setNoteForm] = useState({ diagnostic: '', observation: '' });
   const [noteSaved, setNoteSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
 
-  const vus = PLANNING.filter(p => p.statut === 'termine').length;
-  const restants = PLANNING.filter(p => p.statut === 'en_attente').length;
-  const enCours = PLANNING.find(p => p.statut === 'en_cours');
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await api.get('/medecin/dashboard');
+      const data = res.data.data || {};
+      setStats(data);
+      setPlanning(data.planning_du_jour || []);
+      setDossiersRecents(data.dossiers_recents || []);
+    } catch (err) {
+      setError(err.response?.data?.message || 'Impossible de charger le tableau de bord');
+      setStats(null);
+      setPlanning([]);
+      setDossiersRecents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const saveNote = (e) => {
-    e.preventDefault();
-    setNoteSaved(true);
-    setTimeout(() => setNoteSaved(false), 3000);
+  useEffect(() => { void load(); }, [load]);
+
+  const enCours = stats?.rdv_en_cours || planning.find((p) => p.statut === 'en_cours');
+
+  const updateStatut = async (id, statut) => {
+    try {
+      await api.put(`/medecin/rendez-vous/${id}/statut`, { statut });
+      await load();
+      if (selected?.id === id && statut === 'termine') setSelected(null);
+    } catch {
+      alert('Impossible de mettre à jour le statut');
+    }
   };
+
+  const saveNote = async (e) => {
+    e.preventDefault();
+    if (!selected) return;
+    setSaving(true);
+    try {
+      await api.post('/medecin/dossiers', {
+        patient_id: selected.patient_id,
+        departement_id: selected.departement_id,
+        rendez_vous_id: selected.id,
+        date_consultation: selected.date_rdv?.slice?.(0, 10) || new Date().toISOString().slice(0, 10),
+        motif: selected.motif || 'Consultation',
+        observations: noteForm.observation || null,
+        diagnostic: noteForm.diagnostic
+          ? { libelle: noteForm.diagnostic }
+          : undefined,
+      });
+      setNoteSaved(true);
+      setNoteForm({ diagnostic: '', observation: '' });
+      setTimeout(() => setNoteSaved(false), 3000);
+      await load();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Erreur lors de la sauvegarde');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectRdv = (rdv) => {
+    setSelected(rdv);
+    setNoteForm({ diagnostic: '', observation: '' });
+  };
+
+  if (loading) {
+    return (
+      <Layout title="Espace Médecin">
+        <p className="text-slate-500">Chargement du tableau de bord...</p>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Espace Médecin">
-      {/* Welcome */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-2xl font-bold text-slate-900">Bonjour, {user?.name?.split(' ')[0]} 👨‍⚕️</h2>
@@ -51,23 +130,26 @@ export default function MedecinDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 transition">
+          <Link to="/medecin/dossiers"
+            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
             📋 Nouveau dossier
-          </button>
-          <button className="rounded-full bg-medical-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5">
+          </Link>
+          <Link to="/medecin/dossiers"
+            className="rounded-full bg-medical-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5">
             💊 Nouvelle prescription
-          </button>
+          </Link>
         </div>
       </div>
 
-      {/* KPI */}
+      {error && <p className="mb-4 text-red-600">{error}</p>}
+
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { icon: '📅', label: 'RDV du jour', value: PLANNING.length, sub: 'programmés' },
-          { icon: '✅', label: 'Consultés', value: vus, sub: 'ce matin' },
-          { icon: '⏳', label: 'En attente', value: restants, sub: 'à recevoir' },
-          { icon: '📋', label: 'Dossiers ouverts', value: 3, sub: 'cette semaine' },
-        ].map(s => (
+          { icon: '📅', label: 'RDV du jour', value: stats?.rdv_du_jour ?? 0, sub: 'programmés' },
+          { icon: '✅', label: 'Consultés', value: stats?.rdv_termines ?? 0, sub: "aujourd'hui" },
+          { icon: '⏳', label: 'En attente', value: stats?.rdv_en_attente ?? 0, sub: 'à recevoir' },
+          { icon: '📋', label: 'Dossiers ouverts', value: stats?.dossiers_semaine ?? 0, sub: 'cette semaine' },
+        ].map((s) => (
           <div key={s.label} className="rounded-2xl border bg-white p-5 shadow-sm">
             <div className="flex items-start justify-between">
               <div>
@@ -81,23 +163,27 @@ export default function MedecinDashboard() {
         ))}
       </div>
 
-      {/* Patient en cours */}
       {enCours && (
         <div className="mb-6 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 p-5 text-white shadow-xl">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-2 w-2 rounded-full bg-white animate-pulse" />
+          <div className="mb-2 flex items-center gap-2">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-white" />
             <p className="text-xs font-semibold uppercase tracking-widest opacity-90">Consultation en cours</p>
           </div>
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-xl font-bold">{enCours.patient}</p>
-              <p className="text-sm opacity-80">{enCours.motif} · {enCours.age} ans</p>
+              <p className="text-xl font-bold">{patientName(enCours)}</p>
+              <p className="text-sm opacity-80">
+                {enCours.motif || 'Consultation'}
+                {patientAge(enCours.patient) != null && ` · ${patientAge(enCours.patient)} ans`}
+              </p>
             </div>
             <div className="flex gap-2">
-              <button className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur-sm hover:bg-white/30 transition">
+              <Link to="/medecin/dossiers"
+                className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur-sm transition hover:bg-white/30">
                 📋 Ouvrir dossier
-              </button>
-              <button className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow hover:bg-blue-50 transition">
+              </Link>
+              <button type="button" onClick={() => updateStatut(enCours.id, 'termine')}
+                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow transition hover:bg-blue-50">
                 ✅ Terminer
               </button>
             </div>
@@ -106,45 +192,58 @@ export default function MedecinDashboard() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-5">
-        {/* Planning liste */}
-        <div className="lg:col-span-3 rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm lg:col-span-3">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
             <h3 className="font-semibold text-slate-900">Planning du jour</h3>
-            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-medical-primary">{PLANNING.length} patients</span>
+            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-medical-primary">
+              {planning.length} patient{planning.length !== 1 ? 's' : ''}
+            </span>
           </div>
-          <div className="divide-y divide-slate-50">
-            {PLANNING.map(rdv => {
-              const cfg = STATUT_CONFIG[rdv.statut];
-              return (
-                <div
-                  key={rdv.id}
-                  onClick={() => setSelected(rdv)}
-                  className={`flex cursor-pointer items-center gap-3 px-5 py-3.5 transition hover:bg-slate-50 ${selected?.id === rdv.id ? 'bg-blue-50' : ''}`}
-                >
-                  <div className="w-14 text-center">
-                    <span className="text-sm font-bold text-slate-700">{rdv.heure}</span>
+          {planning.length === 0 ? (
+            <div className="p-10 text-center text-slate-500">
+              <p className="text-4xl">📅</p>
+              <p className="mt-3 font-medium">Aucun rendez-vous aujourd&apos;hui</p>
+              <Link to="/medecin/planning" className="mt-2 inline-block text-sm text-medical-primary hover:underline">
+                Voir le planning complet →
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {planning.map((rdv) => {
+                const cfg = STATUT_CONFIG[rdv.statut] || STATUT_CONFIG.en_attente;
+                const age = patientAge(rdv.patient);
+                return (
+                  <div
+                    key={rdv.id}
+                    onClick={() => selectRdv(rdv)}
+                    className={`flex cursor-pointer items-center gap-3 px-5 py-3.5 transition hover:bg-slate-50 ${selected?.id === rdv.id ? 'bg-blue-50' : ''}`}
+                  >
+                    <div className="w-14 text-center">
+                      <span className="text-sm font-bold text-slate-700">{formatHeure(rdv.heure_rdv)}</span>
+                    </div>
+                    <div className={`h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`} />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-slate-900">{patientName(rdv)}</p>
+                      <p className="truncate text-xs text-slate-500">
+                        {rdv.motif || 'Consultation'}
+                        {age != null && ` · ${age} ans`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {rdv.type === 'teleconsultation' && <span title="Téléconsultation" className="text-base">📹</span>}
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.bg}`}>{cfg.label}</span>
+                    </div>
                   </div>
-                  <div className={`h-2 w-2 rounded-full flex-shrink-0 ${cfg.dot}`} />
-                  <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-900">{rdv.patient}</p>
-                    <p className="text-xs text-slate-500 truncate">{rdv.motif} · {rdv.age} ans</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {rdv.type === 'teleconsultation' && <span title="Téléconsultation" className="text-base">📹</span>}
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.bg}`}>{cfg.label}</span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
 
-        {/* Panel droit */}
-        <div className="lg:col-span-2 flex flex-col gap-4">
-          {/* Note rapide */}
-          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm p-5">
-            <h3 className="font-semibold text-slate-900 mb-3">
-              {selected ? `Observation — ${selected.patient}` : '📝 Note rapide'}
+        <div className="flex flex-col gap-4 lg:col-span-2">
+          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+            <h3 className="mb-3 font-semibold text-slate-900">
+              {selected ? `Observation — ${patientName(selected)}` : '📝 Note rapide'}
             </h3>
             {selected ? (
               <form onSubmit={saveNote} className="space-y-3">
@@ -154,7 +253,7 @@ export default function MedecinDashboard() {
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-medical-primary focus:ring-2 focus:ring-blue-100"
                     placeholder="Diagnostic principal..."
                     value={noteForm.diagnostic}
-                    onChange={e => setNoteForm(f => ({ ...f, diagnostic: e.target.value }))}
+                    onChange={(e) => setNoteForm((f) => ({ ...f, diagnostic: e.target.value }))}
                   />
                 </label>
                 <label className="block">
@@ -164,37 +263,55 @@ export default function MedecinDashboard() {
                     className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-medical-primary focus:ring-2 focus:ring-blue-100"
                     placeholder="Examen clinique, observations..."
                     value={noteForm.observation}
-                    onChange={e => setNoteForm(f => ({ ...f, observation: e.target.value }))}
+                    onChange={(e) => setNoteForm((f) => ({ ...f, observation: e.target.value }))}
                   />
                 </label>
                 <div className="flex gap-2">
-                  <button type="submit" className="flex-1 rounded-xl bg-medical-primary py-2 text-sm font-semibold text-white hover:bg-blue-700 transition">
-                    {noteSaved ? '✅ Sauvegardé !' : 'Sauvegarder'}
+                  <button type="submit" disabled={saving}
+                    className="flex-1 rounded-xl bg-medical-primary py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60">
+                    {noteSaved ? '✅ Sauvegardé !' : saving ? 'Enregistrement...' : 'Sauvegarder'}
                   </button>
-                  <button type="button" onClick={() => setSelected(null)} className="rounded-xl border px-3 py-2 text-sm text-slate-500 hover:bg-slate-50">
+                  {selected.statut !== 'termine' && (
+                    <button type="button" onClick={() => updateStatut(selected.id, 'en_cours')}
+                      className="rounded-xl border px-3 py-2 text-sm text-blue-600 hover:bg-blue-50">
+                      ▶ Démarrer
+                    </button>
+                  )}
+                  <button type="button" onClick={() => setSelected(null)}
+                    className="rounded-xl border px-3 py-2 text-sm text-slate-500 hover:bg-slate-50">
                     ✕
                   </button>
                 </div>
               </form>
             ) : (
-              <p className="text-sm text-slate-400">Cliquez sur un patient dans le planning pour ouvrir le panneau d'observation.</p>
+              <p className="text-sm text-slate-400">
+                Cliquez sur un patient dans le planning pour ouvrir le panneau d&apos;observation.
+              </p>
             )}
           </div>
 
-          {/* Dossiers récents */}
-          <div className="rounded-2xl bg-white border border-slate-100 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100">
+          <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-5 py-4">
               <h3 className="font-semibold text-slate-900">Dossiers récents</h3>
             </div>
-            <div className="divide-y divide-slate-50">
-              {DOSSIERS_RECENTS.map(d => (
-                <div key={d.id} className="px-5 py-3 hover:bg-slate-50 cursor-pointer transition">
-                  <p className="text-sm font-medium text-slate-900">{d.patient}</p>
-                  <p className="text-xs text-slate-500">{d.diagnostic}</p>
-                  <p className="text-xs text-slate-400">{new Date(d.date).toLocaleDateString('fr-FR')}</p>
-                </div>
-              ))}
-            </div>
+            {dossiersRecents.length === 0 ? (
+              <p className="p-5 text-sm text-slate-400">Aucun dossier récent.</p>
+            ) : (
+              <div className="divide-y divide-slate-50">
+                {dossiersRecents.map((d) => (
+                  <Link key={d.id} to="/medecin/dossiers"
+                    className="block px-5 py-3 transition hover:bg-slate-50">
+                    <p className="text-sm font-medium text-slate-900">{d.patient?.user?.name || 'Patient'}</p>
+                    <p className="text-xs text-slate-500">{primaryDiagnostic(d)}</p>
+                    <p className="text-xs text-slate-400">
+                      {d.date_consultation
+                        ? new Date(d.date_consultation).toLocaleDateString('fr-FR')
+                        : '—'}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>

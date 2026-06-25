@@ -10,7 +10,7 @@
 | 0 | Chapitre III — Analyse et conception du système proposé | ✅ |
 | 0b | Chapitre IV — Implémentation et tests fonctionnels | ✅ |
 | 1 | Corriger les 4 liens sidebar (médecin patients/prescriptions, admin statistiques, infirmier patients) | ✅ |
-| 2 | Brancher le dashboard médecin sur l'API | ⏳ |
+| 2 | Brancher le dashboard médecin sur l'API | ✅ |
 | 3 | Mot de passe oublié + page profil | ⏳ |
 | 4 | Admin statistiques + enrichir la gestion (CRUD) | ⏳ |
 | 5 | Espaces spécialisés (maternité, accueil, chirurgie, etc.) | ⏳ |

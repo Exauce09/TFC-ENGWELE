@@ -46,6 +46,33 @@ class IntegrationSeeder extends Seeder
 
         $rdv->update(['lien_video' => $jitsi->embedUrl($rdv->id)]);
 
+        $today = now()->toDateString();
+        $rdvJour = [
+            ['heure' => '08:00', 'motif' => 'Consultation generale', 'statut' => 'termine'],
+            ['heure' => '08:30', 'motif' => 'Suivi diabete type 2', 'statut' => 'en_cours'],
+            ['heure' => '09:00', 'motif' => 'Douleurs abdominales', 'statut' => 'confirme', 'type' => 'teleconsultation'],
+            ['heure' => '09:30', 'motif' => 'Bilan de sante annuel', 'statut' => 'confirme'],
+            ['heure' => '10:00', 'motif' => 'Fievre persistante', 'statut' => 'en_attente'],
+        ];
+
+        foreach ($rdvJour as $slot) {
+            RendezVous::updateOrCreate(
+                [
+                    'patient_id' => $patient->id,
+                    'medecin_id' => $medecin->id,
+                    'date_rdv' => $today,
+                    'heure_rdv' => $slot['heure'],
+                ],
+                [
+                    'departement_id' => $medecin->departement_id,
+                    'motif' => $slot['motif'],
+                    'statut' => $slot['statut'],
+                    'type' => $slot['type'] ?? 'presentiel',
+                    'cree_par' => $patientUser?->id,
+                ]
+            );
+        }
+
         if ($patientUser) {
             Notification::updateOrCreate(
                 ['user_id' => $patientUser->id, 'titre' => 'Teleconsultation confirmee'],

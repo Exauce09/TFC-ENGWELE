@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\DossierMedical;
 use App\Models\Medecin;
 use App\Models\RendezVous;
 use Illuminate\Http\JsonResponse;
@@ -12,20 +13,36 @@ class MedecinController extends Controller
 {
     public function dashboard(Request $request): JsonResponse
     {
-        $medecin = Medecin::where('user_id', $request->user()->id)->first();
-        $today = $medecin
-            ? RendezVous::where('medecin_id', $medecin->id)->whereDate('date_rdv', now()->toDateString())->count()
-            : 0;
-        $enAttente = $medecin
-            ? RendezVous::where('medecin_id', $medecin->id)->where('statut', 'en_attente')->count()
-            : 0;
+        $medecin = Medecin::where('user_id', $request->user()->id)->firstOrFail();
+        $today = now()->toDateString();
+
+        $rdvToday = RendezVous::with(['patient.user', 'patient', 'departement'])
+            ->where('medecin_id', $medecin->id)
+            ->whereDate('date_rdv', $today)
+            ->orderBy('heure_rdv')
+            ->get();
+
+        $dossiersRecents = DossierMedical::with(['patient.user', 'departement', 'diagnostics'])
+            ->where('medecin_id', $medecin->id)
+            ->latest('date_consultation')
+            ->limit(5)
+            ->get();
+
+        $dossiersSemaine = DossierMedical::where('medecin_id', $medecin->id)
+            ->where('date_consultation', '>=', now()->startOfWeek())
+            ->count();
 
         return response()->json([
             'success' => true,
             'message' => 'Dashboard medecin',
             'data' => [
-                'rdv_du_jour' => $today,
-                'rdv_en_attente' => $enAttente,
+                'rdv_du_jour' => $rdvToday->count(),
+                'rdv_en_attente' => $rdvToday->whereIn('statut', ['en_attente', 'confirme'])->count(),
+                'rdv_termines' => $rdvToday->where('statut', 'termine')->count(),
+                'rdv_en_cours' => $rdvToday->firstWhere('statut', 'en_cours'),
+                'planning_du_jour' => $rdvToday->values(),
+                'dossiers_recents' => $dossiersRecents,
+                'dossiers_semaine' => $dossiersSemaine,
             ],
         ]);
     }
