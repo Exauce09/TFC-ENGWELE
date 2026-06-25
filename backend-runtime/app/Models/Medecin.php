@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Medecin extends Model
@@ -36,5 +37,10 @@ class Medecin extends Model
     public function departement(): BelongsTo
     {
         return $this->belongsTo(Departement::class);
+    }
+
+    public function rendezVous(): HasMany
+    {
+        return $this->hasMany(RendezVous::class);
     }
 }

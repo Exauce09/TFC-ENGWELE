@@ -96,9 +96,13 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/patients', [AdminController::class, 'patients']);
             Route::get('/medecins', [AdminController::class, 'medecins']);
             Route::get('/departements', [AdminController::class, 'departements']);
+            Route::post('/departements', [AdminController::class, 'storeDepartement']);
+            Route::put('/departements/{id}', [AdminController::class, 'updateDepartement']);
             Route::get('/utilisateurs', [AdminController::class, 'utilisateurs']);
             Route::post('/utilisateurs', [AdminController::class, 'creerUtilisateur']);
+            Route::put('/utilisateurs/{id}', [AdminController::class, 'updateUtilisateur']);
             Route::put('/utilisateurs/{id}/toggle', [AdminController::class, 'toggleUtilisateur']);
+            Route::put('/patients/{id}/toggle', [AdminController::class, 'togglePatient']);
             Route::get('/rendez-vous', [RendezVousController::class, 'indexAdmin']);
             Route::put('/rendez-vous/{id}/statut', [RendezVousController::class, 'updateStatut']);
             Route::get('/demandes-rdv', [AdminController::class, 'demandesRdv']);
