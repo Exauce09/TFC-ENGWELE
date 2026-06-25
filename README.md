@@ -76,6 +76,7 @@ Voir le guide complet : [`docs/PRODUCTION.md`](docs/PRODUCTION.md)
 | Chapitre III — Analyse et conception | `docs/CHAPITRE_3_ANALYSE_CONCEPTION.md` |
 | Chapitre IV — Implementation et tests | `docs/CHAPITRE_4_IMPLEMENTATION.md` |
 | Guide production | `docs/PRODUCTION.md` |
+| Feuille de route mobile | `docs/ROADMAP_MOBILE.md` |
 | Feuille de route | `docs/ROADMAP_WEB.md` |
 
 ## Comptes demo (`Password@123`)
@@ -98,4 +99,5 @@ Voir le guide complet : [`docs/PRODUCTION.md`](docs/PRODUCTION.md)
 
 ## Etat du projet
 
-Feuille de route web **complete** (phases 0 a 6). Application prete pour demonstration et deploiement production.
+Feuille de route web **complete** (phases 0 a 6).  
+Prochaine etape : **application mobile** — voir [`docs/ROADMAP_MOBILE.md`](docs/ROADMAP_MOBILE.md).

@@ -24,6 +24,7 @@
 | Chapitre III — Analyse et conception du système proposé | `docs/CHAPITRE_3_ANALYSE_CONCEPTION.md` |
 | Chapitre IV — Implémentation et tests fonctionnels | `docs/CHAPITRE_4_IMPLEMENTATION.md` |
 | Guide production | `docs/PRODUCTION.md` |
+| Feuille de route mobile | `docs/ROADMAP_MOBILE.md` |
 | Synthèse | `docs/TFC_L3_CONCEPTION_IMPLEMENTATION.md` |
 
 ## Comptes démo
