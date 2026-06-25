@@ -53,6 +53,48 @@ const MENUS = {
     { label: 'Patients', icon: '👥', to: '/infirmier/patients' },
     { label: 'Constantes', icon: '📈', to: '/infirmier/constantes' },
   ],
+  accueil: [
+    { label: 'Tableau de bord', icon: '🏠', to: '/accueil/dashboard' },
+    { label: 'Demandes RDV', icon: '📩', to: '/accueil/demandes' },
+    { label: 'RDV du jour', icon: '📅', to: '/accueil/rendez-vous' },
+    { label: 'Patients', icon: '👥', to: '/accueil/patients' },
+  ],
+  maternite: [
+    { label: 'Tableau de bord', icon: '🏠', to: '/maternite/dashboard' },
+    { label: 'Suivis', icon: '🤰', to: '/maternite/suivis' },
+  ],
+  chirurgie: [
+    { label: 'Tableau de bord', icon: '🏠', to: '/chirurgie/dashboard' },
+    { label: 'Opérations', icon: '🔪', to: '/chirurgie/operations' },
+  ],
+  echographie: [
+    { label: 'Tableau de bord', icon: '🏠', to: '/echographie/dashboard' },
+    { label: 'Examens', icon: '📡', to: '/echographie/examens' },
+  ],
+  kinesitherapie: [
+    { label: 'Tableau de bord', icon: '🏠', to: '/kinesitherapie/dashboard' },
+    { label: 'Séances', icon: '💪', to: '/kinesitherapie/seances' },
+  ],
+  dentisterie: [
+    { label: 'Tableau de bord', icon: '🏠', to: '/dentisterie/dashboard' },
+    { label: 'Soins', icon: '🦷', to: '/dentisterie/soins' },
+  ],
+};
+
+const ROLE_MENU_KEY = {
+  medecin_generaliste: 'medecin',
+  medecin_interne: 'medecin',
+  pediatre: 'medecin',
+  gynecologue: 'medecin',
+  ophtalmologue: 'medecin',
+  urgentiste: 'medecin',
+  chirurgien: 'chirurgie',
+  anesthesiste: 'chirurgie',
+  sage_femme: 'maternite',
+  receptionniste: 'accueil',
+  echographiste: 'echographie',
+  kinesitherapeute: 'kinesitherapie',
+  dentiste: 'dentisterie',
 };
 
 const ROLE_LABELS = {
@@ -68,15 +110,20 @@ const ROLE_LABELS = {
   pharmacien: 'Pharmacien',
   caissier: 'Caissier',
   infirmier: 'Infirmier(e)',
+  receptionniste: 'Réceptionniste',
+  sage_femme: 'Sage-femme',
+  chirurgien: 'Chirurgien',
+  anesthesiste: 'Anesthésiste',
+  echographiste: 'Échographiste',
+  kinesitherapeute: 'Kinésithérapeute',
+  dentiste: 'Dentiste',
 };
 
 export default function Sidebar({ open, onClose }) {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const roleKey = MENUS[user?.role] === 'medecin' || typeof MENUS[user?.role] === 'string'
-    ? 'medecin'
-    : user?.role;
+  const roleKey = ROLE_MENU_KEY[user?.role] ?? user?.role;
   const links = MENUS[roleKey] ?? [];
 
   const handleLogout = async () => {

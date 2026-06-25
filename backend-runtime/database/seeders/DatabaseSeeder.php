@@ -15,6 +15,7 @@ class DatabaseSeeder extends Seeder
             DossierSeeder::class,
             DepartementStaffSeeder::class,
             IntegrationSeeder::class,
+            SpecialitesSeeder::class,
             FactureSeeder::class,
         ]);
     }

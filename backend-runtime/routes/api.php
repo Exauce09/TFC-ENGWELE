@@ -1,11 +1,17 @@
 <?php
 
+use App\Http\Controllers\Api\AccueilController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CaisseController;
+use App\Http\Controllers\Api\ChirurgieController;
+use App\Http\Controllers\Api\DentisterieController;
 use App\Http\Controllers\Api\DossierController;
+use App\Http\Controllers\Api\EchographieController;
 use App\Http\Controllers\Api\InfirmierController;
+use App\Http\Controllers\Api\KinesitherapieController;
 use App\Http\Controllers\Api\LaboratoireController;
+use App\Http\Controllers\Api\MaterniteController;
 use App\Http\Controllers\Api\MedecinController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PatientController;
@@ -108,6 +114,50 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/demandes-rdv', [AdminController::class, 'demandesRdv']);
             Route::put('/demandes-rdv/{id}', [AdminController::class, 'traiterDemande']);
             Route::get('/facturation', [AdminController::class, 'facturation']);
+        });
+
+        Route::middleware('role:receptionniste')->prefix('accueil')->group(function (): void {
+            Route::get('/dashboard', [AccueilController::class, 'dashboard']);
+            Route::get('/demandes', [AccueilController::class, 'demandes']);
+            Route::put('/demandes/{id}', [AccueilController::class, 'traiterDemande']);
+            Route::get('/rendez-vous', [AccueilController::class, 'rendezVous']);
+            Route::get('/patients', [AccueilController::class, 'patients']);
+        });
+
+        Route::middleware('role:sage_femme')->prefix('maternite')->group(function (): void {
+            Route::get('/dashboard', [MaterniteController::class, 'dashboard']);
+            Route::get('/suivis', [MaterniteController::class, 'index']);
+            Route::post('/suivis', [MaterniteController::class, 'store']);
+            Route::get('/patients', [MaterniteController::class, 'patients']);
+        });
+
+        Route::middleware('role:chirurgien,anesthesiste')->prefix('chirurgie')->group(function (): void {
+            Route::get('/dashboard', [ChirurgieController::class, 'dashboard']);
+            Route::get('/operations', [ChirurgieController::class, 'index']);
+            Route::post('/operations', [ChirurgieController::class, 'store']);
+            Route::put('/operations/{id}/statut', [ChirurgieController::class, 'updateStatut']);
+            Route::get('/patients', [ChirurgieController::class, 'patients']);
+        });
+
+        Route::middleware('role:echographiste')->prefix('echographie')->group(function (): void {
+            Route::get('/dashboard', [EchographieController::class, 'dashboard']);
+            Route::get('/examens', [EchographieController::class, 'index']);
+            Route::post('/examens', [EchographieController::class, 'store']);
+            Route::get('/patients', [EchographieController::class, 'patients']);
+        });
+
+        Route::middleware('role:kinesitherapeute')->prefix('kinesitherapie')->group(function (): void {
+            Route::get('/dashboard', [KinesitherapieController::class, 'dashboard']);
+            Route::get('/seances', [KinesitherapieController::class, 'index']);
+            Route::post('/seances', [KinesitherapieController::class, 'store']);
+            Route::get('/patients', [KinesitherapieController::class, 'patients']);
+        });
+
+        Route::middleware('role:dentiste')->prefix('dentisterie')->group(function (): void {
+            Route::get('/dashboard', [DentisterieController::class, 'dashboard']);
+            Route::get('/soins', [DentisterieController::class, 'index']);
+            Route::post('/soins', [DentisterieController::class, 'store']);
+            Route::get('/patients', [DentisterieController::class, 'patients']);
         });
 
         Route::get('/integrations/status', [IntegrationController::class, 'status']);

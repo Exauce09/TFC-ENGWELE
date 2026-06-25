@@ -33,6 +33,20 @@ import AdminFacturation from './pages/admin/Facturation';
 import AdminStatistiques from './pages/admin/Statistiques';
 import ProfilePage from './pages/shared/Profile';
 import PlaceholderDashboard from './pages/shared/PlaceholderDashboard';
+import AccueilDashboard from './pages/accueil/Dashboard';
+import AccueilDemandes from './pages/accueil/Demandes';
+import AccueilRendezVous from './pages/accueil/RendezVous';
+import AccueilPatients from './pages/accueil/Patients';
+import MaterniteDashboard from './pages/maternite/Dashboard';
+import MaterniteSuivis from './pages/maternite/Suivis';
+import ChirurgieDashboard from './pages/chirurgie/Dashboard';
+import ChirurgieOperations from './pages/chirurgie/Operations';
+import EchographieDashboard from './pages/echographie/Dashboard';
+import EchographieExamens from './pages/echographie/Examens';
+import KinesitherapieDashboard from './pages/kinesitherapie/Dashboard';
+import KinesitherapieSeances from './pages/kinesitherapie/Seances';
+import DentisterieDashboard from './pages/dentisterie/Dashboard';
+import DentisterieSoins from './pages/dentisterie/Soins';
 import PrivateRoute from './router/PrivateRoute';
 
 const MEDECIN_ROLES = [
@@ -48,6 +62,13 @@ const ALL_ROLES = [
   'pharmacien',
   'caissier',
   'infirmier',
+  'receptionniste',
+  'sage_femme',
+  'chirurgien',
+  'anesthesiste',
+  'echographiste',
+  'kinesitherapeute',
+  'dentiste',
 ];
 
 export default function App() {
@@ -198,6 +219,50 @@ export default function App() {
             <PrivateRoute allowedRoles={['infirmier']}>
               <PlaceholderDashboard title="Infirmerie" />
             </PrivateRoute>
+          } />
+
+          {/* Espaces spécialisés */}
+          <Route path="/accueil/dashboard" element={
+            <PrivateRoute allowedRoles={['receptionniste']}><AccueilDashboard /></PrivateRoute>
+          } />
+          <Route path="/accueil/demandes" element={
+            <PrivateRoute allowedRoles={['receptionniste']}><AccueilDemandes /></PrivateRoute>
+          } />
+          <Route path="/accueil/rendez-vous" element={
+            <PrivateRoute allowedRoles={['receptionniste']}><AccueilRendezVous /></PrivateRoute>
+          } />
+          <Route path="/accueil/patients" element={
+            <PrivateRoute allowedRoles={['receptionniste']}><AccueilPatients /></PrivateRoute>
+          } />
+          <Route path="/maternite/dashboard" element={
+            <PrivateRoute allowedRoles={['sage_femme']}><MaterniteDashboard /></PrivateRoute>
+          } />
+          <Route path="/maternite/suivis" element={
+            <PrivateRoute allowedRoles={['sage_femme']}><MaterniteSuivis /></PrivateRoute>
+          } />
+          <Route path="/chirurgie/dashboard" element={
+            <PrivateRoute allowedRoles={['chirurgien', 'anesthesiste']}><ChirurgieDashboard /></PrivateRoute>
+          } />
+          <Route path="/chirurgie/operations" element={
+            <PrivateRoute allowedRoles={['chirurgien', 'anesthesiste']}><ChirurgieOperations /></PrivateRoute>
+          } />
+          <Route path="/echographie/dashboard" element={
+            <PrivateRoute allowedRoles={['echographiste']}><EchographieDashboard /></PrivateRoute>
+          } />
+          <Route path="/echographie/examens" element={
+            <PrivateRoute allowedRoles={['echographiste']}><EchographieExamens /></PrivateRoute>
+          } />
+          <Route path="/kinesitherapie/dashboard" element={
+            <PrivateRoute allowedRoles={['kinesitherapeute']}><KinesitherapieDashboard /></PrivateRoute>
+          } />
+          <Route path="/kinesitherapie/seances" element={
+            <PrivateRoute allowedRoles={['kinesitherapeute']}><KinesitherapieSeances /></PrivateRoute>
+          } />
+          <Route path="/dentisterie/dashboard" element={
+            <PrivateRoute allowedRoles={['dentiste']}><DentisterieDashboard /></PrivateRoute>
+          } />
+          <Route path="/dentisterie/soins" element={
+            <PrivateRoute allowedRoles={['dentiste']}><DentisterieSoins /></PrivateRoute>
           } />
 
           <Route path="/non-autorise" element={<PlaceholderDashboard title="Accès non autorisé" />} />
