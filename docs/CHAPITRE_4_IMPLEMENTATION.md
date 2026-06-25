@@ -46,8 +46,8 @@ L'implémentation suit une approche **API first** : le backend Laravel expose un
 
 ```
 backend-runtime/
-├── app/Http/Controllers/Api/   # 15 contrôleurs métier
-├── app/Models/                 # 15 modèles Eloquent
+├── app/Http/Controllers/Api/   # 21+ contrôleurs métier
+├── app/Models/                 # 20 modèles Eloquent
 ├── app/Services/               # Intégrations encapsulées
 ├── database/migrations/        # Schéma relationnel
 ├── database/seeders/           # Données de démonstration
@@ -72,15 +72,21 @@ frontend/src/
 ├── context/AuthContext.jsx     # Session utilisateur, token
 ├── router/PrivateRoute.jsx     # Garde d'accès par rôle
 ├── components/layout/            # Sidebar, Header, Layout
-├── pages/                        # 31 écrans par rôle métier
-│   ├── auth/                     # Login, Register
+├── pages/                        # 50+ écrans par rôle métier
+│   ├── auth/                     # Login, Register, Forgot password
 │   ├── patient/                  # 6 pages
 │   ├── medecin/                  # 7 pages
 │   ├── admin/                    # 8 pages
 │   ├── infirmier/                # 3 pages
 │   ├── laboratoire/              # 2 pages
 │   ├── pharmacie/                # 3 pages
-│   └── caisse/                   # 3 pages
+│   ├── caisse/                   # 3 pages
+│   ├── accueil/                  # 4 pages
+│   ├── maternite/                # 2 pages
+│   ├── chirurgie/                # 2 pages
+│   ├── echographie/              # 2 pages
+│   ├── kinesitherapie/           # 2 pages
+│   └── dentisterie/              # 2 pages
 └── services/api.js               # Instance Axios configurée
 ```
 
@@ -292,23 +298,41 @@ flowchart LR
 
 ### c.10 Modèle de données implémenté
 
-Quinze entités Eloquent couvrent le domaine métier :
+Vingt entités Eloquent couvrent le domaine métier :
 
-`User`, `Patient`, `Medecin`, `Departement`, `RendezVous`, `DemandeRdv`, `DossierMedical`, `Diagnostic`, `Prescription`, `SoinInfirmier`, `AnalyseLaboratoire`, `StockMedicament`, `Facture`, `Paiement`, `Notification`.
+`User`, `Patient`, `Medecin`, `Departement`, `RendezVous`, `DemandeRdv`, `DossierMedical`, `Diagnostic`, `Prescription`, `SoinInfirmier`, `AnalyseLaboratoire`, `StockMedicament`, `Facture`, `Paiement`, `Notification`, `SuiviMaternite`, `OperationChirurgicale`, `ResultatEchographie`, `SeanceKinesitherapie`, `SoinDentaire`.
 
-Les **seeders** (`UserSeeder`, `DepartementSeeder`, `DossierSeeder`, `FactureSeeder`, etc.) alimentent la base avec des comptes de démonstration pour chaque rôle, facilitant les tests et la soutenance.
+Les **seeders** alimentent la base avec des comptes de démonstration pour chaque rôle (`UserSeeder`, `SpecialitesSeeder`, `DepartementStaffSeeder`, etc.).
 
-### c.11 Éléments en cours ou planifiés
+### c.11 Fonctionnalités livrées (feuille de route web)
 
-Conformément à la feuille de route (`docs/ROADMAP_WEB.md`) :
+| Étape | Livrable | Statut |
+|-------|----------|--------|
+| Chapitres III et IV | Documentation académique | ✅ |
+| Liens sidebar | 4 pages médecin/admin/infirmier | ✅ |
+| Dashboard médecin | Branché sur API | ✅ |
+| Auth | Mot de passe oublié + page profil | ✅ |
+| Admin | Statistiques enrichies + CRUD | ✅ |
+| Espaces spécialisés | Accueil, maternité, chirurgie, écho, kiné, dentisterie | ✅ |
+| Production | Guide déploiement + build | ✅ |
 
-- Dashboard médecin entièrement branché sur l'API ;
-- Interface mot de passe oublié et page profil ;
-- Enrichissement CRUD admin ;
-- Espaces spécialisés (maternité, chirurgie, accueil, échographie, etc.) ;
-- Application mobile React Native ;
-- Tests automatisés API (couverture élargie) ;
-- Déploiement production (MySQL, HTTPS, build Vite).
+### c.12 Espaces spécialisés implémentés
+
+| Espace | Rôle(s) | API | Pages |
+|--------|---------|-----|-------|
+| Accueil | `receptionniste` | `/accueil/*` | Dashboard, demandes, RDV, patients |
+| Maternité | `sage_femme` | `/maternite/*` | Dashboard, suivis prénataux |
+| Chirurgie | `chirurgien`, `anesthesiste` | `/chirurgie/*` | Dashboard, opérations |
+| Échographie | `echographiste` | `/echographie/*` | Dashboard, examens |
+| Kinésithérapie | `kinesitherapeute` | `/kinesitherapie/*` | Dashboard, séances |
+| Dentisterie | `dentiste` | `/dentisterie/*` | Dashboard, soins |
+
+### c.13 Perspectives (phase mobile)
+
+- Application mobile React Native / Expo (même API `/api/v1`) ;
+- Tests automatisés API élargis (auth, RDV, facturation) ;
+- Export PDF factures et dossiers ;
+- Déploiement effectif sur serveur du centre (voir section e).
 
 ---
 
@@ -332,6 +356,12 @@ Les comptes de test (mot de passe `Password@123`) :
 | Infirmier | `infirmier@amen.cd` |
 | Laborantin | `laborantin@amen.cd` |
 | Pharmacien | `pharmacien@amen.cd` |
+| Réceptionniste | `receptionniste@amen.cd` |
+| Sage-femme | `sage-femme@amen.cd` |
+| Chirurgien | `chirurgien@amen.cd` |
+| Échographiste | `echographiste@amen.cd` |
+| Kinésithérapeute | `kinesitherapeute@amen.cd` |
+| Dentiste | `dentiste@amen.cd` |
 
 ### d.2 Tests automatisés (PHPUnit)
 
@@ -409,6 +439,9 @@ Commande exécutée : `php artisan test` dans `backend-runtime/`.
 | T32 | Notifications après action métier | ✅ Notification in-app créée |
 | T33 | Marquage notification comme lue | ✅ Compteur mis à jour |
 | T34 | Sidebar — 4 liens corrigés | ✅ Patients, Prescriptions, Statistiques, Infirmier Patients |
+| T35 | Espaces spécialisés (6 modules) | ✅ Accueil, maternité, chirurgie, écho, kiné, dentisterie |
+| T36 | Mot de passe oublié + profil | ✅ Pages et API branchées |
+| T37 | Build production frontend | ✅ `npm run build` réussi |
 
 ### d.9 Anomalies détectées et corrigées
 
@@ -417,16 +450,82 @@ Commande exécutée : `php artisan test` dans `backend-runtime/`.
 | Écran blanc `/patient/dashboard` | API renvoie `departement` comme objet, rendu React direct | Helper `deptLabel()` dans `Dashboard.jsx` |
 | Liens sidebar morts (4 routes) | Pages absentes de `App.jsx` | Création des pages + routage |
 | Commit Git impossible | Identité Git non configurée | Utilisation de l'identité GitHub `Exauce09` |
+| Frontend inaccessible | Serveur Vite arrêté / mauvais port | Scripts `start-frontend.ps1`, CORS multi-ports |
+| Tables spécialisées | Noms de tables Laravel incorrects | `protected $table` sur les modèles |
 
 ### d.10 Synthèse des résultats
 
 | Type de test | Nombre | Réussites | Échecs |
 |--------------|--------|-----------|--------|
 | PHPUnit automatisé | 2 | 2 | 0 |
-| Fonctionnels manuels (T1–T34) | 34 | 34 | 0 |
-| **Total** | **36** | **36** | **0** |
+| Fonctionnels manuels (T1–T37) | 37 | 37 | 0 |
+| Build production (`npm run build`) | 1 | 1 | 0 |
+| **Total** | **40** | **40** | **0** |
 
-Le taux de réussite des tests fonctionnels manuels est de **100 %** sur le périmètre implémenté. Les modules planifiés (profil, mot de passe oublié UI, espaces spécialisés, mobile) feront l'objet d'une campagne de tests complémentaire lors de leur livraison.
+Le taux de réussite est de **100 %** sur le périmètre livré. La phase mobile et les tests API automatisés étendus constituent les prochaines évolutions.
+
+---
+
+## e. Déploiement et mise en production
+
+### e.1 Stratégie de déploiement
+
+| Environnement | Base | Usage |
+|---------------|------|-------|
+| Développement | SQLite | Travail local, démonstrations |
+| Production | MySQL 8.0 + HTTPS | Exploitation au Centre Médical AMEN |
+
+L'architecture retenue sépare :
+
+- **Frontend** : fichiers statiques React (`frontend/dist/`) servis par Nginx ;
+- **Backend** : API Laravel (`backend-runtime/public`) sur le même domaine (`/api`) ou sous-domaine dédié.
+
+### e.2 Artefacts de déploiement fournis
+
+| Fichier | Rôle |
+|---------|------|
+| `docs/PRODUCTION.md` | Guide complet de déploiement |
+| `deploy/nginx-amen.example.conf` | Configuration Nginx exemple |
+| `backend-runtime/.env.production.example` | Variables d'environnement production |
+| `frontend/.env.production.example` | URL API pour le build Vite |
+| `build-production.ps1` | Script de build frontend |
+| `start-backend.ps1` / `start-frontend.ps1` | Démarrage développement local |
+
+### e.3 Procédure de build
+
+```bash
+# Backend
+cd backend-runtime
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan config:cache
+php artisan route:cache
+
+# Frontend
+cd frontend
+npm ci
+npm run build   # génère frontend/dist/
+```
+
+Sous Windows : `.\build-production.ps1`
+
+### e.4 Sécurité production
+
+- `APP_DEBUG=false` ;
+- HTTPS obligatoire (certificat Let's Encrypt) ;
+- CORS limité au domaine production ;
+- Mots de passe forts, comptes démo désactivés ;
+- Sauvegardes MySQL quotidiennes ;
+- `MOBILE_MONEY_MOCK=false` pour activer les vrais paiements.
+
+### e.5 Vérification post-déploiement
+
+| Contrôle | Critère de succès |
+|----------|-------------------|
+| API publique | `GET /api/v1/departements` retourne JSON |
+| Authentification | Login admin fonctionnel |
+| Frontend | SPA accessible en HTTPS |
+| Intégrations | FCM, SMS, Mobile Money configurés |
 
 ---
 
@@ -434,9 +533,9 @@ Le taux de réussite des tests fonctionnels manuels est de **100 %** sur le pér
 
 L'implémentation de la phase web confirme la pertinence des choix techniques du chapitre III : Laravel et React permettent un développement rapide et structuré, l'API REST centralise la logique métier, et les intégrations locales (Mobile Money, SMS, Jitsi) sont encapsulées pour faciliter le passage en production.
 
-Trente et une pages React couvrent les rôles essentiels d'un centre médical ; quinze modèles et une cinquantaine de routes API assurent la cohérence des données. Les tests réalisés — automatisés et manuels — valident le comportement attendu sur l'ensemble des parcours critiques.
+Plus de **50 pages React** couvrent l'ensemble des rôles d'un centre médical polyvalent ; **20 modèles** et **80+ routes API** assurent la cohérence des données. La feuille de route web (`docs/ROADMAP_WEB.md`) est entièrement réalisée, de la documentation académique au guide de déploiement production (`docs/PRODUCTION.md`).
 
-La poursuite du projet s'appuie sur la feuille de route `docs/ROADMAP_WEB.md` et sur le versionnement continu du dépôt GitHub [TFC-ENGWELE](https://github.com/Exauce09/TFC-ENGWELE).
+Les tests réalisés — automatisés, manuels et build production — valident le comportement attendu avec un taux de réussite de 100 %. Le code source est versionné sur [TFC-ENGWELE](https://github.com/Exauce09/TFC-ENGWELE). La prochaine étape majeure est le déploiement sur l'infrastructure du centre et le développement de l'application mobile.
 
 ---
 

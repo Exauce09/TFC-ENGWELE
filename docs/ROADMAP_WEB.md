@@ -14,7 +14,7 @@
 | 3 | Mot de passe oublié + page profil | ✅ |
 | 4 | Admin statistiques + enrichir la gestion (CRUD) | ✅ |
 | 5 | Espaces spécialisés (maternité, accueil, chirurgie, etc.) | ✅ |
-| 6 | Production + chapitre Implémentation TFC | ⏳ |
+| 6 | Production + chapitre Implémentation TFC | ✅ |
 
 ## Documentation académique
 
@@ -23,8 +23,9 @@
 | Chapitre I — Conception | `docs/CHAPITRE_1_CONCEPTION.md` |
 | Chapitre III — Analyse et conception du système proposé | `docs/CHAPITRE_3_ANALYSE_CONCEPTION.md` |
 | Chapitre IV — Implémentation et tests fonctionnels | `docs/CHAPITRE_4_IMPLEMENTATION.md` |
+| Guide production | `docs/PRODUCTION.md` |
 | Synthèse | `docs/TFC_L3_CONCEPTION_IMPLEMENTATION.md` |
 
 ## Comptes démo
 
-`Password@123` — `patient@amen.cd`, `medecin@amen.cd`, `admin@amen.cd`, `caissier@amen.cd`, `infirmier@amen.cd`, `laborantin@amen.cd`, `pharmacien@amen.cd`
+`Password@123` — voir liste complete dans `README.md` et page Login.

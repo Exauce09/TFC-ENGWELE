@@ -117,6 +117,16 @@ Les cles etrangeres assurent l'integrite referentielle entre le patient, le pers
 - Tests d'integration API (auth, rdv, facturation).
 - Tests UI React pour flux de connexion et pages protegees.
 - Recettes par role metier avec jeux de donnees de demonstration.
+- Build production valide (`npm run build`).
+
+### 2.6 Deploiement production
+
+> Guide detaille : [docs/PRODUCTION.md](./PRODUCTION.md)
+
+- Build frontend (`build-production.ps1`) → `frontend/dist/`
+- Backend Laravel optimise (`config:cache`, `route:cache`)
+- MySQL 8.0, HTTPS, Nginx
+- Variables `.env.production.example` fournies
 
 ## Chapitre 3 - Resultats attendus
 

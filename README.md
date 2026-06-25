@@ -4,50 +4,98 @@ Application hybride de digitalisation hospitaliere pour le Centre Medical AMEN (
 
 ## Depot GitHub
 
-- Projet: [https://github.com/Exauce09/TFC-ENGWELE.git](https://github.com/Exauce09/TFC-ENGWELE.git)
+- Projet : [https://github.com/Exauce09/TFC-ENGWELE](https://github.com/Exauce09/TFC-ENGWELE)
 
 ## Stack
 
-- Backend: Laravel 11, PHP 8.3, MySQL 8.0, Sanctum
-- Frontend web: React 18, Tailwind CSS, Axios
-- Mobile: React Native Expo SDK 51 (phase suivante)
-- Integrations: FCM, AfricasTalking, Airtel Money, M-Pesa, Jitsi Meet
+- **Backend** : Laravel 11, PHP 8.3, Sanctum, SQLite (dev) / MySQL (prod)
+- **Frontend** : React 18, Vite, Tailwind CSS, Axios
+- **Mobile** : React Native Expo (phase suivante)
+- **Integrations** : FCM, AfricasTalking, Airtel Money, M-Pesa, Jitsi Meet
 
 ## Structure
 
-- `backend/`: API REST Laravel
-- `frontend/`: interface web React
-- `docs/`: documentation academique TFC + feuille de route
-  - **Conception (chapitre I)** : `docs/CHAPITRE_1_CONCEPTION.md`
-  - **Chapitre III — Analyse et conception** : `docs/CHAPITRE_3_ANALYSE_CONCEPTION.md`
-  - **Chapitre IV — Implémentation et tests** : `docs/CHAPITRE_4_IMPLEMENTATION.md`
-  - **Feuille de route web** : `docs/ROADMAP_WEB.md`
-  - Conception + implementation (synthese) : `docs/TFC_L3_CONCEPTION_IMPLEMENTATION.md`
+```
+hopital-amen/
+├── backend-runtime/    # API Laravel (execution)
+├── frontend/           # Interface web React
+├── docs/               # Documentation TFC + production
+├── deploy/             # Config Nginx exemple
+├── start-backend.ps1   # Demarrage API locale
+├── start-frontend.ps1  # Demarrage Vite
+└── build-production.ps1
+```
 
-## Lancement rapide
+## Lancement rapide (developpement)
 
-### Backend
+### Terminal 1 — Backend
 
-1. Aller dans `backend`
-2. Installer les dependances (`composer install`)
-3. Configurer `.env` puis executer `php artisan key:generate`
-4. Verifier l'alias middleware `role` dans `bootstrap/app.php` (Laravel 11)
-4. Executer les migrations (`php artisan migrate --seed`)
-5. Demarrer (`php artisan serve`)
+```powershell
+.\start-backend.ps1
+```
 
-### Frontend
+API : http://127.0.0.1:8000
 
-1. Aller dans `frontend`
-2. Installer les dependances (`npm install`)
-3. Copier `.env.example` vers `.env` et definir `VITE_API_URL`
-4. Demarrer (`npm run dev`)
+### Terminal 2 — Frontend
 
-## Etat actuel
+```powershell
+.\start-frontend.ps1
+```
 
-Cette base initialise la phase web (authentification, routage prive, architecture par roles) et la documentation TFC.
+Web : http://localhost:5173
 
-## Comptes de demo (seeders)
+### Premier lancement
 
-- Admin: `admin@amen.cd` / `Password@123`
-- Medecin: `medecin@amen.cd` / `Password@123`
-- Patient: `patient@amen.cd` / `Password@123`
+```powershell
+cd backend-runtime
+composer install
+copy .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+```
+
+```powershell
+cd frontend
+npm install
+copy .env.example .env
+```
+
+## Production
+
+Voir le guide complet : [`docs/PRODUCTION.md`](docs/PRODUCTION.md)
+
+```powershell
+.\build-production.ps1
+```
+
+## Documentation TFC
+
+| Document | Fichier |
+|----------|---------|
+| Chapitre I — Conception | `docs/CHAPITRE_1_CONCEPTION.md` |
+| Chapitre III — Analyse et conception | `docs/CHAPITRE_3_ANALYSE_CONCEPTION.md` |
+| Chapitre IV — Implementation et tests | `docs/CHAPITRE_4_IMPLEMENTATION.md` |
+| Guide production | `docs/PRODUCTION.md` |
+| Feuille de route | `docs/ROADMAP_WEB.md` |
+
+## Comptes demo (`Password@123`)
+
+| Role | Email |
+|------|-------|
+| Admin | `admin@amen.cd` |
+| Medecin | `medecin@amen.cd` |
+| Patient | `patient@amen.cd` |
+| Caissier | `caissier@amen.cd` |
+| Infirmier | `infirmier@amen.cd` |
+| Laborantin | `laborantin@amen.cd` |
+| Pharmacien | `pharmacien@amen.cd` |
+| Receptionniste | `receptionniste@amen.cd` |
+| Sage-femme | `sage-femme@amen.cd` |
+| Chirurgien | `chirurgien@amen.cd` |
+| Echographiste | `echographiste@amen.cd` |
+| Kinesitherapeute | `kinesitherapeute@amen.cd` |
+| Dentiste | `dentiste@amen.cd` |
+
+## Etat du projet
+
+Feuille de route web **complete** (phases 0 a 6). Application prete pour demonstration et deploiement production.
