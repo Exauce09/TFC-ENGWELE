@@ -14,8 +14,11 @@ import PatientRendezVous from './pages/patient/RendezVous';
 import PatientDossier from './pages/patient/Dossier';
 import PatientTeleconsultation from './pages/patient/Teleconsultation';
 import MedecinTeleconsultation from './pages/medecin/Teleconsultation';
+import MedecinPatients from './pages/medecin/Patients';
+import MedecinPrescriptions from './pages/medecin/Prescriptions';
 import InfirmierDashboard from './pages/infirmier/Dashboard';
 import InfirmierConstantes from './pages/infirmier/Constantes';
+import InfirmierPatients from './pages/infirmier/Patients';
 import LaboratoireDashboard from './pages/laboratoire/Dashboard';
 import LaboratoireAnalyses from './pages/laboratoire/Analyses';
 import PharmacieDashboard from './pages/pharmacie/Dashboard';
@@ -26,6 +29,7 @@ import CaisseFactures from './pages/caisse/Factures';
 import CaissePaiements from './pages/caisse/Paiements';
 import PatientFactures from './pages/patient/Factures';
 import AdminFacturation from './pages/admin/Facturation';
+import AdminStatistiques from './pages/admin/Statistiques';
 import PlaceholderDashboard from './pages/shared/PlaceholderDashboard';
 import PrivateRoute from './router/PrivateRoute';
 
@@ -79,6 +83,12 @@ export default function App() {
           <Route path="/medecin/dossiers" element={
             <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinDossiers /></PrivateRoute>
           } />
+          <Route path="/medecin/patients" element={
+            <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinPatients /></PrivateRoute>
+          } />
+          <Route path="/medecin/prescriptions" element={
+            <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinPrescriptions /></PrivateRoute>
+          } />
           <Route path="/medecin/teleconsultation" element={
             <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinTeleconsultation /></PrivateRoute>
           } />
@@ -109,6 +119,9 @@ export default function App() {
           } />
           <Route path="/admin/facturation" element={
             <PrivateRoute allowedRoles={['admin']}><AdminFacturation /></PrivateRoute>
+          } />
+          <Route path="/admin/statistiques" element={
+            <PrivateRoute allowedRoles={['admin']}><AdminStatistiques /></PrivateRoute>
           } />
           <Route path="/admin/*" element={
             <PrivateRoute allowedRoles={['admin']}>
@@ -161,6 +174,9 @@ export default function App() {
           } />
           <Route path="/infirmier/constantes" element={
             <PrivateRoute allowedRoles={['infirmier']}><InfirmierConstantes /></PrivateRoute>
+          } />
+          <Route path="/infirmier/patients" element={
+            <PrivateRoute allowedRoles={['infirmier']}><InfirmierPatients /></PrivateRoute>
           } />
           <Route path="/infirmier/*" element={
             <PrivateRoute allowedRoles={['infirmier']}>

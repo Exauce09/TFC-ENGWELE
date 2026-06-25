@@ -56,6 +56,11 @@ function Badge({ statut }) {
   );
 }
 
+function deptLabel(value) {
+  if (!value) return '—';
+  return typeof value === 'object' ? value.nom : value;
+}
+
 // ── dashboard ─────────────────────────────────────────────────────────────────
 
 export default function PatientDashboard() {
@@ -108,7 +113,7 @@ export default function PatientDashboard() {
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-xl font-bold">{prochainRdv[0].medecin?.user?.name}</p>
-              <p className="text-sm opacity-90">{prochainRdv[0].departement}</p>
+              <p className="text-sm opacity-90">{deptLabel(prochainRdv[0].departement)}</p>
               <p className="mt-1 text-sm opacity-75">{prochainRdv[0].motif}</p>
             </div>
             <div className="rounded-xl bg-white/20 px-5 py-3 text-center backdrop-blur-sm">
@@ -150,7 +155,7 @@ export default function PatientDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-slate-900">{r.medecin?.user?.name}</p>
-                    <p className="text-xs text-slate-500">{r.departement} · {r.heure_rdv} · {r.type === 'teleconsultation' ? '📹 Téléconsultation' : '🏥 Présentiel'}</p>
+                    <p className="text-xs text-slate-500">{deptLabel(r.departement)} · {String(r.heure_rdv).slice(0, 5)} · {r.type === 'teleconsultation' ? '📹 Téléconsultation' : '🏥 Présentiel'}</p>
                     <p className="text-xs text-slate-400 mt-0.5">{r.motif}</p>
                   </div>
                   <Badge statut={r.statut} />
@@ -200,7 +205,7 @@ export default function PatientDashboard() {
                     </span>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    {p.medicaments.map((m, i) => (
+                    {(p.medicaments ?? []).map((m, i) => (
                       <div key={i} className="flex items-center gap-3 rounded-lg bg-blue-50 p-3">
                         <span className="text-xl">💊</span>
                         <div>

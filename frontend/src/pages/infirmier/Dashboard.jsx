@@ -13,11 +13,12 @@ export default function InfirmierDashboard() {
           <p className="mt-2 font-bold text-slate-900">Constantes vitales</p>
           <p className="text-sm text-slate-500">Saisir température, tension, pouls...</p>
         </Link>
-        <div className="rounded-2xl border border-dashed bg-slate-50 p-6 opacity-60">
+        <Link to="/infirmier/patients"
+          className="rounded-2xl border bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-md">
           <p className="text-3xl">👥</p>
           <p className="mt-2 font-bold text-slate-900">Patients</p>
-          <p className="text-sm text-slate-500">Bientôt disponible</p>
-        </div>
+          <p className="text-sm text-slate-500">Liste et recherche des patients</p>
+        </Link>
       </div>
     </Layout>
   );

@@ -22,7 +22,9 @@ La gestion hospitaliere manuelle entraine des pertes d'information, des delais d
 
 L'objectif est de proposer une architecture robuste, securisee et evolutive, adaptee au contexte de Kinshasa.
 
-## Chapitre 1 - Conception
+> **Redaction complete du chapitre Conception** : voir [docs/CHAPITRE_1_CONCEPTION.md](./CHAPITRE_1_CONCEPTION.md)
+
+## Chapitre 1 - Conception (synthese)
 
 ### 1.1 Analyse des besoins
 
@@ -77,6 +79,10 @@ Les cles etrangeres assurent l'integrite referentielle entre le patient, le pers
 - Standardisation des reponses API.
 
 ## Chapitre 2 - Implementation
+
+> **Redaction complete** :
+> - Chapitre III (analyse et conception) : [docs/CHAPITRE_3_ANALYSE_CONCEPTION.md](./CHAPITRE_3_ANALYSE_CONCEPTION.md)
+> - Chapitre IV (implementation et tests) : [docs/CHAPITRE_4_IMPLEMENTATION.md](./CHAPITRE_4_IMPLEMENTATION.md)
 
 ### 2.1 Mise en place backend
 

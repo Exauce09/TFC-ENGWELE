@@ -17,7 +17,12 @@ Application hybride de digitalisation hospitaliere pour le Centre Medical AMEN (
 
 - `backend/`: API REST Laravel
 - `frontend/`: interface web React
-- `docs/`: documentation academique TFC (conception + implementation)
+- `docs/`: documentation academique TFC + feuille de route
+  - **Conception (chapitre I)** : `docs/CHAPITRE_1_CONCEPTION.md`
+  - **Chapitre III — Analyse et conception** : `docs/CHAPITRE_3_ANALYSE_CONCEPTION.md`
+  - **Chapitre IV — Implémentation et tests** : `docs/CHAPITRE_4_IMPLEMENTATION.md`
+  - **Feuille de route web** : `docs/ROADMAP_WEB.md`
+  - Conception + implementation (synthese) : `docs/TFC_L3_CONCEPTION_IMPLEMENTATION.md`
 
 ## Lancement rapide
 
