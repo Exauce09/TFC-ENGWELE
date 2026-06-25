@@ -3,6 +3,7 @@ import { AuthProvider } from './context/AuthContext';
 import Landing from './pages/Landing';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
+import ForgotPassword from './pages/auth/ForgotPassword';
 import AdminDashboard from './pages/admin/Dashboard';
 import AdminRendezVous from './pages/admin/RendezVous';
 import { AdminPatients, AdminMedecins, AdminDepartements, AdminUtilisateurs } from './pages/admin/Gestion';
@@ -30,12 +31,23 @@ import CaissePaiements from './pages/caisse/Paiements';
 import PatientFactures from './pages/patient/Factures';
 import AdminFacturation from './pages/admin/Facturation';
 import AdminStatistiques from './pages/admin/Statistiques';
+import ProfilePage from './pages/shared/Profile';
 import PlaceholderDashboard from './pages/shared/PlaceholderDashboard';
 import PrivateRoute from './router/PrivateRoute';
 
 const MEDECIN_ROLES = [
   'medecin_generaliste', 'medecin_interne', 'pediatre',
   'gynecologue', 'ophtalmologue', 'urgentiste',
+];
+
+const ALL_ROLES = [
+  'patient',
+  ...MEDECIN_ROLES,
+  'admin',
+  'laborantin',
+  'pharmacien',
+  'caissier',
+  'infirmier',
 ];
 
 export default function App() {
@@ -47,6 +59,10 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/profil" element={
+            <PrivateRoute allowedRoles={ALL_ROLES}><ProfilePage /></PrivateRoute>
+          } />
 
           {/* Patient */}
           <Route path="/patient/dashboard" element={

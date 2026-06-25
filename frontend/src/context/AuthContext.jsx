@@ -84,6 +84,15 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  const setCurrentUser = (nextUser) => {
+    setUser(nextUser);
+    if (nextUser) {
+      localStorage.setItem('amen_user', JSON.stringify(nextUser));
+    } else {
+      localStorage.removeItem('amen_user');
+    }
+  };
+
   const value = useMemo(
     () => ({
       user,
@@ -91,6 +100,7 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      setCurrentUser,
       hasRole: (...roles) => roles.includes(user?.role),
     }),
     [user, loading]
