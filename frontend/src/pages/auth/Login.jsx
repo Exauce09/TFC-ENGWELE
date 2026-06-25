@@ -94,6 +94,12 @@ export default function Login() {
                 { role: 'Infirmier', email: 'infirmier@amen.cd', pwd: 'Password@123', color: 'text-orange-300' },
                 { role: 'Laborantin', email: 'laborantin@amen.cd', pwd: 'Password@123', color: 'text-violet-300' },
                 { role: 'Pharmacien', email: 'pharmacien@amen.cd', pwd: 'Password@123', color: 'text-pink-300' },
+                { role: 'Accueil', email: 'receptionniste@amen.cd', pwd: 'Password@123', color: 'text-sky-300' },
+                { role: 'Maternité', email: 'sage-femme@amen.cd', pwd: 'Password@123', color: 'text-pink-300' },
+                { role: 'Chirurgie', email: 'chirurgien@amen.cd', pwd: 'Password@123', color: 'text-red-300' },
+                { role: 'Écho', email: 'echographiste@amen.cd', pwd: 'Password@123', color: 'text-indigo-300' },
+                { role: 'Kiné', email: 'kinesitherapeute@amen.cd', pwd: 'Password@123', color: 'text-teal-300' },
+                { role: 'Dentiste', email: 'dentiste@amen.cd', pwd: 'Password@123', color: 'text-cyan-300' },
               ].map((d) => (
                 <button
                   key={d.role}
