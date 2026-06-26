@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+
+import { getItem, removeItem, setItem } from '@/src/services/storage';
 
 const TOKEN_KEY = 'amen_token';
 const USER_KEY = 'amen_user';
@@ -31,21 +32,21 @@ export function setUnauthorizedHandler(handler: () => void) {
 }
 
 export async function getStoredToken(): Promise<string | null> {
-  return SecureStore.getItemAsync(TOKEN_KEY);
+  return getItem(TOKEN_KEY);
 }
 
 export async function getStoredUser(): Promise<string | null> {
-  return SecureStore.getItemAsync(USER_KEY);
+  return getItem(USER_KEY);
 }
 
 export async function saveAuth(token: string, user: object) {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
-  await SecureStore.setItemAsync(USER_KEY, JSON.stringify(user));
+  await setItem(TOKEN_KEY, token);
+  await setItem(USER_KEY, JSON.stringify(user));
 }
 
 export async function clearAuthStorage() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
-  await SecureStore.deleteItemAsync(USER_KEY);
+  await removeItem(TOKEN_KEY);
+  await removeItem(USER_KEY);
 }
 
 api.interceptors.request.use(async (config) => {

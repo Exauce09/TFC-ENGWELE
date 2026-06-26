@@ -53,7 +53,9 @@ Web : http://localhost:5173
 .\start-mobile.ps1
 ```
 
-Puis scanner le QR code avec **Expo Go** (Android/iOS).
+Puis scanner le QR code avec **Expo Go** (Android/iOS) — mode developpement uniquement.
+
+**Installer comme une vraie app (APK Android, sans Expo Go) :** voir [`docs/MOBILE_INSTALL.md`](docs/MOBILE_INSTALL.md) puis `.\build-mobile-apk.ps1`.
 
 Configurer `mobile/.env` :
 - Emulateur Android : `EXPO_PUBLIC_API_URL=http://10.0.2.2:8000/api/v1`
@@ -92,6 +94,7 @@ Voir le guide complet : [`docs/PRODUCTION.md`](docs/PRODUCTION.md)
 | Chapitre IV — Implementation et tests | `docs/CHAPITRE_4_IMPLEMENTATION.md` |
 | Guide production | `docs/PRODUCTION.md` |
 | Feuille de route mobile | `docs/ROADMAP_MOBILE.md` |
+| Installer sur telephone (APK) | `docs/MOBILE_INSTALL.md` |
 | Feuille de route | `docs/ROADMAP_WEB.md` |
 
 ## Comptes demo (`Password@123`)
