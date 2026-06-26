@@ -12,6 +12,7 @@
 
 # Build outputs
 frontend/dist/
+releases/*.apk
 backend-runtime/public/build/
 backend-runtime/public/hot
 
