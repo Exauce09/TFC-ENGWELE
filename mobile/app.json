@@ -39,6 +39,13 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "b9686296-6935-48e1-adff-9c6e0b803462"
+      }
+    },
+    "owner": "exauce-tsh"
   }
 }
