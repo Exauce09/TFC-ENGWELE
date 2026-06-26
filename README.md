@@ -19,10 +19,12 @@ Application hybride de digitalisation hospitaliere pour le Centre Medical AMEN (
 hopital-amen/
 ├── backend-runtime/    # API Laravel (execution)
 ├── frontend/           # Interface web React
+├── mobile/             # Application mobile Expo
 ├── docs/               # Documentation TFC + production
 ├── deploy/             # Config Nginx exemple
 ├── start-backend.ps1   # Demarrage API locale
 ├── start-frontend.ps1  # Demarrage Vite
+├── start-mobile.ps1    # Demarrage Expo
 └── build-production.ps1
 ```
 
@@ -43,6 +45,19 @@ API : http://127.0.0.1:8000
 ```
 
 Web : http://localhost:5173
+
+### Terminal 3 — Mobile (Expo)
+
+```powershell
+.\start-backend.ps1    # requis pour l'API
+.\start-mobile.ps1
+```
+
+Puis scanner le QR code avec **Expo Go** (Android/iOS).
+
+Configurer `mobile/.env` :
+- Emulateur Android : `EXPO_PUBLIC_API_URL=http://10.0.2.2:8000/api/v1`
+- Appareil physique : IP Wi-Fi du PC (ex. `http://192.168.1.10:8000/api/v1`)
 
 ### Premier lancement
 
@@ -100,4 +115,4 @@ Voir le guide complet : [`docs/PRODUCTION.md`](docs/PRODUCTION.md)
 ## Etat du projet
 
 Feuille de route web **complete** (phases 0 a 6).  
-Prochaine etape : **application mobile** — voir [`docs/ROADMAP_MOBILE.md`](docs/ROADMAP_MOBILE.md).
+Application mobile : **phase 0 terminee** (auth + navigation patient) — voir [`docs/ROADMAP_MOBILE.md`](docs/ROADMAP_MOBILE.md).

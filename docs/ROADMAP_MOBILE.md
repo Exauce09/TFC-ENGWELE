@@ -63,12 +63,12 @@ hopital-amen/
 
 | # | Tâche | Statut |
 |---|--------|--------|
-| 0 | Initialiser projet Expo (`mobile/`) + Expo Router | ⏳ |
-| 0b | Service API Axios + variables `EXPO_PUBLIC_API_URL` | ⏳ |
-| 0c | AuthContext (login, logout, token SecureStore, `/me`) | ⏳ |
-| 0d | Écrans Login + Register + mot de passe oublié | ⏳ |
-| 0e | Navigation protégée par rôle (garde comme `PrivateRoute`) | ⏳ |
-| 0f | Script `start-mobile.ps1` + doc dans README | ⏳ |
+| 0 | Initialiser projet Expo (`mobile/`) + Expo Router | ✅ |
+| 0b | Service API Axios + variables `EXPO_PUBLIC_API_URL` | ✅ |
+| 0c | AuthContext (login, logout, token SecureStore, `/me`) | ✅ |
+| 0d | Écrans Login + Register + mot de passe oublié | ✅ |
+| 0e | Navigation protégée par rôle (garde comme `PrivateRoute`) | ✅ |
+| 0f | Script `start-mobile.ps1` + doc dans README | ✅ |
 
 **API utilisée :** `POST /login`, `POST /logout`, `GET /me`, `PUT /profile`, `POST /register`, `POST /forgot-password`
 
