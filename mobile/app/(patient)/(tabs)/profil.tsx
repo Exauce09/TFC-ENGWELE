@@ -1,7 +1,12 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
-import { colors } from '@/src/constants/theme';
+import MedicalCard from '@/src/components/ui/MedicalCard';
+import PrimaryButton from '@/src/components/ui/PrimaryButton';
+import { colors, gradients, radius } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/AuthContext';
 
 export default function PatientProfilScreen() {
@@ -12,41 +17,98 @@ export default function PatientProfilScreen() {
     router.replace('/(auth)/login');
   };
 
-  return (
-    <View style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.label}>Nom</Text>
-        <Text style={styles.value}>{user?.name}</Text>
-        <Text style={styles.label}>Email</Text>
-        <Text style={styles.value}>{user?.email}</Text>
-        <Text style={styles.label}>Téléphone</Text>
-        <Text style={styles.value}>{user?.phone || '—'}</Text>
-      </View>
+  const initials = user?.name
+    ?.split(' ')
+    .map((n) => n[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase() ?? 'P';
 
-      <Pressable style={styles.logout} onPress={handleLogout}>
-        <Text style={styles.logoutText}>Se déconnecter</Text>
-      </Pressable>
-    </View>
+  const rows = [
+    { icon: 'person-outline' as const, label: 'Nom complet', value: user?.name },
+    { icon: 'mail-outline' as const, label: 'Email', value: user?.email },
+    { icon: 'call-outline' as const, label: 'Téléphone', value: user?.phone || '—' },
+    { icon: 'shield-checkmark-outline' as const, label: 'Rôle', value: 'Patient' },
+  ];
+
+  return (
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <LinearGradient colors={gradients.primary} style={styles.header}>
+        <Animated.View entering={FadeInDown.duration(500)} style={styles.avatar}>
+          <Text style={styles.avatarText}>{initials}</Text>
+        </Animated.View>
+        <Text style={styles.name}>{user?.name}</Text>
+        <Text style={styles.email}>{user?.email}</Text>
+      </LinearGradient>
+
+      <Animated.View entering={FadeInDown.delay(150)} style={styles.cardWrap}>
+        <MedicalCard>
+          {rows.map((row, i) => (
+            <View key={row.label} style={[styles.row, i < rows.length - 1 && styles.rowBorder]}>
+              <View style={styles.rowIcon}>
+                <Ionicons name={row.icon} size={20} color={colors.primary} />
+              </View>
+              <View style={styles.rowContent}>
+                <Text style={styles.rowLabel}>{row.label}</Text>
+                <Text style={styles.rowValue}>{row.value}</Text>
+              </View>
+            </View>
+          ))}
+        </MedicalCard>
+      </Animated.View>
+
+      <Animated.View entering={FadeInDown.delay(280)} style={styles.logoutWrap}>
+        <PrimaryButton label="Se déconnecter" onPress={handleLogout} variant="outline" />
+      </Animated.View>
+
+      <Text style={styles.footer}>Centre Médical AMEN · FOSPHA ONGD/ASBL</Text>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, gap: 16, backgroundColor: colors.background },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: 16,
-    padding: 16,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  label: { fontSize: 12, color: colors.textMuted, fontWeight: '600', marginTop: 8 },
-  value: { fontSize: 16, color: colors.text, fontWeight: '600' },
-  logout: {
-    backgroundColor: '#fee2e2',
-    borderRadius: 12,
-    paddingVertical: 14,
+  screen: { flex: 1, backgroundColor: colors.background },
+  content: { paddingBottom: 40 },
+  header: {
+    paddingTop: 48,
+    paddingBottom: 32,
     alignItems: 'center',
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
   },
-  logoutText: { color: '#b91c1c', fontWeight: '700' },
+  avatar: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: 'rgba(255,255,255,0.25)',
+    borderWidth: 3,
+    borderColor: 'rgba(255,255,255,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  avatarText: { fontSize: 28, fontWeight: '800', color: '#fff' },
+  name: { fontSize: 22, fontWeight: '800', color: '#fff' },
+  email: { fontSize: 14, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
+  cardWrap: { marginTop: -20, marginHorizontal: 20 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 14, paddingVertical: 14 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: colors.border },
+  rowIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.sm,
+    backgroundColor: '#e0f2fe',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  rowContent: { flex: 1 },
+  rowLabel: { fontSize: 12, color: colors.textMuted, fontWeight: '600' },
+  rowValue: { fontSize: 15, color: colors.text, fontWeight: '600', marginTop: 2 },
+  logoutWrap: { marginHorizontal: 20, marginTop: 8 },
+  footer: {
+    textAlign: 'center',
+    fontSize: 11,
+    color: colors.textLight,
+    marginTop: 24,
+  },
 });

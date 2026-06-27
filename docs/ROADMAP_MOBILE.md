@@ -78,7 +78,7 @@ hopital-amen/
 
 | # | Tâche | Statut | API |
 |---|--------|--------|-----|
-| 1 | Dashboard patient (résumé RDV, factures, notifications) | ⏳ | `GET /patient/dashboard` |
+| 1 | Dashboard patient (résumé RDV, factures, notifications) | ✅ | `GET /patient/dashboard` |
 | 2 | Liste et détail des rendez-vous | ⏳ | `GET /patient/rendez-vous` |
 | 3 | Prise de RDV (département, médecin, créneau) | ⏳ | `GET /departements`, `GET /medecins`, `POST /patient/rendez-vous` |
 | 4 | Annulation RDV | ⏳ | `DELETE /patient/rendez-vous/{id}` |

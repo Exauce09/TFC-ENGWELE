@@ -1,18 +1,37 @@
 import { Stack } from 'expo-router';
 
+import { colors } from '@/src/constants/theme';
+
 export default function AuthLayout() {
   return (
     <Stack
       screenOptions={{
-        headerShown: true,
-        headerTintColor: '#0d9488',
-        headerTitleStyle: { fontWeight: '700' },
-        contentStyle: { backgroundColor: '#f8fafc' },
+        headerShown: false,
+        animation: 'slide_from_right',
+        contentStyle: { backgroundColor: colors.background },
       }}
     >
-      <Stack.Screen name="login" options={{ title: 'Connexion' }} />
-      <Stack.Screen name="register" options={{ title: 'Inscription' }} />
-      <Stack.Screen name="forgot-password" options={{ title: 'Mot de passe oublié' }} />
+      <Stack.Screen name="login" />
+      <Stack.Screen
+        name="register"
+        options={{
+          headerShown: true,
+          title: 'Inscription',
+          headerTintColor: colors.primary,
+          headerStyle: { backgroundColor: colors.card },
+          headerShadowVisible: false,
+        }}
+      />
+      <Stack.Screen
+        name="forgot-password"
+        options={{
+          headerShown: true,
+          title: 'Mot de passe oublié',
+          headerTintColor: colors.primary,
+          headerStyle: { backgroundColor: colors.card },
+          headerShadowVisible: false,
+        }}
+      />
     </Stack>
   );
 }

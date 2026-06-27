@@ -1,17 +1,11 @@
 import { Link, router } from 'expo-router';
 import { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import FormField from '@/src/components/FormField';
-import { colors } from '@/src/constants/theme';
+import PrimaryButton from '@/src/components/ui/PrimaryButton';
+import { colors, radius } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/AuthContext';
 
 export default function RegisterScreen() {
@@ -47,7 +41,7 @@ export default function RegisterScreen() {
         response?: { data?: { message?: string; errors?: Record<string, string[]> } };
       };
       if (!axiosErr.response) {
-        setError('Serveur inaccessible. Démarrez le backend.');
+        setError('Serveur inaccessible.');
       } else {
         const errs = axiosErr.response.data?.errors ?? {};
         const detail = Object.values(errs).flat().join(' ');
@@ -59,80 +53,49 @@ export default function RegisterScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.flex}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-    >
+    <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
-        <Text style={styles.intro}>
-          Créez votre compte patient pour accéder aux rendez-vous, factures et dossier médical.
-        </Text>
+        <Animated.View entering={FadeInDown.springify()} style={styles.intro}>
+          <Text style={styles.title}>Rejoignez AMEN</Text>
+          <Text style={styles.sub}>Créez votre compte patient en quelques minutes.</Text>
+        </Animated.View>
 
-        <FormField label="Nom complet" value={form.name} onChangeText={set('name')} />
-        <FormField
-          label="Email"
-          value={form.email}
-          onChangeText={set('email')}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <FormField label="Téléphone" value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
-        <FormField
-          label="Date de naissance (AAAA-MM-JJ)"
-          value={form.date_naissance}
-          onChangeText={set('date_naissance')}
-        />
-        <FormField label="Adresse" value={form.adresse} onChangeText={set('adresse')} />
-        <FormField
-          label="Mot de passe"
-          value={form.password}
-          onChangeText={set('password')}
-          secureTextEntry
-        />
-        <FormField
-          label="Confirmer le mot de passe"
-          value={form.password_confirmation}
-          onChangeText={set('password_confirmation')}
-          secureTextEntry
-        />
+        <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.form}>
+          <FormField label="Nom complet" icon="person-outline" value={form.name} onChangeText={set('name')} />
+          <FormField label="Email" icon="mail-outline" value={form.email} onChangeText={set('email')} autoCapitalize="none" keyboardType="email-address" />
+          <FormField label="Téléphone" icon="call-outline" value={form.phone} onChangeText={set('phone')} keyboardType="phone-pad" />
+          <FormField label="Date de naissance (AAAA-MM-JJ)" value={form.date_naissance} onChangeText={set('date_naissance')} />
+          <FormField label="Adresse" icon="location-outline" value={form.adresse} onChangeText={set('adresse')} />
+          <FormField label="Mot de passe" icon="lock-closed-outline" value={form.password} onChangeText={set('password')} secureTextEntry />
+          <FormField label="Confirmer" icon="lock-closed-outline" value={form.password_confirmation} onChangeText={set('password_confirmation')} secureTextEntry />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
 
-        <Pressable
-          style={[styles.button, submitting && styles.buttonDisabled]}
-          onPress={handleSubmit}
-          disabled={submitting}
-        >
-          <Text style={styles.buttonText}>{submitting ? 'Création...' : "S'inscrire"}</Text>
-        </Pressable>
+          <PrimaryButton label="Créer mon compte" onPress={handleSubmit} loading={submitting} />
 
-        <Link href="/(auth)/login" style={styles.link}>
-          Déjà un compte ? Se connecter
-        </Link>
+          <Link href="/(auth)/login" style={styles.link}>
+            Déjà inscrit ? Se connecter
+          </Link>
+        </Animated.View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  container: { padding: 20, gap: 12, backgroundColor: colors.background },
-  intro: { color: colors.textMuted, fontSize: 14, marginBottom: 4 },
-  error: {
-    color: colors.error,
-    backgroundColor: colors.errorBg,
-    padding: 10,
-    borderRadius: 10,
-    fontSize: 13,
+  flex: { flex: 1, backgroundColor: colors.background },
+  container: { padding: 20, gap: 16, paddingBottom: 40 },
+  intro: { gap: 6 },
+  title: { fontSize: 24, fontWeight: '800', color: colors.text },
+  sub: { fontSize: 14, color: colors.textMuted },
+  form: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: 20,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  link: { color: colors.primary, fontSize: 14, fontWeight: '600', textAlign: 'center', marginTop: 8 },
+  error: { color: colors.error, backgroundColor: colors.errorBg, padding: 10, borderRadius: radius.sm, fontSize: 13 },
+  link: { color: colors.primary, fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 8 },
 });

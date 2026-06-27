@@ -1,10 +1,13 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInDown } from 'react-native-reanimated';
 
 import FormField from '@/src/components/FormField';
+import PrimaryButton from '@/src/components/ui/PrimaryButton';
+import MedicalCard from '@/src/components/ui/MedicalCard';
+import { colors, radius } from '@/src/constants/theme';
 import api from '@/src/services/api';
-import { colors } from '@/src/constants/theme';
 
 export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
@@ -18,7 +21,7 @@ export default function ForgotPasswordScreen() {
     setSuccess('');
     try {
       const res = await api.post('/forgot-password', { email: email.trim() });
-      setSuccess(res.data?.message || 'Demande envoyée.');
+      setSuccess(res.data?.message || 'Demande envoyée. Vérifiez votre email.');
     } catch (err: unknown) {
       const axiosErr = err as { response?: { data?: { message?: string } } };
       setError(axiosErr.response?.data?.message || 'Impossible de traiter la demande.');
@@ -29,57 +32,40 @@ export default function ForgotPasswordScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.intro}>
-        Entrez votre email. Si le compte existe, un message de réinitialisation sera envoyé.
-      </Text>
+      <Animated.View entering={FadeInDown.springify()}>
+        <MedicalCard>
+          <Text style={styles.intro}>
+            Entrez votre email. Si le compte existe, un message de réinitialisation sera envoyé.
+          </Text>
 
-      <FormField
-        label="Adresse email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        placeholder="exemple@amen.cd"
-      />
+          <FormField
+            label="Adresse email"
+            icon="mail-outline"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            placeholder="exemple@amen.cd"
+          />
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
-      {success ? <Text style={styles.success}>{success}</Text> : null}
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {success ? <Text style={styles.success}>{success}</Text> : null}
 
-      <Pressable style={[styles.button, loading && styles.buttonDisabled]} onPress={submit} disabled={loading}>
-        <Text style={styles.buttonText}>{loading ? 'Envoi...' : 'Envoyer le lien'}</Text>
-      </Pressable>
+          <PrimaryButton label="Envoyer le lien" onPress={submit} loading={loading} />
 
-      <Link href="/(auth)/login" style={styles.link}>
-        Retour à la connexion
-      </Link>
+          <Link href="/(auth)/login" style={styles.link}>
+            Retour à la connexion
+          </Link>
+        </MedicalCard>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, gap: 14, backgroundColor: colors.background },
-  intro: { color: colors.textMuted, fontSize: 14 },
-  error: {
-    color: colors.error,
-    backgroundColor: colors.errorBg,
-    padding: 10,
-    borderRadius: 10,
-    fontSize: 13,
-  },
-  success: {
-    color: colors.success,
-    backgroundColor: colors.successBg,
-    padding: 10,
-    borderRadius: 10,
-    fontSize: 13,
-  },
-  button: {
-    backgroundColor: colors.primary,
-    borderRadius: 12,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  link: { color: colors.primary, fontSize: 14, fontWeight: '600' },
+  container: { flex: 1, padding: 20, backgroundColor: colors.background },
+  intro: { fontSize: 14, color: colors.textMuted, lineHeight: 20, marginBottom: 8 },
+  error: { color: colors.error, backgroundColor: colors.errorBg, padding: 10, borderRadius: radius.sm, fontSize: 13 },
+  success: { color: colors.success, backgroundColor: colors.successBg, padding: 10, borderRadius: radius.sm, fontSize: 13 },
+  link: { color: colors.primary, fontSize: 14, fontWeight: '700', textAlign: 'center', marginTop: 12 },
 });
