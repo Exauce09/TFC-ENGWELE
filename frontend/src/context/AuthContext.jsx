@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
+import { findDemoUser, isDemoMode, isDemoToken } from '../demo/demoConfig';
 
 const AuthContext = createContext(null);
 
@@ -34,6 +35,10 @@ export function AuthProvider({ children }) {
     const cachedUser = localStorage.getItem('amen_user');
     if (token && cachedUser) {
       setUser(JSON.parse(cachedUser));
+      if (isDemoMode() && isDemoToken(token)) {
+        setLoading(false);
+        return;
+      }
       void verifyToken();
     } else {
       setLoading(false);
@@ -56,6 +61,18 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
+    if (isDemoMode()) {
+      const demoUser = findDemoUser(email, password);
+      if (!demoUser) {
+        throw { response: { data: { message: 'Email ou mot de passe incorrect (démo).' } } };
+      }
+      const token = `demo-token-${demoUser.email}`;
+      localStorage.setItem('amen_token', token);
+      localStorage.setItem('amen_user', JSON.stringify(demoUser));
+      setUser(demoUser);
+      return ROLE_ROUTES[demoUser.role] || '/';
+    }
+
     const res = await api.post('/login', { email, password });
     const { token, user: userData, role } = res.data.data;
     localStorage.setItem('amen_token', token);
@@ -65,6 +82,20 @@ export function AuthProvider({ children }) {
   };
 
   const register = async (data) => {
+    if (isDemoMode()) {
+      const demoUser = {
+        id: 99,
+        name: data.name,
+        email: data.email,
+        role: 'patient',
+        phone: data.phone,
+      };
+      localStorage.setItem('amen_token', `demo-token-${data.email}`);
+      localStorage.setItem('amen_user', JSON.stringify(demoUser));
+      setUser(demoUser);
+      return '/patient/dashboard';
+    }
+
     const res = await api.post('/register', data);
     const { token, user: userData } = res.data.data;
     localStorage.setItem('amen_token', token);
@@ -102,6 +133,7 @@ export function AuthProvider({ children }) {
       logout,
       setCurrentUser,
       hasRole: (...roles) => roles.includes(user?.role),
+      isDemoMode: isDemoMode(),
     }),
     [user, loading]
   );

@@ -18,7 +18,9 @@
 | Navigation | Toutes les pages web React |
 | Connexion / donnees | Necessite une **API publique** (voir ci-dessous) |
 
-Sans API en ligne, le site **s'affiche** mais la connexion echoue (« serveur inaccessible »).
+Sans API en ligne, le site **s'affiche** mais la connexion utilisait l'API locale.
+
+**Mode démo intégré** : sur GitHub Pages, connectez-vous avec les comptes démo (`Password@123`) pour accéder à tous les espaces utilisateurs avec des **données simulées**.
 
 ---
 

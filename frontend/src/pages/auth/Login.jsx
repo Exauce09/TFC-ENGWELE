@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { isDemoMode } from '../../demo/demoConfig';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -119,6 +120,13 @@ export default function Login() {
             <p className="text-xs font-bold uppercase tracking-widest text-medical-primary">Connexion sécurisée</p>
             <h1 className="mt-2 text-3xl font-extrabold text-slate-900">Bon retour 👋</h1>
             <p className="mt-1 text-sm text-slate-500">Connectez-vous à votre espace personnel.</p>
+
+            {isDemoMode() ? (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                <strong>Mode démo en ligne</strong> — données simulées. Utilisez un compte ci-contre avec{' '}
+                <code className="rounded bg-amber-100 px-1">Password@123</code>
+              </div>
+            ) : null}
 
             <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
               {/* Email */}
