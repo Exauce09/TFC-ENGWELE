@@ -1,15 +1,10 @@
+import type { AuthUser } from '@/src/context/AuthContext';
+
 export const DEMO_PASSWORD = 'Password@123';
 
-/** Mode démo : build CI ou hébergement GitHub Pages (pas d'API publique). */
-export const isDemoMode = () => {
-  if (import.meta.env.VITE_DEMO_MODE === 'true') return true;
-  if (typeof window !== 'undefined' && /\.github\.io$/i.test(window.location.hostname)) {
-    return true;
-  }
-  return false;
-};
+export const isDemoMode = () => process.env.EXPO_PUBLIC_DEMO_MODE === 'true';
 
-export const DEMO_USERS = {
+export const DEMO_USERS: Record<string, AuthUser> = {
   'admin@amen.cd': {
     id: 1,
     name: 'Administrateur AMEN',
@@ -103,12 +98,12 @@ export const DEMO_USERS = {
   },
 };
 
-export function findDemoUser(email, password) {
+export function findDemoUser(email: string, password: string): AuthUser | null {
   const user = DEMO_USERS[email?.toLowerCase()];
   if (!user || password !== DEMO_PASSWORD) return null;
   return user;
 }
 
-export function isDemoToken(token) {
-  return token?.startsWith('demo-token-');
+export function isDemoToken(token: string | null | undefined): boolean {
+  return token?.startsWith('demo-token-') ?? false;
 }

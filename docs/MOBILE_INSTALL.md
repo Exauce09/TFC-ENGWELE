@@ -117,7 +117,7 @@ Pendant les tests avec IP locale, le backend doit ecouter sur le reseau :
 | « Fichier dangereux » | Android affiche un avertissement — appuyez sur **Installer quand meme** / **Details** puis installer |
 | « Analyse impossible » | Retelechargez l'APK ; verifiez l'espace disque (> 100 Mo libre) |
 | « Application non installee » | Desinstallez une ancienne version AMEN ; redemarrez le telephone |
-| « Serveur inaccessible » (app installee) | 1) Meme Wi-Fi 2) `.\start-backend.ps1` 3) Autoriser HTTP : rebuild APK avec `usesCleartextTraffic` 4) Pare-feu Windows port 8000 |
+| « Serveur inaccessible » (app installee) | **Nouveau APK** : mode démo intégré (`EXPO_PUBLIC_DEMO_MODE=true`) — connectez-vous avec `patient@amen.cd` / `Password@123` sans backend. Sinon : 1) Meme Wi-Fi 2) `.\start-backend.ps1` 3) Pare-feu port 8000 |
 | Build EAS echoue | `npx eas-cli login`, connexion Internet stable |
 | iPhone | APK Android uniquement — iPhone necessite build iOS (compte Apple payant) |
 

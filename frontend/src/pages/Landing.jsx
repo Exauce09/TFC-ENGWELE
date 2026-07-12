@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { HOSPITAL, HOSPITAL_STATS } from '../constants/hospital';
 import api from '../services/api';
 
 // ─── DATA ──────────────────────────────────────────────────────────────────────
@@ -481,23 +482,23 @@ function APropos() {
             </span>
             <h2 className="mt-4 text-3xl font-bold text-slate-900 sm:text-4xl">
               Un centre médical au cœur de{' '}
-              <span className="text-medical-primary">Kinshasa</span>
+              <span className="text-medical-primary">{HOSPITAL.commune}, {HOSPITAL.city}</span>
             </h2>
             <p className="mt-4 text-slate-600 leading-relaxed">
-              Le Centre Médical AMEN est une institution sanitaire de référence de FOSPHA ONGD/ASBL. Fondé avec la mission de fournir des soins médicaux accessibles et de qualité à toutes les couches de la population de Kinshasa, notre centre réunit des spécialistes reconnus et des équipements modernes.
+              {HOSPITAL.description}
             </p>
             <p className="mt-3 text-slate-600 leading-relaxed">
-              Nous croyons que chaque patient mérite une prise en charge digne, humanisée et efficace. Notre approche intègre le soin du corps, du mental et du social pour une santé globale et durable.
+              {HOSPITAL.organization} La gestion des dossiers médicaux se fait principalement en version papier, ce qui nécessite un espace de stockage important.
             </p>
             <div className="mt-6 grid grid-cols-2 gap-4">
               {[
-                { icon: '✅', text: 'Personnel qualifié & certifié' },
-                { icon: '✅', text: 'Équipements de dernière génération' },
-                { icon: '✅', text: 'Soins accessibles & humanisés' },
-                { icon: '✅', text: 'Urgences 24h/24 – 7j/7' },
+                { text: 'Personnel qualifié & certifié' },
+                { text: 'Accueil à la réception' },
+                { text: 'Soins accessibles & humanisés' },
+                { text: 'Organisation administrative structurée' },
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-2 text-sm text-slate-700">
-                  <span>{item.icon}</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">✓</span>
                   <span>{item.text}</span>
                 </div>
               ))}
@@ -510,12 +511,12 @@ function APropos() {
               className="rounded-2xl shadow-2xl w-full object-cover h-[420px]"
             />
             <div className="absolute -bottom-5 -left-5 rounded-xl bg-medical-primary p-5 text-white shadow-xl">
-              <p className="text-3xl font-extrabold">10+</p>
-              <p className="text-xs font-medium uppercase tracking-wide">Années d'excellence</p>
+              <p className="text-3xl font-extrabold">{HOSPITAL_STATS.anneesExperience}+</p>
+              <p className="text-xs font-medium uppercase tracking-wide">Années d'expérience</p>
             </div>
             <div className="absolute -top-5 -right-5 rounded-xl bg-emerald-500 p-5 text-white shadow-xl">
-              <p className="text-3xl font-extrabold">13</p>
-              <p className="text-xs font-medium uppercase tracking-wide">Départements</p>
+              <p className="text-3xl font-extrabold">{HOSPITAL_STATS.patientsParJour}</p>
+              <p className="text-xs font-medium uppercase tracking-wide">Patients / jour</p>
             </div>
           </div>
         </div>
@@ -784,13 +785,15 @@ function ContactSection() {
         <div className="mt-12 grid gap-8 lg:grid-cols-2">
           <div className="space-y-5">
             {[
-              { icon: '📍', titre: 'Adresse', val: 'Avenue de la Clinique, Commune de Gombe, Kinshasa, RDC' },
-              { icon: '📞', titre: 'Téléphone', val: '+243 000 000 000 / +243 000 000 001' },
-              { icon: '📧', titre: 'Email', val: 'contact@amen-hopital.cd' },
-              { icon: '🕐', titre: "Heures d'ouverture", val: 'Lun – Sam : 7h00 – 20h00 | Urgences : 24h/24' },
+              { titre: 'Adresse', val: HOSPITAL.fullAddress },
+              { titre: 'Commune', val: HOSPITAL.commune },
+              { titre: 'Fondation', val: `${HOSPITAL.foundedMonth} ${HOSPITAL.foundedYear}` },
+              { titre: 'Activité', val: `Environ ${HOSPITAL.avgPatientsPerDay} patients accueillis par jour` },
             ].map((c) => (
               <div key={c.titre} className="flex items-start gap-4 rounded-xl bg-slate-50 p-4">
-                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-2xl">{c.icon}</div>
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-blue-100 text-medical-primary font-bold text-sm">
+                  {c.titre[0]}
+                </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-900">{c.titre}</p>
                   <p className="text-sm text-slate-600">{c.val}</p>
@@ -827,7 +830,7 @@ function Footer({ scrollTo }) {
               </div>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-slate-400">
-              Votre santé, notre priorité absolue. Des soins de qualité au cœur de Kinshasa depuis plus de 10 ans.
+              {HOSPITAL.tagline}. Des soins de qualité à {HOSPITAL.commune} {HOSPITAL_STATS.depuis.toLowerCase()}.
             </p>
             <div className="mt-4 flex gap-3">
               {['📘', '📸', '🐦', '▶️'].map((icon, i) => (

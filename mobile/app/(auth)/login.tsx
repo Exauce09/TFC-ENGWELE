@@ -10,13 +10,16 @@ import {
   Text,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 
 import FormField from '@/src/components/FormField';
 import PrimaryButton from '@/src/components/ui/PrimaryButton';
+import { HOSPITAL, HOSPITAL_STATS } from '@/src/constants/hospital';
 import { images } from '@/src/constants/images';
 import { colors, radius } from '@/src/constants/theme';
+import { isDemoMode } from '@/src/demo/demoConfig';
 import { useAuth } from '@/src/context/AuthContext';
 
 const DEMO_ACCOUNTS = [
@@ -25,10 +28,10 @@ const DEMO_ACCOUNTS = [
 ];
 
 const FEATURES = [
-  '📅 Rendez-vous en ligne',
-  '📋 Dossier médical',
-  '💊 Ordonnances',
-  '💵 Mobile Money',
+  { icon: 'calendar-outline' as const, label: 'Rendez-vous en ligne' },
+  { icon: 'folder-open-outline' as const, label: 'Dossier médical' },
+  { icon: 'medkit-outline' as const, label: 'Ordonnances' },
+  { icon: 'card-outline' as const, label: 'Mobile Money' },
 ];
 
 export default function LoginScreen() {
@@ -64,17 +67,23 @@ export default function LoginScreen() {
             <View style={styles.logo}>
               <Text style={styles.logoText}>A</Text>
             </View>
-            <Text style={styles.brand}>Centre Médical AMEN</Text>
-            <Text style={styles.tagline}>Excellence des soins · Kinshasa, RDC</Text>
+            <Text style={styles.brand}>{HOSPITAL.name}</Text>
+            <Text style={styles.tagline}>
+              {HOSPITAL.commune}, {HOSPITAL.city} · {HOSPITAL_STATS.depuis}
+            </Text>
+            <Text style={styles.statsLine}>
+              Environ {HOSPITAL_STATS.patientsParJour} patients accueillis par jour
+            </Text>
             <View style={styles.features}>
               {FEATURES.map((f, i) => (
-                <Animated.Text
-                  key={f}
+                <Animated.View
+                  key={f.label}
                   entering={FadeInDown.delay(200 + i * 80).duration(400)}
-                  style={styles.featureText}
+                  style={styles.featureRow}
                 >
-                  {f}
-                </Animated.Text>
+                  <Ionicons name={f.icon} size={16} color="rgba(255,255,255,0.9)" />
+                  <Text style={styles.featureText}>{f.label}</Text>
+                </Animated.View>
               ))}
             </View>
           </Animated.View>
@@ -93,6 +102,15 @@ export default function LoginScreen() {
           <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.card}>
             <Text style={styles.cardTitle}>Connexion sécurisée</Text>
             <Text style={styles.cardSub}>Accédez à votre espace patient</Text>
+
+            {isDemoMode() ? (
+              <View style={styles.demoBanner}>
+                <Ionicons name="information-circle-outline" size={18} color="#b45309" />
+                <Text style={styles.demoBannerText}>
+                  Mode démo hors ligne — utilisez un compte ci-dessous avec Password@123
+                </Text>
+              </View>
+            ) : null}
 
             <FormField
               label="Adresse email"
@@ -129,7 +147,7 @@ export default function LoginScreen() {
                 Mot de passe oublié ?
               </Link>
               <Link href="/(auth)/register" style={styles.linkBold}>
-                Créer un compte patient →
+                Créer un compte patient
               </Link>
             </View>
           </Animated.View>
@@ -150,6 +168,7 @@ export default function LoginScreen() {
                 </Pressable>
               ))}
             </View>
+            <Text style={styles.address}>{HOSPITAL.fullAddress}</Text>
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -159,7 +178,7 @@ export default function LoginScreen() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.backgroundDark },
-  heroImage: { height: 340, width: '100%' },
+  heroImage: { height: 360, width: '100%' },
   heroGradient: { flex: 1, justifyContent: 'flex-end', padding: 24, paddingBottom: 32 },
   heroContent: { gap: 8 },
   logo: {
@@ -173,8 +192,10 @@ const styles = StyleSheet.create({
   },
   logoText: { color: '#fff', fontSize: 26, fontWeight: '800' },
   brand: { fontSize: 24, fontWeight: '800', color: '#fff' },
-  tagline: { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 8 },
-  features: { gap: 4, marginTop: 4 },
+  tagline: { fontSize: 13, color: 'rgba(255,255,255,0.75)' },
+  statsLine: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginBottom: 4 },
+  features: { gap: 6, marginTop: 4 },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   featureText: { fontSize: 13, color: 'rgba(255,255,255,0.9)' },
   formArea: {
     flex: 1,
@@ -195,6 +216,17 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 20, fontWeight: '800', color: colors.text },
   cardSub: { fontSize: 13, color: colors.textMuted, marginBottom: 4 },
+  demoBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#fffbeb',
+    borderRadius: radius.sm,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#fde68a',
+  },
+  demoBannerText: { flex: 1, fontSize: 12, color: '#92400e', lineHeight: 18 },
   errorBox: {
     backgroundColor: colors.errorBg,
     borderRadius: radius.sm,
@@ -218,4 +250,5 @@ const styles = StyleSheet.create({
     borderColor: '#bae6fd',
   },
   demoChipText: { color: colors.primaryDark, fontSize: 13, fontWeight: '700' },
+  address: { fontSize: 11, color: colors.textLight, lineHeight: 16 },
 });

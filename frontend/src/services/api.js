@@ -11,20 +11,20 @@ const api = axios.create({
   timeout: 30000,
 });
 
-if (isDemoMode()) {
-  api.defaults.adapter = async (config) => {
-    const data = resolveMock(config);
-    return {
-      data,
-      status: 200,
-      statusText: 'OK',
-      headers: {},
-      config,
-    };
-  };
-}
-
 api.interceptors.request.use((config) => {
+  if (isDemoMode()) {
+    config.adapter = async (cfg) => {
+      const data = resolveMock(cfg);
+      return {
+        data,
+        status: 200,
+        statusText: 'OK',
+        headers: {},
+        config: cfg,
+      };
+    };
+  }
+
   const token = localStorage.getItem('amen_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

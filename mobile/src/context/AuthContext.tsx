@@ -14,6 +14,7 @@ import api, {
   saveAuth,
   setUnauthorizedHandler,
 } from '@/src/services/api';
+import { findDemoUser, isDemoMode, isDemoToken } from '@/src/demo/demoConfig';
 import { getHomeRoute } from '@/src/constants/roles';
 
 export type AuthUser = {
@@ -57,11 +58,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const verifyToken = useCallback(async () => {
+    const token = await getStoredToken();
+    if (isDemoMode() && isDemoToken(token)) {
+      setLoading(false);
+      return;
+    }
     try {
       const res = await api.get('/me');
       const userData = res.data.data as AuthUser;
       setUser(userData);
-      const token = await getStoredToken();
       if (token) {
         await saveAuth(token, userData);
       }
@@ -89,6 +94,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [verifyToken]);
 
   const login = useCallback(async (email: string, password: string) => {
+    if (isDemoMode()) {
+      const demoUser = findDemoUser(email, password);
+      if (!demoUser) {
+        throw { response: { data: { message: 'Email ou mot de passe incorrect (démo).' } } };
+      }
+      const token = `demo-token-${demoUser.email}`;
+      await saveAuth(token, demoUser);
+      setUser(demoUser);
+      return getHomeRoute(demoUser.role);
+    }
+
     const res = await api.post('/login', { email, password });
     const { token, user: userData, role } = res.data.data;
     await saveAuth(token, userData);

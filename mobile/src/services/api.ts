@@ -1,6 +1,8 @@
 import axios from 'axios';
 import { Platform } from 'react-native';
 
+import { isDemoMode, isDemoToken } from '@/src/demo/demoConfig';
+import { resolveMock } from '@/src/demo/mockApi';
 import { getItem, removeItem, setItem } from '@/src/services/storage';
 
 const TOKEN_KEY = 'amen_token';
@@ -24,6 +26,19 @@ const api = axios.create({
   },
   timeout: 30000,
 });
+
+if (isDemoMode()) {
+  api.defaults.adapter = async (config) => {
+    const data = await resolveMock(config);
+    return {
+      data,
+      status: 200,
+      statusText: 'OK',
+      headers: {},
+      config,
+    };
+  };
+}
 
 let onUnauthorized: (() => void) | null = null;
 
@@ -60,7 +75,7 @@ api.interceptors.request.use(async (config) => {
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    if (error.response?.status === 401 && !isDemoMode() && !isDemoToken(await getStoredToken())) {
       await clearAuthStorage();
       onUnauthorized?.();
     }

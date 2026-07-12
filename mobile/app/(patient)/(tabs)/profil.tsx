@@ -7,6 +7,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import MedicalCard from '@/src/components/ui/MedicalCard';
 import PrimaryButton from '@/src/components/ui/PrimaryButton';
 import { colors, gradients, radius } from '@/src/constants/theme';
+import { HOSPITAL } from '@/src/constants/hospital';
 import { useAuth } from '@/src/context/AuthContext';
 
 export default function PatientProfilScreen() {
@@ -61,7 +62,11 @@ export default function PatientProfilScreen() {
         <PrimaryButton label="Se déconnecter" onPress={handleLogout} variant="outline" />
       </Animated.View>
 
-      <Text style={styles.footer}>Centre Médical AMEN · FOSPHA ONGD/ASBL</Text>
+      <Text style={styles.footer}>
+        {HOSPITAL.name} · {HOSPITAL.legalName}
+        {'\n'}
+        {HOSPITAL.fullAddress}
+      </Text>
     </ScrollView>
   );
 }
@@ -110,5 +115,6 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textLight,
     marginTop: 24,
+    lineHeight: 16,
   },
 });

@@ -16,6 +16,7 @@ import { AnimatedCard } from '@/src/components/ui/AnimatedScreen';
 import GradientHero from '@/src/components/ui/GradientHero';
 import MedicalCard from '@/src/components/ui/MedicalCard';
 import StatCard from '@/src/components/ui/StatCard';
+import { HOSPITAL, HOSPITAL_STATS } from '@/src/constants/hospital';
 import { images } from '@/src/constants/images';
 import { colors, radius, statutColors } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/AuthContext';
@@ -80,8 +81,8 @@ export default function PatientHomeScreen() {
     >
       <GradientHero
         imageUri={images.heroDashboard}
-        title={`Bonjour, ${user?.name?.split(' ')[0] ?? 'Patient'} 👋`}
-        subtitle="Votre santé, notre priorité absolue"
+        title={`Bonjour, ${user?.name?.split(' ')[0] ?? 'Patient'}`}
+        subtitle={HOSPITAL.tagline}
         height={200}
       />
 
@@ -90,6 +91,30 @@ export default function PatientHomeScreen() {
           <ActivityIndicator size="large" color={colors.primary} style={{ marginTop: 24 }} />
         ) : (
           <>
+            <AnimatedCard delay={60}>
+              <MedicalCard>
+                <View style={styles.hospitalHead}>
+                  <Ionicons name="business-outline" size={20} color={colors.primary} />
+                  <Text style={styles.hospitalTitle}>{HOSPITAL.name}</Text>
+                </View>
+                <Text style={styles.hospitalAddress}>{HOSPITAL.fullAddress}</Text>
+                <View style={styles.hospitalStats}>
+                  <View style={styles.hospitalStat}>
+                    <Text style={styles.hospitalStatValue}>{HOSPITAL_STATS.patientsParJour}</Text>
+                    <Text style={styles.hospitalStatLabel}>patients / jour</Text>
+                  </View>
+                  <View style={styles.hospitalStat}>
+                    <Text style={styles.hospitalStatValue}>{HOSPITAL_STATS.anneesExperience}+</Text>
+                    <Text style={styles.hospitalStatLabel}>ans d'expérience</Text>
+                  </View>
+                  <View style={styles.hospitalStat}>
+                    <Text style={styles.hospitalStatValue}>2007</Text>
+                    <Text style={styles.hospitalStatLabel}>fondation</Text>
+                  </View>
+                </View>
+              </MedicalCard>
+            </AnimatedCard>
+
             <View style={styles.statsRow}>
               <AnimatedCard delay={100}>
                 <StatCard
@@ -180,6 +205,19 @@ export default function PatientHomeScreen() {
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   body: { padding: 20, gap: 18, paddingBottom: 32 },
+  hospitalHead: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 },
+  hospitalTitle: { fontSize: 15, fontWeight: '800', color: colors.text },
+  hospitalAddress: { fontSize: 12, color: colors.textMuted, lineHeight: 18, marginBottom: 12 },
+  hospitalStats: { flexDirection: 'row', gap: 8 },
+  hospitalStat: {
+    flex: 1,
+    backgroundColor: '#f0f9ff',
+    borderRadius: radius.sm,
+    padding: 10,
+    alignItems: 'center',
+  },
+  hospitalStatValue: { fontSize: 18, fontWeight: '800', color: colors.primary },
+  hospitalStatLabel: { fontSize: 10, color: colors.textMuted, textAlign: 'center', marginTop: 2 },
   statsRow: { flexDirection: 'row', gap: 12, flexWrap: 'wrap' },
   ctaWrap: { borderRadius: radius.lg, overflow: 'hidden' },
   cta: {

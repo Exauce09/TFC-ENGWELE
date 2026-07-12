@@ -2,6 +2,52 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { isDemoMode } from '../../demo/demoConfig';
+import { HOSPITAL, HOSPITAL_STATS } from '../../constants/hospital';
+
+const FEATURES = [
+  { icon: 'calendar', label: 'Prise de rendez-vous en ligne' },
+  { icon: 'folder', label: 'Dossier médical numérique' },
+  { icon: 'pill', label: 'Prescriptions électroniques' },
+  { icon: 'wallet', label: 'Paiement Mobile Money' },
+  { icon: 'video', label: 'Téléconsultation vidéo' },
+];
+
+function FeatureIcon({ type }) {
+  const cls = 'h-4 w-4 text-cyan-300';
+  if (type === 'calendar') {
+    return (
+      <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    );
+  }
+  if (type === 'folder') {
+    return (
+      <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+      </svg>
+    );
+  }
+  if (type === 'pill') {
+    return (
+      <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 12.572l-7.5 7.5a4.5 4.5 0 11-6.364-6.364l7.5-7.5a3 3 0 114.243 4.243l-7.5 7.5" />
+      </svg>
+    );
+  }
+  if (type === 'wallet') {
+    return (
+      <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+      </svg>
+    );
+  }
+  return (
+    <svg className={cls} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+    </svg>
+  );
+}
 
 export default function Login() {
   const navigate = useNavigate();
@@ -21,7 +67,11 @@ export default function Login() {
       navigate(redirect, { replace: true });
     } catch (err) {
       if (!err.response) {
-        setError('Serveur inaccessible. Vérifiez votre connexion ou que le backend est démarré.');
+        setError(
+          isDemoMode()
+            ? 'Utilisez un compte démo (ex. patient@amen.cd) avec le mot de passe Password@123.'
+            : 'Serveur inaccessible. Vérifiez votre connexion ou que le backend est démarré.'
+        );
       } else {
         setError(err.response?.data?.message || 'Email ou mot de passe incorrect.');
       }
@@ -66,20 +116,18 @@ export default function Login() {
                 </span>
               </h2>
               <p className="mt-3 text-sm text-slate-300 leading-relaxed">
-                Plateforme sécurisée de gestion médicale pour patients, médecins et personnel soignant du Centre Médical AMEN à Kinshasa.
+                {HOSPITAL.description}
+              </p>
+              <p className="mt-2 text-xs text-slate-400">
+                {HOSPITAL.fullAddress} · {HOSPITAL_STATS.depuis}
               </p>
 
               {/* Features */}
               <ul className="mt-6 space-y-2">
-                {[
-                  '📅 Prise de rendez-vous en ligne',
-                  '📋 Dossier médical numérique',
-                  '💊 Prescriptions électroniques',
-                  '💵 Paiement Mobile Money',
-                  '📹 Téléconsultation vidéo',
-                ].map((f) => (
-                  <li key={f} className="flex items-center gap-2 text-sm text-slate-300">
-                    <span className="text-base">{f}</span>
+                {FEATURES.map((f) => (
+                  <li key={f.label} className="flex items-center gap-2 text-sm text-slate-300">
+                    <FeatureIcon type={f.icon} />
+                    <span>{f.label}</span>
                   </li>
                 ))}
               </ul>
@@ -118,7 +166,7 @@ export default function Login() {
           {/* ── PANNEAU DROIT — formulaire ── */}
           <div className="flex flex-col justify-center p-8 sm:p-10">
             <p className="text-xs font-bold uppercase tracking-widest text-medical-primary">Connexion sécurisée</p>
-            <h1 className="mt-2 text-3xl font-extrabold text-slate-900">Bon retour 👋</h1>
+            <h1 className="mt-2 text-3xl font-extrabold text-slate-900">Bon retour</h1>
             <p className="mt-1 text-sm text-slate-500">Connectez-vous à votre espace personnel.</p>
 
             {isDemoMode() ? (
@@ -169,7 +217,7 @@ export default function Login() {
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-lg"
                     aria-label={showPwd ? 'Masquer' : 'Afficher'}
                   >
-                    {showPwd ? '🙈' : '👁️'}
+                    {showPwd ? 'Masquer' : 'Afficher'}
                   </button>
                 </div>
               </div>
@@ -177,7 +225,7 @@ export default function Login() {
               {/* Erreur */}
               {error && (
                 <div className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  <span className="mt-0.5 flex-shrink-0">⚠️</span>
+                  <span className="mt-0.5 flex-shrink-0 text-red-500">!</span>
                   <span>{error}</span>
                 </div>
               )}
@@ -194,7 +242,7 @@ export default function Login() {
                     Connexion en cours...
                   </span>
                 ) : (
-                  '🔐 Se connecter'
+                  'Se connecter'
                 )}
               </button>
             </form>
@@ -211,7 +259,7 @@ export default function Login() {
               to="/register"
               className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-medical-primary px-4 py-3.5 text-base font-bold text-medical-primary transition hover:bg-blue-50"
             >
-              ✍️ Créer un compte patient
+              Créer un compte patient
             </Link>
 
             <p className="mt-4 text-center text-xs text-slate-400">
