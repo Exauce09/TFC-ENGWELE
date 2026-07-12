@@ -25,10 +25,11 @@ Sans API en ligne, le site **s'affiche** mais la connexion echoue (« serveur in
 ## Activer GitHub Pages (une seule fois)
 
 1. Ouvrez : https://github.com/Exauce09/TFC-ENGWELE/settings/pages
-2. **Source** : `GitHub Actions`
-3. Enregistrez
+2. **Source** : `Deploy from a branch`
+3. **Branch** : `gh-pages` → dossier `/ (root)`
+4. Cliquez **Save**
 
-Le workflow `.github/workflows/deploy-pages.yml` deploie automatiquement.
+Attendez 1-2 minutes apres le deploiement (onglet **Actions**).
 
 ---
 

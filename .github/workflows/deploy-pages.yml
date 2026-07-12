@@ -3,22 +3,13 @@ name: Deploy demo web (GitHub Pages)
 on:
   push:
     branches: [main]
-    paths:
-      - 'frontend/**'
-      - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -39,7 +30,6 @@ jobs:
         working-directory: frontend
         env:
           VITE_BASE_PATH: /TFC-ENGWELE/
-          # Definir VITE_API_URL dans Settings > Secrets and variables > Actions
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: npm run build
 
@@ -47,18 +37,11 @@ jobs:
         working-directory: frontend
         run: cp dist/index.html dist/404.html
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
         with:
-          path: frontend/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./frontend/dist
+          publish_branch: gh-pages
+          force_orphan: true
+          commit_message: 'Deploy demo web GitHub Pages'
