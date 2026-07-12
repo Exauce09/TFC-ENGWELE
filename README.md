@@ -5,6 +5,7 @@ Application hybride de digitalisation hospitaliere pour le Centre Medical AMEN (
 ## Depot GitHub
 
 - Projet : [https://github.com/Exauce09/TFC-ENGWELE](https://github.com/Exauce09/TFC-ENGWELE)
+- **Demo web en ligne** : [https://exauce09.github.io/TFC-ENGWELE/](https://exauce09.github.io/TFC-ENGWELE/) (partageable, ex. Lubumbashi)
 
 ## Stack
 
@@ -93,6 +94,7 @@ Voir le guide complet : [`docs/PRODUCTION.md`](docs/PRODUCTION.md)
 | Chapitre III — Analyse et conception | `docs/CHAPITRE_3_ANALYSE_CONCEPTION.md` |
 | Chapitre IV — Implementation et tests | `docs/CHAPITRE_4_IMPLEMENTATION.md` |
 | Guide production | `docs/PRODUCTION.md` |
+| Demo web GitHub Pages | `docs/DEMO_GITHUB_PAGES.md` |
 | Feuille de route mobile | `docs/ROADMAP_MOBILE.md` |
 | Installer sur telephone (APK) | `docs/MOBILE_INSTALL.md` |
 | Feuille de route | `docs/ROADMAP_WEB.md` |
