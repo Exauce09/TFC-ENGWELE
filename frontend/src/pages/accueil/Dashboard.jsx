@@ -14,8 +14,10 @@ export default function AccueilDashboard() {
     <Layout title="Accueil">
       <h2 className="text-2xl font-bold text-slate-900">Accueil & réception</h2>
       <p className="mt-1 text-sm text-slate-500">Gestion des arrivées, demandes et rendez-vous du jour.</p>
-      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
+          { key: 'en_attente_triage', label: 'En attente de triage', icon: '🚨' },
+          { key: 'episodes_actifs', label: 'Épisodes actifs', icon: '🛤️' },
           { key: 'demandes_nouvelles', label: 'Demandes nouvelles', icon: '📩' },
           { key: 'rdv_du_jour', label: 'RDV du jour', icon: '📅' },
           { key: 'rdv_en_attente', label: 'RDV en attente', icon: '⏳' },
@@ -28,7 +30,12 @@ export default function AccueilDashboard() {
           </div>
         ))}
       </div>
-      <div className="mt-6 grid gap-4 sm:grid-cols-3">
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Link to="/parcours" className="rounded-2xl border border-medical-primary/30 bg-blue-50 p-6 shadow-sm hover:shadow-md transition">
+          <p className="text-3xl">🚪</p>
+          <p className="mt-2 font-bold text-medical-primary">Arrivée patient</p>
+          <p className="text-xs text-slate-500">Enregistrer un patient qui arrive</p>
+        </Link>
         <Link to="/accueil/demandes" className="rounded-2xl border bg-white p-6 shadow-sm hover:shadow-md transition">
           <p className="text-3xl">📩</p>
           <p className="mt-2 font-bold">Demandes RDV</p>

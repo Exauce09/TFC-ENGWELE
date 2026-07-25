@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-export default function PrivateRoute({ children, allowedRoles }) {
+export default function PrivateRoute({ children, allowedRoles, skipOnboarding = false }) {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -18,6 +18,14 @@ export default function PrivateRoute({ children, allowedRoles }) {
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
     return <Navigate to="/non-autorise" replace />;
+  }
+
+  if (
+    !skipOnboarding
+    && user.role === 'patient'
+    && user.needs_onboarding
+  ) {
+    return <Navigate to="/patient/premiere-connexion" replace />;
   }
 
   return children;

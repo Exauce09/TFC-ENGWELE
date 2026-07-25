@@ -5,15 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Diagnostic;
 use App\Models\DossierMedical;
+use App\Models\EpisodeSoin;
 use App\Models\Medecin;
 use App\Models\Patient;
-use App\Models\Prescription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DossierController extends Controller
 {
-    private const WITH = ['medecin.user', 'departement', 'diagnostics', 'prescriptions'];
+    private const WITH = ['medecin.user', 'departement', 'diagnostics', 'prescriptions', 'ouvertPar:id,name', 'episode'];
 
     public function monDossier(Request $request): JsonResponse
     {
@@ -41,11 +41,14 @@ class DossierController extends Controller
     public function index(Request $request): JsonResponse
     {
         $medecin = Medecin::where('user_id', $request->user()->id)->first();
-        $query = DossierMedical::with(['patient.user', 'departement', 'diagnostics']);
-
-        if ($medecin) {
-            $query->where('medecin_id', $medecin->id);
-        }
+        // Dossiers ouverts à la réception (à compléter) + ceux du médecin
+        $query = DossierMedical::with(['patient.user', 'departement', 'diagnostics', 'ouvertPar:id,name', 'episode'])
+            ->where(function ($q) use ($medecin) {
+                $q->whereIn('statut', ['ouvert', 'en_consultation']);
+                if ($medecin) {
+                    $q->orWhere('medecin_id', $medecin->id);
+                }
+            });
 
         if ($request->filled('patient_id')) {
             $query->where('patient_id', $request->patient_id);
@@ -55,7 +58,7 @@ class DossierController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Liste des dossiers',
+            'message' => 'Liste des dossiers (ouverts à la réception)',
             'data' => $dossiers->items(),
             'meta' => [
                 'total' => $dossiers->total(),
@@ -79,16 +82,24 @@ class DossierController extends Controller
         ]);
     }
 
+    /**
+     * Le médecin ne crée PAS le dossier — il complète celui ouvert par la réception.
+     */
     public function store(Request $request): JsonResponse
     {
+        return response()->json([
+            'success' => false,
+            'message' => 'Seul l\'accueil / réception crée le patient et ouvre le dossier. Utilisez « Compléter la consultation » sur un dossier existant.',
+        ], 403);
+    }
+
+    public function update(Request $request, int $id): JsonResponse
+    {
         $medecin = Medecin::where('user_id', $request->user()->id)->firstOrFail();
+        $dossier = DossierMedical::findOrFail($id);
 
         $validated = $request->validate([
-            'patient_id' => 'required|exists:patients,id',
-            'departement_id' => 'required|exists:departements,id',
-            'rendez_vous_id' => 'nullable|exists:rendez_vous,id',
-            'date_consultation' => 'required|date',
-            'motif' => 'required|string|max:500',
+            'motif' => 'sometimes|string|max:500',
             'anamnese' => 'nullable|string',
             'examen_clinique' => 'nullable|string',
             'observations' => 'nullable|string',
@@ -96,18 +107,16 @@ class DossierController extends Controller
             'diagnostic.libelle' => 'required_with:diagnostic|string|max:255',
             'diagnostic.code_cim10' => 'nullable|string|max:20',
             'diagnostic.description' => 'nullable|string',
+            'cloturer' => 'nullable|boolean',
         ]);
 
-        $dossier = DossierMedical::create([
-            'patient_id' => $validated['patient_id'],
+        $dossier->update([
             'medecin_id' => $medecin->id,
-            'departement_id' => $validated['departement_id'],
-            'rendez_vous_id' => $validated['rendez_vous_id'] ?? null,
-            'date_consultation' => $validated['date_consultation'],
-            'motif' => $validated['motif'],
-            'anamnese' => $validated['anamnese'] ?? null,
-            'examen_clinique' => $validated['examen_clinique'] ?? null,
-            'observations' => $validated['observations'] ?? null,
+            'motif' => $validated['motif'] ?? $dossier->motif,
+            'anamnese' => $validated['anamnese'] ?? $dossier->anamnese,
+            'examen_clinique' => $validated['examen_clinique'] ?? $dossier->examen_clinique,
+            'observations' => $validated['observations'] ?? $dossier->observations,
+            'statut' => !empty($validated['cloturer']) ? 'clos' : 'en_consultation',
         ]);
 
         if (!empty($validated['diagnostic']['libelle'])) {
@@ -117,35 +126,29 @@ class DossierController extends Controller
                 'libelle' => $validated['diagnostic']['libelle'],
                 'code_cim10' => $validated['diagnostic']['code_cim10'] ?? null,
                 'description' => $validated['diagnostic']['description'] ?? null,
-                'date_diagnostic' => $validated['date_consultation'],
+                'date_diagnostic' => now()->toDateString(),
+            ]);
+        }
+
+        // Lier l'épisode actif à ce médecin et avancer vers décision si encore en consultation
+        $episode = EpisodeSoin::where('dossier_id', $dossier->id)
+            ->whereNotIn('etape', ['termine', 'sorti', 'suivi_post_sortie'])
+            ->latest()
+            ->first();
+
+        if ($episode) {
+            $episode->update([
+                'medecin_id' => $medecin->id,
+                'etape' => in_array($episode->etape, ['consultation', 'examens'], true)
+                    ? 'decision'
+                    : $episode->etape,
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Dossier cree',
-            'data' => $dossier->load(self::WITH),
-        ], 201);
-    }
-
-    public function update(Request $request, int $id): JsonResponse
-    {
-        $medecin = Medecin::where('user_id', $request->user()->id)->firstOrFail();
-        $dossier = DossierMedical::where('medecin_id', $medecin->id)->findOrFail($id);
-
-        $validated = $request->validate([
-            'motif' => 'sometimes|string|max:500',
-            'anamnese' => 'nullable|string',
-            'examen_clinique' => 'nullable|string',
-            'observations' => 'nullable|string',
-        ]);
-
-        $dossier->update($validated);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Dossier mis a jour',
-            'data' => $dossier->load(self::WITH),
+            'message' => 'Consultation enregistrée sur le dossier ouvert à la réception',
+            'data' => $dossier->fresh(self::WITH),
         ]);
     }
 

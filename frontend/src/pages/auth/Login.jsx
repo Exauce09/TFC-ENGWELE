@@ -73,7 +73,7 @@ export default function Login() {
             : 'Serveur inaccessible. Vérifiez votre connexion ou que le backend est démarré.'
         );
       } else {
-        setError(err.response?.data?.message || 'Email ou mot de passe incorrect.');
+        setError(err.response?.data?.message || 'Identifiant ou mot de passe incorrect.');
       }
     } finally {
       setSubmitting(false);
@@ -177,20 +177,23 @@ export default function Login() {
             ) : null}
 
             <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
-              {/* Email */}
+              {/* Identifiant */}
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-slate-700">
-                  Adresse email
+                  Nom et prénom, login ou email
                 </label>
                 <input
-                  type="email"
+                  type="text"
                   required
-                  autoComplete="email"
-                  placeholder="exemple@amen.cd"
+                  autoComplete="username"
+                  placeholder="ex. Marie Kalala ou marie.kalala"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm outline-none transition focus:border-medical-primary focus:bg-white focus:ring-4 focus:ring-blue-100"
                 />
+                <p className="mt-1 text-xs text-slate-400">
+                  1re connexion patient : nom remis à l&apos;accueil + mot de passe <code className="rounded bg-slate-100 px-1">Amen2026</code>.
+                </p>
               </div>
 
               {/* Mot de passe */}
@@ -254,12 +257,12 @@ export default function Login() {
               <div className="flex-1 border-t border-slate-200" />
             </div>
 
-            {/* Bouton S'INSCRIRE */}
+            {/* Accès patient via réception */}
             <Link
               to="/register"
               className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-medical-primary px-4 py-3.5 text-base font-bold text-medical-primary transition hover:bg-blue-50"
             >
-              Créer un compte patient
+              Pas encore de compte ? Voir comment l&apos;obtenir
             </Link>
 
             <p className="mt-4 text-center text-xs text-slate-400">

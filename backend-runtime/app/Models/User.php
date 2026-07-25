@@ -20,12 +20,15 @@ class User extends Authenticatable
     protected $fillable = [
         'name',
         'email',
+        'login_identifiant',
         'phone',
         'password',
         'role',
         'departement_id',
         'avatar',
         'is_active',
+        'must_change_password',
+        'profil_complet',
         'fcm_token',
     ];
 
@@ -37,8 +40,19 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'is_active' => 'boolean',
+        'must_change_password' => 'boolean',
+        'profil_complet' => 'boolean',
         'password' => 'hashed',
     ];
+
+    protected $appends = [
+        'needs_onboarding',
+    ];
+
+    public function getNeedsOnboardingAttribute(): bool
+    {
+        return (bool) ($this->must_change_password || ! $this->profil_complet);
+    }
 
     public function departement(): BelongsTo
     {

@@ -11,6 +11,7 @@ class Facture extends Model
     protected $fillable = [
         'numero_facture',
         'patient_id',
+        'admission_id',
         'rendez_vous_id',
         'caissier_id',
         'date_facture',
@@ -41,6 +42,11 @@ class Facture extends Model
         return $this->belongsTo(Patient::class);
     }
 
+    public function admission(): BelongsTo
+    {
+        return $this->belongsTo(Admission::class);
+    }
+
     public function caissier(): BelongsTo
     {
         return $this->belongsTo(User::class, 'caissier_id');
@@ -54,5 +60,10 @@ class Facture extends Model
     public function paiements(): HasMany
     {
         return $this->hasMany(Paiement::class);
+    }
+
+    public function lignesDetail(): HasMany
+    {
+        return $this->hasMany(FactureLigne::class);
     }
 }

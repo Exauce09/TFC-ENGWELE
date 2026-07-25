@@ -20,6 +20,10 @@ import MedecinPrescriptions from './pages/medecin/Prescriptions';
 import InfirmierDashboard from './pages/infirmier/Dashboard';
 import InfirmierConstantes from './pages/infirmier/Constantes';
 import InfirmierPatients from './pages/infirmier/Patients';
+import InfirmierTriage from './pages/infirmier/Triage';
+import AccueilArrivee from './pages/accueil/Arrivee';
+import AdmissionsList from './pages/parcours/AdmissionsList';
+import DossierMedical from './pages/parcours/DossierMedical';
 import LaboratoireDashboard from './pages/laboratoire/Dashboard';
 import LaboratoireAnalyses from './pages/laboratoire/Analyses';
 import PharmacieDashboard from './pages/pharmacie/Dashboard';
@@ -29,6 +33,7 @@ import CaisseDashboard from './pages/caisse/Dashboard';
 import CaisseFactures from './pages/caisse/Factures';
 import CaissePaiements from './pages/caisse/Paiements';
 import PatientFactures from './pages/patient/Factures';
+import PremiereConnexion from './pages/patient/PremiereConnexion';
 import AdminFacturation from './pages/admin/Facturation';
 import AdminStatistiques from './pages/admin/Statistiques';
 import ProfilePage from './pages/shared/Profile';
@@ -71,6 +76,17 @@ const ALL_ROLES = [
   'dentiste',
 ];
 
+/** Rôles cliniques du parcours patient (accueil → sortie). */
+const PARCOURS_ROLES = [
+  'admin',
+  'receptionniste',
+  'infirmier',
+  'laborantin',
+  'pharmacien',
+  'caissier',
+  ...MEDECIN_ROLES,
+];
+
 export default function App() {
   return (
     <AuthProvider>
@@ -86,6 +102,9 @@ export default function App() {
           } />
 
           {/* Patient */}
+          <Route path="/patient/premiere-connexion" element={
+            <PrivateRoute allowedRoles={['patient']} skipOnboarding><PremiereConnexion /></PrivateRoute>
+          } />
           <Route path="/patient/dashboard" element={
             <PrivateRoute allowedRoles={['patient']}><PatientDashboard /></PrivateRoute>
           } />
@@ -125,6 +144,9 @@ export default function App() {
           } />
           <Route path="/medecin/prescriptions" element={
             <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinPrescriptions /></PrivateRoute>
+          } />
+          <Route path="/medecin/parcours" element={
+            <PrivateRoute allowedRoles={MEDECIN_ROLES}><Navigate to="/parcours" replace /></PrivateRoute>
           } />
           <Route path="/medecin/teleconsultation" element={
             <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinTeleconsultation /></PrivateRoute>
@@ -209,6 +231,9 @@ export default function App() {
           <Route path="/infirmier/dashboard" element={
             <PrivateRoute allowedRoles={['infirmier']}><InfirmierDashboard /></PrivateRoute>
           } />
+          <Route path="/infirmier/triage" element={
+            <PrivateRoute allowedRoles={['infirmier']}><InfirmierTriage /></PrivateRoute>
+          } />
           <Route path="/infirmier/constantes" element={
             <PrivateRoute allowedRoles={['infirmier']}><InfirmierConstantes /></PrivateRoute>
           } />
@@ -224,6 +249,15 @@ export default function App() {
           {/* Espaces spécialisés */}
           <Route path="/accueil/dashboard" element={
             <PrivateRoute allowedRoles={['receptionniste']}><AccueilDashboard /></PrivateRoute>
+          } />
+          <Route path="/accueil/arrivee" element={
+            <PrivateRoute allowedRoles={['receptionniste']}><AccueilArrivee /></PrivateRoute>
+          } />
+          <Route path="/parcours" element={
+            <PrivateRoute allowedRoles={PARCOURS_ROLES}><AdmissionsList /></PrivateRoute>
+          } />
+          <Route path="/parcours/:id" element={
+            <PrivateRoute allowedRoles={PARCOURS_ROLES}><DossierMedical /></PrivateRoute>
           } />
           <Route path="/accueil/demandes" element={
             <PrivateRoute allowedRoles={['receptionniste']}><AccueilDemandes /></PrivateRoute>

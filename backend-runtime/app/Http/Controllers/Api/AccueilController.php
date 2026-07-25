@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\DemandeRdv;
+use App\Models\EpisodeSoin;
 use App\Models\Patient;
 use App\Models\RendezVous;
 use Illuminate\Http\JsonResponse;
@@ -21,6 +22,8 @@ class AccueilController extends Controller
                 'rdv_du_jour' => RendezVous::whereDate('date_rdv', now()->toDateString())->count(),
                 'patients_total' => Patient::count(),
                 'rdv_en_attente' => RendezVous::where('statut', 'en_attente')->whereDate('date_rdv', '>=', now())->count(),
+                'en_attente_triage' => EpisodeSoin::whereIn('etape', ['enregistrement', 'triage'])->count(),
+                'episodes_actifs' => EpisodeSoin::whereNotIn('etape', ['termine'])->count(),
             ],
         ]);
     }

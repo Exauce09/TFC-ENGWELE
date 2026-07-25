@@ -41,4 +41,9 @@ class AnalyseLaboratoire extends Model
     {
         return $this->belongsTo(User::class, 'laborantin_id');
     }
+
+    public function dossier(): BelongsTo
+    {
+        return $this->belongsTo(DossierMedical::class, 'dossier_id');
+    }
 }

@@ -74,10 +74,12 @@ export function AuthProvider({ children }) {
     }
 
     const res = await api.post('/login', { email, password });
-    const { token, user: userData, role } = res.data.data;
+    const { token, user: userData, role, redirect } = res.data.data;
     localStorage.setItem('amen_token', token);
     localStorage.setItem('amen_user', JSON.stringify(userData));
     setUser(userData);
+    if (redirect) return redirect;
+    if (userData?.needs_onboarding && role === 'patient') return '/patient/premiere-connexion';
     return ROLE_ROUTES[role] || '/';
   };
 

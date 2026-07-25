@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AccueilController;
+use App\Http\Controllers\Api\AdmissionController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CaisseController;
@@ -8,6 +9,7 @@ use App\Http\Controllers\Api\ChirurgieController;
 use App\Http\Controllers\Api\DentisterieController;
 use App\Http\Controllers\Api\DossierController;
 use App\Http\Controllers\Api\EchographieController;
+use App\Http\Controllers\Api\EpisodeSoinController;
 use App\Http\Controllers\Api\InfirmierController;
 use App\Http\Controllers\Api\KinesitherapieController;
 use App\Http\Controllers\Api\LaboratoireController;
@@ -36,6 +38,23 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/me', [AuthController::class, 'me']);
         Route::put('/profile', [AuthController::class, 'updateProfile']);
+        Route::post('/patient/premiere-connexion', [AuthController::class, 'completeOnboarding']);
+
+        Route::prefix('admissions')->group(function (): void {
+            $staff = 'role:receptionniste,infirmier,laborantin,pharmacien,caissier,admin,medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste';
+
+            Route::get('/', [AdmissionController::class, 'index'])->middleware($staff);
+            Route::post('/', [AdmissionController::class, 'store'])->middleware('role:receptionniste');
+            Route::get('/{id}', [AdmissionController::class, 'show'])->middleware($staff);
+            Route::patch('/{id}/triage', [AdmissionController::class, 'triage'])->middleware('role:infirmier,admin');
+            Route::patch('/{id}/consultation', [AdmissionController::class, 'consultation'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,admin');
+            Route::patch('/{id}/prelevement', [AdmissionController::class, 'prelevement'])->middleware('role:infirmier,admin,medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste');
+            Route::post('/{id}/examens', [AdmissionController::class, 'examens'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,laborantin,admin');
+            Route::patch('/{id}/diagnostic', [AdmissionController::class, 'diagnostic'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,admin');
+            Route::post('/{id}/prescription', [AdmissionController::class, 'prescription'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,pharmacien,admin');
+            Route::patch('/{id}/initiation', [AdmissionController::class, 'initiation'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,admin');
+            Route::patch('/{id}/suivi', [AdmissionController::class, 'suivi'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,receptionniste,admin');
+        });
 
         Route::middleware('role:patient')->prefix('patient')->group(function (): void {
             Route::get('/dashboard', [PatientController::class, 'dashboard']);
@@ -61,12 +80,17 @@ Route::prefix('v1')->group(function (): void {
                 Route::put('/dossiers/{id}', [DossierController::class, 'update']);
                 Route::post('/prescriptions', [PrescriptionController::class, 'store']);
                 Route::put('/rendez-vous/{id}/statut', [RendezVousController::class, 'updateStatut']);
+                Route::get('/file-consultation', [EpisodeSoinController::class, 'fileConsultation']);
+                Route::post('/episodes/{id}/decision', [EpisodeSoinController::class, 'decision']);
+                Route::put('/episodes/{id}/avancer', [EpisodeSoinController::class, 'avancer']);
             });
 
         Route::middleware('role:infirmier')->prefix('infirmier')->group(function (): void {
             Route::get('/patients', [InfirmierController::class, 'patients']);
             Route::get('/constantes', [InfirmierController::class, 'constantes']);
             Route::post('/constantes', [InfirmierController::class, 'enregistrerConstantes']);
+            Route::get('/file-triage', [EpisodeSoinController::class, 'fileTriage']);
+            Route::post('/episodes/{id}/triage', [EpisodeSoinController::class, 'triage']);
         });
 
         Route::middleware('role:laborantin')->prefix('laboratoire')->group(function (): void {
@@ -75,6 +99,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/analyses', [LaboratoireController::class, 'store']);
             Route::put('/analyses/{id}/resultats', [LaboratoireController::class, 'publierResultat']);
             Route::get('/patients', [LaboratoireController::class, 'patients']);
+            Route::get('/file-examens', [LaboratoireController::class, 'fileExamens']);
         });
 
         Route::middleware('role:pharmacien')->prefix('pharmacie')->group(function (): void {
@@ -122,6 +147,9 @@ Route::prefix('v1')->group(function (): void {
             Route::put('/demandes/{id}', [AccueilController::class, 'traiterDemande']);
             Route::get('/rendez-vous', [AccueilController::class, 'rendezVous']);
             Route::get('/patients', [AccueilController::class, 'patients']);
+            Route::get('/episodes', [EpisodeSoinController::class, 'index']);
+            Route::post('/episodes/arrivee', [EpisodeSoinController::class, 'enregistrerArrivee']);
+            Route::get('/episodes/{id}', [EpisodeSoinController::class, 'show']);
         });
 
         Route::middleware('role:sage_femme')->prefix('maternite')->group(function (): void {

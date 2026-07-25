@@ -18,6 +18,7 @@ const MENUS = {
   urgentiste: 'medecin',
   medecin: [
     { label: 'Tableau de bord', icon: '🏠', to: '/medecin/dashboard' },
+    { label: 'Parcours patient', icon: '🛤️', to: '/parcours' },
     { label: 'Mon Planning', icon: '📅', to: '/medecin/planning' },
     { label: 'Mes Patients', icon: '👥', to: '/medecin/patients' },
     { label: 'Dossiers Médicaux', icon: '📋', to: '/medecin/dossiers' },
@@ -26,6 +27,7 @@ const MENUS = {
   ],
   admin: [
     { label: 'Tableau de bord', icon: '🏠', to: '/admin/dashboard' },
+    { label: 'Parcours patient', icon: '🛤️', to: '/parcours' },
     { label: 'Patients', icon: '👥', to: '/admin/patients' },
     { label: 'Médecins', icon: '👨‍⚕️', to: '/admin/medecins' },
     { label: 'Rendez-vous', icon: '📅', to: '/admin/rendez-vous' },
@@ -36,25 +38,30 @@ const MENUS = {
   ],
   laborantin: [
     { label: 'Tableau de bord', icon: '🏠', to: '/laboratoire/dashboard' },
+    { label: 'Parcours patient', icon: '🛤️', to: '/parcours' },
     { label: 'Analyses', icon: '🔬', to: '/laboratoire/analyses' },
   ],
   pharmacien: [
     { label: 'Tableau de bord', icon: '🏠', to: '/pharmacie/dashboard' },
+    { label: 'Parcours patient', icon: '🛤️', to: '/parcours' },
     { label: 'Stock', icon: '💊', to: '/pharmacie/stock' },
     { label: 'Ordonnances', icon: '📋', to: '/pharmacie/ordonnances' },
   ],
   caissier: [
     { label: 'Tableau de bord', icon: '🏠', to: '/caisse/dashboard' },
+    { label: 'Parcours patient', icon: '🛤️', to: '/parcours' },
     { label: 'Factures', icon: '🧾', to: '/caisse/factures' },
     { label: 'Paiements', icon: '💵', to: '/caisse/paiements' },
   ],
   infirmier: [
     { label: 'Tableau de bord', icon: '🏠', to: '/infirmier/dashboard' },
+    { label: 'Parcours patient', icon: '🛤️', to: '/parcours' },
     { label: 'Patients', icon: '👥', to: '/infirmier/patients' },
     { label: 'Constantes', icon: '📈', to: '/infirmier/constantes' },
   ],
   accueil: [
     { label: 'Tableau de bord', icon: '🏠', to: '/accueil/dashboard' },
+    { label: 'Arrivée patient', icon: '🚪', to: '/parcours' },
     { label: 'Demandes RDV', icon: '📩', to: '/accueil/demandes' },
     { label: 'RDV du jour', icon: '📅', to: '/accueil/rendez-vous' },
     { label: 'Patients', icon: '👥', to: '/accueil/patients' },

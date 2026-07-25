@@ -16,10 +16,10 @@ export default function LaboratoireDashboard() {
       <p className="mt-1 text-sm text-slate-500">Gestion des analyses biologiques.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-4">
         {[
+          { label: 'Patients parcours', value: stats?.patients_parcours ?? '—', color: 'bg-violet-50 text-violet-700', icon: '👥' },
           { label: 'En attente', value: stats?.en_attente ?? '—', color: 'bg-amber-50 text-amber-700', icon: '⏳' },
           { label: 'En cours', value: stats?.en_cours ?? '—', color: 'bg-blue-50 text-blue-700', icon: '🔬' },
           { label: 'Résultats dispo', value: stats?.disponibles ?? '—', color: 'bg-emerald-50 text-emerald-700', icon: '✅' },
-          { label: 'Mes analyses', value: stats?.mes_analyses ?? '—', color: 'bg-violet-50 text-violet-700', icon: '📋' },
         ].map((s) => (
           <div key={s.label} className={`rounded-2xl border p-5 ${s.color}`}>
             <p className="text-2xl">{s.icon}</p>
