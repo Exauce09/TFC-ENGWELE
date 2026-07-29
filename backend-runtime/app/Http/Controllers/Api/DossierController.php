@@ -3,17 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admission;
+use App\Models\AnalyseLaboratoire;
 use App\Models\Diagnostic;
 use App\Models\DossierMedical;
 use App\Models\EpisodeSoin;
+use App\Models\ExamenLabo;
 use App\Models\Medecin;
 use App\Models\Patient;
+use App\Models\Prescription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class DossierController extends Controller
 {
-    private const WITH = ['medecin.user', 'departement', 'diagnostics', 'prescriptions', 'ouvertPar:id,name', 'episode'];
+    private const WITH = ['medecin.user', 'departement', 'diagnostics', 'prescriptions.medecin.user', 'prescriptions.medecin.departement', 'ouvertPar:id,name', 'episode'];
 
     public function monDossier(Request $request): JsonResponse
     {
@@ -73,12 +77,18 @@ class DossierController extends Controller
         $dossier = DossierMedical::with([
             ...self::WITH,
             'patient.user',
+            'patient.admissionActive',
+            'prescriptions.medecin.user',
+            'prescriptions.medecin.departement',
         ])->findOrFail($id);
+
+        $data = $dossier->toArray();
+        $data['admission_active'] = $dossier->patient?->admissionActive;
 
         return response()->json([
             'success' => true,
             'message' => 'Detail dossier',
-            'data' => $dossier,
+            'data' => $data,
         ]);
     }
 
@@ -154,17 +164,149 @@ class DossierController extends Controller
 
     public function patients(Request $request): JsonResponse
     {
-        $q = $request->get('q', '');
-        $patients = Patient::with('user:id,name,email,phone')
-            ->when($q, fn ($query) => $query->where('numero_patient', 'like', "%{$q}%")
-                ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%")))
-            ->limit(20)
-            ->get();
+        $q = trim((string) $request->get('q', ''));
+
+        $patients = Patient::with([
+            'user:id,name,email,phone',
+            'dossiers.medecin.user:id,name',
+            'dossiers.departement:id,nom',
+            'admissionActive.departement:id,nom',
+            'admissionActive.medecinReferent.user:id,name',
+        ])
+            ->when($q !== '', fn ($query) => $query->where(
+                fn ($sub) => $sub->where('numero_patient', 'like', "%{$q}%")
+                    ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%")
+                        ->orWhere('phone', 'like', "%{$q}%"))
+            ))
+            ->orderByDesc('id')
+            ->limit(30)
+            ->get()
+            ->map(function (Patient $patient) {
+                $dossier = $patient->dossiers->first();
+                $admission = $patient->admissionActive;
+
+                return [
+                    'id' => $patient->id,
+                    'numero_patient' => $patient->numero_patient,
+                    'date_naissance' => $patient->date_naissance?->toDateString(),
+                    'sexe' => $patient->sexe,
+                    'commune' => $patient->commune,
+                    'allergies' => $patient->allergies,
+                    'antecedents_medicaux' => $patient->antecedents_medicaux,
+                    'photo' => $patient->photo,
+                    'user' => $patient->user,
+                    'nombre_dossiers' => $patient->dossiers->count(),
+                    'dossier' => $dossier ? [
+                        'id' => $dossier->id,
+                        'numero_dossier' => $dossier->numero_dossier,
+                        'statut' => $dossier->statut,
+                        'motif' => $dossier->motif,
+                        'date_consultation' => $dossier->date_consultation?->toDateString(),
+                        'departement' => $dossier->departement?->nom,
+                    ] : null,
+                    'medecin_en_charge' => $admission?->medecinReferent?->user?->name
+                        ?? $dossier?->medecin?->user?->name,
+                    'admission_active' => $admission ? [
+                        'id' => $admission->id,
+                        'numero_admission' => $admission->numero_admission,
+                        'statut' => $admission->statut,
+                        'statut_label' => $admission->statut_label,
+                        'departement' => $admission->departement?->nom,
+                    ] : null,
+                ];
+            });
 
         return response()->json([
             'success' => true,
             'message' => 'Patients',
             'data' => $patients,
+        ]);
+    }
+
+    /**
+     * Dossier longitudinal d'un patient pour le médecin :
+     * identité + photo, dernière visite, historique admissions,
+     * consultations, examens (parcours + analyses), ordonnances, diagnostics.
+     */
+    public function showPatient(int $id): JsonResponse
+    {
+        $patient = Patient::with([
+            'user:id,name,email,phone',
+            'admissionActive.departement:id,nom',
+            'admissionActive.medecinReferent.user:id,name',
+            'admissionActive.triage',
+        ])->findOrFail($id);
+
+        $admissions = Admission::with([
+            'departement:id,nom',
+            'medecinReferent.user:id,name',
+            'triage',
+            'consultations.medecin.user:id,name',
+            'examensLabo.prescritPar:id,name',
+            'examensLabo.laborantin:id,name',
+            'prescriptions.medecin.user:id,name',
+        ])
+            ->where('patient_id', $patient->id)
+            ->latest('arrivee_at')
+            ->limit(20)
+            ->get();
+
+        $dossiers = DossierMedical::with([
+            'medecin.user:id,name',
+            'departement:id,nom',
+            'diagnostics',
+            'prescriptions.medecin.user:id,name',
+        ])
+            ->where('patient_id', $patient->id)
+            ->latest('date_consultation')
+            ->limit(20)
+            ->get();
+
+        $examensParcours = ExamenLabo::with(['prescritPar:id,name', 'laborantin:id,name', 'admission:id,numero_admission,arrivee_at'])
+            ->whereHas('admission', fn ($q) => $q->where('patient_id', $patient->id))
+            ->latest('prescrit_at')
+            ->limit(30)
+            ->get();
+
+        $analyses = AnalyseLaboratoire::with(['laborantin:id,name', 'dossier:id,numero_dossier'])
+            ->where('patient_id', $patient->id)
+            ->latest('date_prelevement')
+            ->limit(30)
+            ->get();
+
+        $ordonnances = Prescription::with(['medecin.user:id,name', 'medecin.departement:id,nom', 'dossier:id,numero_dossier'])
+            ->where('patient_id', $patient->id)
+            ->latest('date_prescription')
+            ->limit(20)
+            ->get();
+
+        $derniereVisite = $admissions->first();
+        $derniersResultats = $examensParcours
+            ->filter(fn ($e) => in_array($e->statut, ['termine', 'resultat_disponible'], true))
+            ->take(5)
+            ->values()
+            ->concat(
+                $analyses
+                    ->filter(fn ($a) => in_array($a->statut, ['termine', 'resultat_disponible'], true))
+                    ->take(5)
+            )
+            ->sortByDesc(fn ($e) => $e->termine_at ?? $e->date_resultat ?? $e->prescrit_at)
+            ->take(8)
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Dossier patient complet',
+            'data' => [
+                'patient' => $patient,
+                'derniere_visite' => $derniereVisite,
+                'admissions' => $admissions,
+                'consultations' => $dossiers,
+                'examens' => $examensParcours,
+                'analyses' => $analyses,
+                'derniers_resultats' => $derniersResultats,
+                'ordonnances' => $ordonnances,
+            ],
         ]);
     }
 }

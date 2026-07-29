@@ -8,9 +8,11 @@ use App\Models\Patient;
 use App\Models\RendezVous;
 use App\Models\DemandeRdv;
 use App\Http\Controllers\Api\CaisseController;
+use App\Services\CreneauService;
 use App\Services\JitsiService;
 use App\Services\MobileMoneyService;
 use App\Services\NotificationService;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,6 +22,7 @@ class RendezVousController extends Controller
         private NotificationService $notifications,
         private JitsiService $jitsi,
         private MobileMoneyService $mobileMoney,
+        private CreneauService $creneaux,
     ) {}
 
     public function indexAdmin(Request $request): JsonResponse
@@ -62,6 +65,32 @@ class RendezVousController extends Controller
         ]);
     }
 
+    /** Créneaux libres pour un médecin / date (web + app mobile). */
+    public function creneaux(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'medecin_id' => 'required|exists:medecins,id',
+            'date' => 'required|date|after_or_equal:today',
+            'exclure_rdv_id' => 'nullable|exists:rendez_vous,id',
+        ]);
+
+        $slots = $this->creneaux->creneauxDisponibles(
+            (int) $validated['medecin_id'],
+            $validated['date'],
+            isset($validated['exclure_rdv_id']) ? (int) $validated['exclure_rdv_id'] : null,
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Créneaux disponibles',
+            'data' => $slots,
+            'meta' => [
+                'duree_minutes' => CreneauService::DUREE_MINUTES,
+                'disponibles' => collect($slots)->where('disponible', true)->count(),
+            ],
+        ]);
+    }
+
     public function prendre(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -78,7 +107,7 @@ class RendezVousController extends Controller
         $patientId = $validated['patient_id']
             ?? Patient::where('user_id', $request->user()->id)->value('id');
 
-        if (!$patientId) {
+        if (! $patientId) {
             return response()->json([
                 'success' => false,
                 'message' => 'Profil patient introuvable',
@@ -86,16 +115,33 @@ class RendezVousController extends Controller
             ], 422);
         }
 
+        if (! $this->creneaux->estDisponible(
+            (int) $validated['medecin_id'],
+            $validated['date_rdv'],
+            $validated['heure_rdv'],
+        )) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Ce créneau n\'est plus disponible. Choisissez un autre horaire.',
+                'errors' => ['heure_rdv' => ['Créneau indisponible']],
+            ], 422);
+        }
+
         $type = $validated['type'] ?? 'presentiel';
         $medecin = Medecin::with('user')->find($validated['medecin_id']);
         $patient = Patient::with('user')->find($patientId);
+        $heure = Carbon::createFromFormat('H:i', $validated['heure_rdv'])->format('H:i');
+        $heureFin = Carbon::createFromFormat('H:i', $heure)
+            ->addMinutes(CreneauService::DUREE_MINUTES)
+            ->format('H:i');
 
         $rdv = RendezVous::create([
             'patient_id' => $patientId,
             'medecin_id' => $validated['medecin_id'],
             'departement_id' => $validated['departement_id'],
             'date_rdv' => $validated['date_rdv'],
-            'heure_rdv' => $validated['heure_rdv'],
+            'heure_rdv' => $heure,
+            'heure_fin' => $heureFin,
             'motif' => $validated['motif'] ?? null,
             'type' => $type,
             'priorite' => $validated['priorite'] ?? 'normal',
@@ -114,8 +160,8 @@ class RendezVousController extends Controller
         if ($patient?->user) {
             $this->notifications->notify(
                 $patient->user,
-                'Rendez-vous enregistre',
-                "Votre demande du {$validated['date_rdv']} a {$validated['heure_rdv']} est en attente de confirmation.",
+                'Rendez-vous enregistré',
+                "Votre demande du {$validated['date_rdv']} à {$heure} est en attente de confirmation.",
                 'rdv_confirme',
                 ['rendez_vous_id' => $rdv->id],
                 sendSms: true,
@@ -134,7 +180,7 @@ class RendezVousController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Rendez-vous enregistre',
+            'message' => 'Rendez-vous enregistré (en attente de confirmation)',
             'data' => $rdv,
         ], 201);
     }
@@ -159,8 +205,8 @@ class RendezVousController extends Controller
 
             $this->notifications->notify(
                 $request->user(),
-                'Paiement confirme',
-                "Votre paiement de {$montant} FC pour le RDV #{$rdv->id} a ete enregistre.",
+                'Paiement confirmé',
+                "Votre paiement de {$montant} FC pour le RDV #{$rdv->id} a été enregistré.",
                 'paiement',
                 ['rendez_vous_id' => $rdv->id, 'reference' => $result['reference']],
                 sendSms: true,
@@ -196,7 +242,7 @@ class RendezVousController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Demande de rendez-vous envoyee. Notre equipe vous contactera sous peu.',
+            'message' => 'Demande de rendez-vous envoyée. Notre équipe vous contactera sous peu.',
             'data' => $demande,
         ], 201);
     }
@@ -206,20 +252,21 @@ class RendezVousController extends Controller
         $patient = Patient::where('user_id', $request->user()->id)->firstOrFail();
         $rdv = RendezVous::where('patient_id', $patient->id)->findOrFail($id);
 
-        if (in_array($rdv->statut, ['termine', 'annule'], true)) {
+        if (in_array($rdv->statut, ['termine', 'annule', 'absent'], true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Ce rendez-vous ne peut plus etre annule',
+                'message' => 'Ce rendez-vous ne peut plus être annulé',
                 'errors' => [],
             ], 422);
         }
 
+        // Libère le créneau (statut annule → hors STATUTS_OCCUPES)
         $rdv->update(['statut' => 'annule']);
 
         $this->notifications->notify(
             $request->user(),
-            'Rendez-vous annule',
-            "Votre rendez-vous du {$rdv->date_rdv} a ete annule.",
+            'Rendez-vous annulé',
+            "Votre rendez-vous du {$rdv->date_rdv->format('d/m/Y')} a été annulé. Le créneau est de nouveau disponible.",
             'rdv_annule',
             ['rendez_vous_id' => $rdv->id],
             sendSms: true,
@@ -227,8 +274,70 @@ class RendezVousController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Rendez-vous annule',
-            'data' => $rdv,
+            'message' => 'Rendez-vous annulé — créneau libéré',
+            'data' => $rdv->fresh(['medecin.user', 'departement']),
+        ]);
+    }
+
+    /** Report : libère l'ancien créneau et réserve le nouveau. */
+    public function reporter(Request $request, int $id): JsonResponse
+    {
+        $patient = Patient::where('user_id', $request->user()->id)->firstOrFail();
+        $rdv = RendezVous::where('patient_id', $patient->id)->findOrFail($id);
+
+        if (! in_array($rdv->statut, ['en_attente', 'confirme'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Seul un rendez-vous en attente ou confirmé peut être reporté',
+                'errors' => [],
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'date_rdv' => 'required|date|after_or_equal:today',
+            'heure_rdv' => 'required|date_format:H:i',
+            'medecin_id' => 'nullable|exists:medecins,id',
+        ]);
+
+        $medecinId = (int) ($validated['medecin_id'] ?? $rdv->medecin_id);
+        $heure = Carbon::createFromFormat('H:i', $validated['heure_rdv'])->format('H:i');
+
+        if (! $this->creneaux->estDisponible($medecinId, $validated['date_rdv'], $heure, $rdv->id)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Le nouveau créneau n\'est pas disponible',
+                'errors' => ['heure_rdv' => ['Créneau indisponible']],
+            ], 422);
+        }
+
+        $heureFin = Carbon::createFromFormat('H:i', $heure)
+            ->addMinutes(CreneauService::DUREE_MINUTES)
+            ->format('H:i');
+
+        $rdv->update([
+            'medecin_id' => $medecinId,
+            'date_rdv' => $validated['date_rdv'],
+            'heure_rdv' => $heure,
+            'heure_fin' => $heureFin,
+            // Reporte → repasse en attente de confirmation réception
+            'statut' => 'en_attente',
+            'rappel_24h_envoye' => false,
+            'rappel_1h_envoye' => false,
+        ]);
+
+        $this->notifications->notify(
+            $request->user(),
+            'Rendez-vous reporté',
+            "Nouveau créneau : {$validated['date_rdv']} à {$heure}. En attente de confirmation.",
+            'rdv_confirme',
+            ['rendez_vous_id' => $rdv->id],
+            sendSms: true,
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Rendez-vous reporté — ancien créneau libéré',
+            'data' => $rdv->fresh(['medecin.user', 'departement']),
         ]);
     }
 
@@ -244,7 +353,7 @@ class RendezVousController extends Controller
         if ($medecin && $rdv->medecin_id !== $medecin->id && $request->user()->role !== 'admin') {
             return response()->json([
                 'success' => false,
-                'message' => 'Acces refuse',
+                'message' => 'Accès refusé',
                 'errors' => [],
             ], 403);
         }
@@ -252,13 +361,13 @@ class RendezVousController extends Controller
         $rdv->update(['statut' => $validated['statut']]);
 
         if ($validated['statut'] === 'confirme' && $rdv->patient?->user) {
-            $msg = "Votre RDV du {$rdv->date_rdv} a {$rdv->heure_rdv} est confirme.";
+            $msg = "Votre RDV du {$rdv->date_rdv->format('d/m/Y')} à ".Carbon::parse($rdv->heure_rdv)->format('H:i').' est confirmé.';
             if ($rdv->type === 'teleconsultation') {
-                $msg .= ' Lien video disponible dans Teleconsultation.';
+                $msg .= ' Lien vidéo disponible dans Téléconsultation.';
             }
             $this->notifications->notify(
                 $rdv->patient->user,
-                'Rendez-vous confirme',
+                'Rendez-vous confirmé',
                 $msg,
                 'rdv_confirme',
                 ['rendez_vous_id' => $rdv->id],
@@ -268,7 +377,7 @@ class RendezVousController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Statut mis a jour',
+            'message' => 'Statut mis à jour',
             'data' => $rdv->load(['patient.user', 'departement']),
         ]);
     }

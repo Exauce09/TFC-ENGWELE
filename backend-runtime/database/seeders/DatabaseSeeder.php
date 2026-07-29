@@ -17,6 +17,8 @@ class DatabaseSeeder extends Seeder
             IntegrationSeeder::class,
             SpecialitesSeeder::class,
             FactureSeeder::class,
+            ProfilsActeursSeeder::class,
+            AdmissionParcoursCompletSeeder::class,
         ]);
     }
 }

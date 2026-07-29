@@ -18,11 +18,9 @@ const MENUS = {
   urgentiste: 'medecin',
   medecin: [
     { label: 'Tableau de bord', icon: '🏠', to: '/medecin/dashboard' },
-    { label: 'Parcours patient', icon: '🛤️', to: '/parcours' },
-    { label: 'Mon Planning', icon: '📅', to: '/medecin/planning' },
-    { label: 'Mes Patients', icon: '👥', to: '/medecin/patients' },
-    { label: 'Dossiers Médicaux', icon: '📋', to: '/medecin/dossiers' },
-    { label: 'Prescriptions', icon: '💊', to: '/medecin/prescriptions' },
+    { label: 'Consultations', icon: '🩺', to: '/medecin/dossiers' },
+    { label: 'Patients', icon: '👥', to: '/medecin/patients' },
+    { label: 'Planning RDV', icon: '📅', to: '/medecin/planning' },
     { label: 'Téléconsultation', icon: '📹', to: '/medecin/teleconsultation' },
   ],
   admin: [
@@ -55,13 +53,14 @@ const MENUS = {
   ],
   infirmier: [
     { label: 'Tableau de bord', icon: '🏠', to: '/infirmier/dashboard' },
-    { label: 'Parcours patient', icon: '🛤️', to: '/parcours' },
-    { label: 'Patients', icon: '👥', to: '/infirmier/patients' },
+    { label: 'Triage', icon: '🩹', to: '/infirmier/triage' },
     { label: 'Constantes', icon: '📈', to: '/infirmier/constantes' },
+    { label: 'Patients', icon: '👥', to: '/infirmier/patients' },
+    { label: 'Parcours patient', icon: '🛤️', to: '/parcours' },
   ],
   accueil: [
     { label: 'Tableau de bord', icon: '🏠', to: '/accueil/dashboard' },
-    { label: 'Arrivée patient', icon: '🚪', to: '/parcours' },
+    { label: 'Réception', icon: '🚪', to: '/accueil/reception' },
     { label: 'Demandes RDV', icon: '📩', to: '/accueil/demandes' },
     { label: 'RDV du jour', icon: '📅', to: '/accueil/rendez-vous' },
     { label: 'Patients', icon: '👥', to: '/accueil/patients' },

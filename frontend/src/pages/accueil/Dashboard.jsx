@@ -12,8 +12,8 @@ export default function AccueilDashboard() {
 
   return (
     <Layout title="Accueil">
-      <h2 className="text-2xl font-bold text-slate-900">Accueil & réception</h2>
-      <p className="mt-1 text-sm text-slate-500">Gestion des arrivées, demandes et rendez-vous du jour.</p>
+      <h2 className="text-2xl font-bold text-slate-900">Réception</h2>
+      <p className="mt-1 text-sm text-slate-500">Enregistrement des arrivées, demandes et rendez-vous confirmés du jour.</p>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {[
           { key: 'en_attente_triage', label: 'En attente de triage', icon: '🚨' },
@@ -31,10 +31,10 @@ export default function AccueilDashboard() {
         ))}
       </div>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link to="/parcours" className="rounded-2xl border border-medical-primary/30 bg-blue-50 p-6 shadow-sm hover:shadow-md transition">
+        <Link to="/accueil/reception" className="rounded-2xl border border-medical-primary/30 bg-blue-50 p-6 shadow-sm hover:shadow-md transition">
           <p className="text-3xl">🚪</p>
-          <p className="mt-2 font-bold text-medical-primary">Arrivée patient</p>
-          <p className="text-xs text-slate-500">Enregistrer un patient qui arrive</p>
+          <p className="mt-2 font-bold text-medical-primary">Réception</p>
+          <p className="text-xs text-slate-500">Enregistrer une personne qui se présente</p>
         </Link>
         <Link to="/accueil/demandes" className="rounded-2xl border bg-white p-6 shadow-sm hover:shadow-md transition">
           <p className="text-3xl">📩</p>
@@ -46,7 +46,7 @@ export default function AccueilDashboard() {
         </Link>
         <Link to="/accueil/patients" className="rounded-2xl border bg-white p-6 shadow-sm hover:shadow-md transition">
           <p className="text-3xl">👥</p>
-          <p className="mt-2 font-bold">Recherche patients</p>
+          <p className="mt-2 font-bold">Vérifier un patient</p>
         </Link>
       </div>
     </Layout>

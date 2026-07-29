@@ -14,12 +14,22 @@ class ExamenLabo extends Model
         'prescrit_par',
         'laborantin_id',
         'type_examen',
+        'categorie',
         'indication',
         'statut',
         'urgent',
+        'priorite',
+        'type_echantillon',
+        'conditions_prelevement',
+        'numero_echantillon',
         'resultats',
         'interpretation',
+        'technique',
+        'commentaire_medecin',
+        'valide_par_medecin_at',
         'prescrit_at',
+        'preleve_at',
+        'recu_labo_at',
         'termine_at',
     ];
 
@@ -27,8 +37,33 @@ class ExamenLabo extends Model
         'urgent' => 'boolean',
         'resultats' => 'array',
         'prescrit_at' => 'datetime',
+        'preleve_at' => 'datetime',
+        'recu_labo_at' => 'datetime',
         'termine_at' => 'datetime',
+        'valide_par_medecin_at' => 'datetime',
     ];
+
+    protected $appends = ['priorite_label', 'statut_label'];
+
+    public function getPrioriteLabelAttribute(): string
+    {
+        return match ($this->priorite) {
+            'stat' => 'STAT (immédiat)',
+            'urgent' => 'Urgent',
+            default => 'Routine',
+        };
+    }
+
+    public function getStatutLabelAttribute(): string
+    {
+        return match ($this->statut) {
+            'prescrit' => 'Prescrit',
+            'en_cours' => 'En cours',
+            'termine' => 'Résultat disponible',
+            'annule' => 'Annulé',
+            default => (string) $this->statut,
+        };
+    }
 
     public function admission(): BelongsTo
     {

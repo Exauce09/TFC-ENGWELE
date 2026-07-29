@@ -53,6 +53,74 @@ const DEMO_DEPARTEMENTS = [
   { id: 3, nom: 'Pédiatrie', code: 'PED' },
 ];
 
+const DEMO_MEDECINS = [
+  { id: 1, name: 'Jean-Pierre Kabila', specialite: 'Médecine interne', departement_id: 1, departement: 'Médecine Générale' },
+  { id: 2, name: 'Espérance Mbuyi', specialite: 'Gynécologie', departement_id: 3, departement: 'Pédiatrie' },
+];
+
+const DEMO_DEMANDES = [
+  {
+    id: 1,
+    nom: 'Joseph Mbala',
+    telephone: '+243 900 111 222',
+    departement_id: 1,
+    departement: { id: 1, nom: 'Médecine Générale' },
+    date_souhaitee: new Date().toISOString().slice(0, 10),
+    message: 'Contrôle de tension artérielle',
+    statut: 'nouvelle',
+  },
+  {
+    id: 2,
+    nom: 'Alice Nzuzi',
+    telephone: '+243 900 333 444',
+    departement_id: 3,
+    departement: { id: 3, nom: 'Pédiatrie' },
+    date_souhaitee: new Date().toISOString().slice(0, 10),
+    message: 'Vaccination enfant',
+    statut: 'nouvelle',
+  },
+];
+
+const DEMO_RDV_JOUR = [
+  {
+    id: 91,
+    heure_rdv: '08:30',
+    statut: 'confirme',
+    motif: 'Suivi hypertension',
+    patient: { numero_patient: 'PAT-00003', user: { name: 'Marie Kalala' } },
+    medecin: { user: { name: 'Jean-Pierre Kabila' } },
+    departement: { nom: 'Médecine Générale' },
+  },
+];
+
+const DEMO_PATIENTS_ACCUEIL = [
+  {
+    id: 3,
+    numero_patient: 'PAT-00003',
+    date_naissance: '1990-05-12',
+    sexe: 'F',
+    commune: 'Matete',
+    user: { id: 3, name: 'Marie Kalala', phone: '+243 900 000 003', email: 'marie.kalala@patient.amen.cd' },
+    nombre_dossiers: 2,
+    dossier: {
+      id: 1,
+      numero_dossier: 'DOS-DEMO-0001',
+      statut: 'ouvert',
+      motif: 'Fièvre et céphalées',
+      date_consultation: '2026-07-25',
+      departement: 'Médecine Générale',
+    },
+    medecin_en_charge: 'Jean-Pierre Kabila',
+    admission_active: {
+      id: 1,
+      numero_admission: 'ADM-DEMO-0001',
+      statut: 'triage',
+      statut_label: '2. Triage (infirmier)',
+      departement: 'Médecine Générale',
+    },
+  },
+];
+
 const STATUT_LABELS = {
   enregistre: '1. Accueil (réceptionniste)',
   triage: '2. Triage (infirmier)',
@@ -137,6 +205,12 @@ function path(url = '') {
   return url.replace(/^.*\/api\/v1/, '').split('?')[0];
 }
 
+function queryParam(config, key) {
+  if (config.params && config.params[key] != null) return String(config.params[key]);
+  const query = String(config.url || '').split('?')[1];
+  return query ? new URLSearchParams(query).get(key) : null;
+}
+
 export function resolveMock(config) {
   const p = path(config.url);
   const method = (config.method || 'get').toLowerCase();
@@ -190,6 +264,71 @@ export function resolveMock(config) {
 
   if (method === 'get' && p === '/departements') {
     return ok(DEMO_DEPARTEMENTS);
+  }
+
+  if (method === 'get' && p === '/medecins') {
+    return ok(DEMO_MEDECINS);
+  }
+
+  // --- Réception (accueil) ---
+  if (method === 'get' && p === '/accueil/dashboard') {
+    return ok({
+      demandes_nouvelles: DEMO_DEMANDES.filter((d) => d.statut === 'nouvelle').length,
+      rdv_du_jour: DEMO_RDV_JOUR.length,
+      patients_total: DEMO_PATIENTS_ACCUEIL.length,
+      rdv_en_attente: 0,
+      en_attente_triage: DEMO_ADMISSIONS.filter((a) => a.statut === 'triage').length,
+      episodes_actifs: DEMO_ADMISSIONS.length,
+    });
+  }
+
+  if (method === 'get' && p === '/accueil/demandes') {
+    const statut = queryParam(config, 'statut') || 'nouvelle';
+    const list = statut === 'toutes' ? DEMO_DEMANDES : DEMO_DEMANDES.filter((d) => d.statut === statut);
+    return {
+      ...ok(list, 'Demandes de rendez-vous'),
+      meta: {
+        total: list.length,
+        a_confirmer: DEMO_DEMANDES.filter((d) => d.statut === 'nouvelle').length,
+      },
+    };
+  }
+
+  const demandeConfirm = p.match(/^\/accueil\/demandes\/(\d+)\/confirmer$/);
+  if (method === 'post' && demandeConfirm) {
+    const demande = DEMO_DEMANDES.find((d) => String(d.id) === demandeConfirm[1]);
+    if (demande) demande.statut = 'traitee';
+    const medecin = DEMO_MEDECINS.find((m) => String(m.id) === String(body.medecin_id));
+    DEMO_RDV_JOUR.push({
+      id: DEMO_RDV_JOUR.length + 90,
+      heure_rdv: body.heure_rdv || '09:00',
+      statut: 'confirme',
+      motif: body.motif || demande?.message,
+      patient: { numero_patient: 'PAT-00003', user: { name: demande?.nom || 'Patient démo' } },
+      medecin: { user: { name: medecin?.name || 'Kabila' } },
+      departement: { nom: medecin?.departement || 'Médecine Générale' },
+    });
+    return ok(null, 'Rendez-vous confirmé (démo)');
+  }
+
+  const demandeStatut = p.match(/^\/accueil\/demandes\/(\d+)$/);
+  if (method === 'put' && demandeStatut) {
+    const demande = DEMO_DEMANDES.find((d) => String(d.id) === demandeStatut[1]);
+    if (demande) demande.statut = body.statut || 'annulee';
+    return ok(demande, 'Demande mise à jour (démo)');
+  }
+
+  if (method === 'get' && p === '/accueil/rendez-vous') {
+    return { ...ok(DEMO_RDV_JOUR, 'Rendez-vous confirmés du jour'), meta: { total: DEMO_RDV_JOUR.length } };
+  }
+
+  if (method === 'get' && p === '/accueil/patients') {
+    const q = (queryParam(config, 'q') || '').toLowerCase();
+    const list = q
+      ? DEMO_PATIENTS_ACCUEIL.filter((pt) =>
+        `${pt.user?.name} ${pt.numero_patient} ${pt.user?.phone}`.toLowerCase().includes(q))
+      : DEMO_PATIENTS_ACCUEIL;
+    return ok(list);
   }
 
   // --- Parcours patient / admissions ---
@@ -416,12 +555,21 @@ export function resolveMock(config) {
 
   if (method === 'get' && p === '/medecin/dashboard') {
     return ok({
-      rdv_aujourdhui: DEMO_RDV,
-      stats: { rdv_jour: 5, patients_suivis: 42, prescriptions_actives: 8 },
+      rdv_du_jour: DEMO_RDV.length,
+      rdv_en_attente: 1,
+      rdv_termines: 0,
+      rdv_en_cours: null,
+      planning_du_jour: DEMO_RDV,
+      file_consultation: DEMO_ADMISSIONS.filter((a) => ['triage', 'consultation_medicale'].includes(a.statut)),
+      file_count: DEMO_ADMISSIONS.filter((a) => ['triage', 'consultation_medicale'].includes(a.statut)).length,
+      examens_en_attente: 1,
+      ordonnances_actives: 2,
+      dossiers_recents: [],
+      dossiers_semaine: 3,
     });
   }
   if (method === 'get' && p === '/medecin/patients') {
-    return ok([{ id: 1, user: { name: 'Marie Kalala' }, numero_patient: 'PAT-00003' }]);
+    return ok(DEMO_PATIENTS_ACCUEIL);
   }
   if (method === 'get' && p === '/medecin/planning') return ok(DEMO_RDV);
 

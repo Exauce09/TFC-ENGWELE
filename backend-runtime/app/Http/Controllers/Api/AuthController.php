@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Patient;
 use App\Models\User;
+use App\Services\StaffProfileService;
 use App\Support\PatientCredentials;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -63,7 +64,7 @@ class AuthController extends Controller
             'message' => 'Connexion reussie',
             'data' => [
                 'token' => $token,
-                'user' => $user->fresh()->load('patient'),
+                'user' => StaffProfileService::loadFull($user->fresh()),
                 'role' => $user->role,
                 'redirect' => $redirect,
             ],
@@ -72,12 +73,14 @@ class AuthController extends Controller
 
     public function me(Request $request): JsonResponse
     {
-        $user = $request->user()->load('patient');
+        /** @var User $user */
+        $user = $request->user();
+        StaffProfileService::ensureProfil($user);
 
         return new JsonResponse([
             'success' => true,
             'message' => 'Profil recupere',
-            'data' => $user,
+            'data' => StaffProfileService::loadFull($user->fresh()),
         ]);
     }
 
@@ -107,20 +110,57 @@ class AuthController extends Controller
     {
         $validated = $request->validate([
             'name' => 'sometimes|string|max:100',
+            'nom' => 'sometimes|nullable|string|max:80',
+            'post_nom' => 'sometimes|nullable|string|max:80',
+            'prenom' => 'sometimes|nullable|string|max:80',
             'phone' => 'sometimes|nullable|string|max:25',
-            'avatar' => 'sometimes|nullable|string|max:255',
+            'avatar' => 'sometimes|nullable|string',
+            'sexe' => 'sometimes|nullable|in:M,F',
+            'date_naissance' => 'sometimes|nullable|date|before:today',
+            'adresse' => 'sometimes|nullable|string',
+            'piece_identite_numero' => 'sometimes|nullable|string|max:80',
+            'departement_id' => 'sometimes|nullable|integer|exists:departements,id',
+            'date_embauche' => 'sometimes|nullable|date',
+            'statut' => 'sometimes|nullable|in:actif,inactif,suspendu,en_conge',
+            'superviseur_id' => 'sometimes|nullable|integer|exists:users,id',
             'fcm_token' => 'sometimes|nullable|string|max:500',
+            'medecin' => 'sometimes|array',
+            'profil_infirmier' => 'sometimes|array',
+            'profil_receptionniste' => 'sometimes|array',
+            'profil_laborantin' => 'sometimes|array',
+            'profil_radiologue' => 'sometimes|array',
+            'profil_pharmacien' => 'sometimes|array',
+            'profil_caissier' => 'sometimes|array',
+            'profil_gestionnaire_assurance' => 'sometimes|array',
+            'profil_responsable_chambres' => 'sometimes|array',
+            'profil_directeur' => 'sometimes|array',
+            'profil_admin' => 'sometimes|array',
         ]);
 
         /** @var User $user */
         $user = $request->user();
-        $user->fill($validated);
+
+        $userFields = collect($validated)->only([
+            'name', 'nom', 'post_nom', 'prenom', 'phone', 'avatar', 'sexe',
+            'date_naissance', 'adresse', 'piece_identite_numero', 'departement_id',
+            'date_embauche', 'statut', 'superviseur_id', 'fcm_token',
+        ])->all();
+
+        $user->fill($userFields);
+
+        if (array_key_exists('statut', $userFields)) {
+            $user->is_active = in_array($userFields['statut'], ['actif', 'en_conge'], true);
+        }
+
+        StaffProfileService::syncDisplayName($user);
         $user->save();
+
+        StaffProfileService::updateMetier($user, $validated);
 
         return new JsonResponse([
             'success' => true,
             'message' => 'Profil mis a jour',
-            'data' => $user->fresh()->load('patient'),
+            'data' => StaffProfileService::loadFull($user->fresh()),
         ]);
     }
 
@@ -237,6 +277,10 @@ class AuthController extends Controller
             'caissier' => '/caisse/dashboard',
             'receptionniste' => '/accueil/dashboard',
             'admin' => '/admin/dashboard',
+            'gestionnaire_assurance' => '/admin/dashboard',
+            'responsable_chambres' => '/admin/dashboard',
+            'directeur_medical' => '/admin/dashboard',
+            'radiologue' => '/echographie/dashboard',
             default => '/',
         };
     }

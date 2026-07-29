@@ -10,9 +10,14 @@
 
 ## Introduction du chapitre
 
-Le présent chapitre approfondit l'analyse du système d'information hospitalier proposé pour le Centre Médical AMEN. Il complète le chapitre I en détaillant, selon une démarche structurée, les besoins des utilisateurs, les fonctionnalités attendues, la modélisation (diagrammes, architecture, base de données) et les choix techniques retenus.
+Après avoir situé le problème et le cadre théorique, le présent chapitre décrit de manière structurée le **système d'information hospitalier** conçu et développé pour le Centre Médical AMEN. Il s'articule autour de quatre axes :
 
-L'objectif est de démontrer que la solution envisagée répond de manière cohérente aux contraintes du terrain kinshasa et aux exigences d'un établissement de santé polyvalent, tout en restant évolutive vers une application mobile et vers des modules spécialisés (maternité, chirurgie, accueil, etc.).
+- **a.** les besoins des utilisateurs ;
+- **b.** les fonctionnalités attendues ;
+- **c.** la modélisation (diagrammes, architecture, base de données) ;
+- **d.** les choix techniques.
+
+La démarche s'appuie sur l'observation des flux réels d'un centre médical polyvalent à Kinshasa et sur l'implémentation concrète d'une plateforme **hybride** (web React + API Laravel + application mobile Expo), centrée sur un **parcours patient en neuf étapes** : de l'accueil à l'initiation du traitement et au suivi.
 
 ---
 
@@ -22,105 +27,148 @@ L'objectif est de démontrer que la solution envisagée répond de manière coh�
 
 Les besoins ont été identifiés par :
 
-- **Observation** des flux réels d'un centre médical (accueil, consultation, laboratoire, pharmacie, caisse) ;
-- **Entretiens informels** avec les catégories de personnel (médecins, infirmiers, caissiers, administration) ;
-- **Analyse comparative** de systèmes d'information de santé (SIH) et de bonnes pratiques (RBAC, traçabilité, API REST) ;
-- **Prise en compte du contexte local** : usage du Mobile Money (Airtel, M-Pesa), SMS, connectivité variable, langue française.
+1. **Observation** des circuits physiques : réception → triage → consultation → laboratoire / pharmacie → sortie ;
+2. **Entretiens** avec les catégories d'acteurs (réceptionnistes, infirmiers, médecins, laborantins, pharmaciens, caissiers, patients) ;
+3. **Analyse comparative** des bonnes pratiques SIH (contrôle d'accès par rôle, traçabilité, API REST, dossier unique) ;
+4. **Prise en compte du contexte local** : français comme langue d'interface, Mobile Money (Airtel Money, M-Pesa), SMS, connectivité variable, adoption progressive du numérique.
 
 ### a.2 Besoins par catégorie d'utilisateurs
+
+#### Réceptionniste (accueil)
+
+| Besoin | Description | Priorité |
+|--------|-------------|----------|
+| Enregistrer le patient | Créer l'identité, le dossier et les identifiants d'espace patient (1ʳᵉ connexion) | Haute |
+| Accueillir walk-in ou RDV | Ouvrir une admission, convertir un rendez-vous du jour en accueil | Haute |
+| Confirmer les demandes RDV | Valider créneau médecin / date / heure, refuser si besoin | Haute |
+| Orienter vers le triage | Faire passer l'admission au statut triage | Haute |
+
+*Règle métier retenue :* seul l'accueil crée le patient ; le médecin complète le parcours, il ne crée pas le dossier d'identité.
 
 #### Patient
 
 | Besoin | Description | Priorité |
 |--------|-------------|----------|
-| S'inscrire et se connecter | Création de compte en ligne, accès sécurisé à son espace | Haute |
-| Prendre rendez-vous | Choisir département, médecin, date, type (présentiel / téléconsultation) | Haute |
-| Consulter son dossier | Voir consultations, diagnostics, prescriptions | Haute |
-| Payer en ligne | Factures et téléconsultation via Mobile Money | Haute |
-| Recevoir des notifications | Confirmations RDV, rappels, résultats, paiements | Moyenne |
-| Téléconsultation | Rejoindre une consultation vidéo depuis le navigateur | Moyenne |
-
-#### Médecin
-
-| Besoin | Description | Priorité |
-|--------|-------------|----------|
-| Voir son planning | Liste des RDV du jour et à venir | Haute |
-| Gérer les dossiers | Créer et mettre à jour consultations, diagnostics | Haute |
-| Prescrire | Émettre des ordonnances liées au dossier | Haute |
-| Changer le statut des RDV | Confirmer, annuler, marquer terminé | Haute |
-| Téléconsultation | Démarrer une salle vidéo avec le patient | Moyenne |
-| Liste des patients | Rechercher un patient par nom ou numéro | Moyenne |
+| Se connecter (1ʳᵉ fois) | Login + mot de passe par défaut, compléter le profil | Haute |
+| Choisir un créneau | Réserver un horaire libre chez un médecin (web et mobile) | Haute |
+| Suivre ses RDV | Statuts `en_attente` / `confirmé`, annuler ou reporter (créneau libéré) | Haute |
+| Recevoir des rappels | Notifications J-1 et H-2 avant le rendez-vous | Haute |
+| Consulter son dossier | Consultations, **résultats d'examens**, prescriptions | Haute |
+| Payer | Factures et téléconsultation (Mobile Money, mode démo inclus) | Moyenne |
+| Téléconsultation | Accès salle vidéo après confirmation / paiement | Moyenne |
 
 #### Infirmier(ère)
 
 | Besoin | Description | Priorité |
 |--------|-------------|----------|
-| Saisir les constantes vitales | Tension, température, pouls, poids, etc. | Haute |
-| Consulter la liste des patients | Identifier le patient avant la saisie | Moyenne |
+| Triage | Constantes vitales, niveau d'urgence, orientation vers le médecin | Haute |
+| Prélèvement | File dédiée après prescription d'examens, transmission au labo | Haute |
+| Constantes / patients | Saisie complémentaire et recherche patient | Moyenne |
+
+#### Médecin
+
+| Besoin | Description | Priorité |
+|--------|-------------|----------|
+| File de consultation | Patients **après triage**, prêts pour consultation | Haute |
+| Conduire la consultation | Anamnèse, examen, hypothèses ; option examens labo | Haute |
+| Interpréter et prescrire | Diagnostic final + ordonnance parcours | Haute |
+| Initier le traitement | Après délivrance pharmacie, consignes et suivi | Haute |
+| Planning RDV | Voir et mettre à jour les rendez-vous du jour | Moyenne |
 
 #### Laborantin
 
 | Besoin | Description | Priorité |
 |--------|-------------|----------|
-| Enregistrer des analyses | Créer une demande pour un patient | Haute |
-| Publier les résultats | Saisir et valider les résultats structurés | Haute |
-| Tableau de bord | Suivre analyses en attente / disponibles | Moyenne |
+| File d'examens | Voir les analyses prescrites liées aux admissions | Haute |
+| Saisir les résultats | Paramètres structurés, interprétation, notification médecin | Haute |
 
 #### Pharmacien
 
 | Besoin | Description | Priorité |
 |--------|-------------|----------|
-| Gérer le stock | Quantités, seuils d'alerte, prix | Haute |
-| Délivrer les ordonnances | Marquer une prescription comme délivrée | Haute |
+| File d'ordonnances | Ordonnances du **parcours** en attente de délivrance | Haute |
+| Délivrer | Lier lots / stock, faire avancer l'admission vers l'initiation | Haute |
+| Gérer le stock | Quantités, seuils, lots | Moyenne |
 
-#### Caissier
-
-| Besoin | Description | Priorité |
-|--------|-------------|----------|
-| Émettre des factures | Lignes détaillées, remises, lien patient | Haute |
-| Enregistrer les paiements | Espèces, Mobile Money, virement | Haute |
-| Suivre les impayés | Montants restants, historique | Haute |
-
-#### Administrateur
+#### Caissier / Administrateur
 
 | Besoin | Description | Priorité |
 |--------|-------------|----------|
-| Superviser l'activité | Statistiques patients, RDV, facturation | Haute |
-| Gérer les utilisateurs | Création, activation/désactivation des comptes | Haute |
-| Gérer patients, médecins, départements | Référentiels de l'établissement | Haute |
-| Traiter les demandes RDV publiques | Demandes issues du site sans compte | Haute |
+| Facturer et encaisser | Factures, paiements cash ou Mobile Money | Haute |
+| Superviser | Stats, utilisateurs, départements, demandes | Haute |
 
-#### Visiteur (non connecté)
+#### Visiteur (non authentifié)
 
 | Besoin | Description | Priorité |
 |--------|-------------|----------|
-| Découvrir le centre | Services, médecins, contact | Haute |
-| Demander un rendez-vous | Formulaire simple sans inscription | Haute |
+| Découvrir le centre | Landing, services, contact | Haute |
+| Demander un RDV | Formulaire public sans compte | Haute |
 
 ### a.3 Besoins non fonctionnels
 
 | Catégorie | Exigence |
 |-----------|----------|
-| **Sécurité** | Authentification par token, contrôle d'accès par rôle (RBAC), données de santé isolées par patient |
-| **Performance** | Pagination des listes, requêtes ciblées, interface légère (SPA React) |
-| **Disponibilité** | Architecture découplée frontend / backend pour maintenance indépendante |
-| **Traçabilité** | Horodatage, statuts explicites (RDV, factures, paiements) |
-| **Évolutivité** | API versionnée (`/api/v1`), modules ajoutables sans refonte |
-| **Interopérabilité** | Connecteurs Jitsi, AfricasTalking, FCM, opérateurs Mobile Money |
-| **Utilisabilité** | Interface en français, espaces métier distincts, responsive (Tailwind) |
+| **Sécurité** | Authentification par jeton (Sanctum), RBAC strict par rôle, isolement des données patient |
+| **Traçabilité** | Historique des statuts d'admission, horodatage, acteur (user + rôle) |
+| **Cohérence métier** | Machine à états : transitions illégales refusées (ex. accueil → pharmacie) |
+| **Performance** | Pagination, SPA légère, API découplée |
+| **Disponibilité** | Frontend et backend indépendants ; mode mock pour SMS / Mobile Money en développement |
+| **Évolutivité** | API versionnée `/api/v1`, modules (maternité, chirurgie…) branchables |
+| **Utilisabilité** | Interfaces par métier, français, responsive ; mobile Expo pour le patient |
+| **Interopérabilité** | Jitsi, AfricasTalking, FCM, Airtel Money / M-Pesa |
 
 ### a.4 Contraintes du contexte kinshasa
 
-- Paiements majoritairement **mobiles** (Airtel Money, M-Pesa) plutôt que carte bancaire ;
-- **SMS** souvent plus fiable que l'e-mail pour alerter les patients ;
-- **Connexion internet** parfois instable : limiter les allers-retours, prévoir mode démo / mock pour les intégrations en développement ;
-- **Adoption progressive** : déploiement par modules (RDV → dossier → facturation → intégrations).
+- Paiements **mobiles** privilégiés (Airtel Money, M-Pesa) ;
+- **SMS** souvent plus fiable que l'e-mail pour les rappels RDV ;
+- Connexion parfois instable → architecture API légère, mocks en démo ;
+- Déploiement **progressif** : d'abord le parcours clinique ambulatoire, puis les modules spécialisés.
 
 ---
 
 ## b. Fonctionnalités attendues
 
-### b.1 Cartographie fonctionnelle globale
+### b.1 Vision fonctionnelle : le parcours patient en 9 étapes
+
+Le cœur du système est le **parcours d'admission**, qui formalise la prise en charge ambulatoire du patient :
+
+```mermaid
+flowchart LR
+  Accueil --> Triage
+  Triage --> Consult
+  Consult -->|examens prescrits| Prelev
+  Prelev --> Labo
+  Labo --> Diag
+  Consult -->|sans examens| Diag
+  Diag --> Pharma
+  Pharma --> Init
+  Init --> Suivi
+```
+
+| Étape | Statut technique | Acteur principal | Action clé |
+|-------|------------------|------------------|------------|
+| 1. Accueil | `enregistre` → `triage` | Réceptionniste | Identification, motif, ouverture admission |
+| 2. Triage | `triage` → `consultation_medicale` | Infirmier | Constantes + urgence |
+| 3. Consultation | `consultation_medicale` → `prelevement` **ou** `diagnostic_prescription` | Médecin | Anamnèse ; création des examens si prescrits |
+| 4. Prélèvement | `prelevement` → `examens_laboratoire` | Infirmier | Échantillon, n° d'échantillon |
+| 5. Laboratoire | `examens_laboratoire` | Laborantin | Résultats structurés |
+| 6. Diagnostic & Rx | → `diagnostic_prescription` | Médecin | Diagnostic + `ParcoursPrescription` |
+| 7. Pharmacie | → `delivrance_medicaments` | Pharmacien | Délivrance (stock / lots) |
+| 8. Initiation | → `initiation_traitement` | Médecin | Consignes thérapeutiques |
+| 9. Suivi | → `suivi` | Médecin / Accueil | Notes, RDV de contrôle, clôture facturation |
+
+### b.2 Cycle de vie des rendez-vous
+
+En parallèle du parcours walk-in, le système gère les **rendez-vous** :
+
+1. Le patient **choisit un créneau** disponible (créneaux de 30 min selon disponibilités du médecin) ;
+2. RDV créé en `en_attente` ;
+3. La réception **confirme** (avec sélecteur de créneaux) → `confirmé` ;
+4. **Rappels automatiques** J-1 puis H-2 (commande planifiée) ;
+5. Annulation / report → **créneau libéré** ;
+6. Jour J : réception **convertit** le RDV en admission (`rdv_id`) → patient reçu (`termine`) ou **absent**.
+
+### b.3 Cartographie des modules
 
 ```mermaid
 mindmap
@@ -128,67 +176,72 @@ mindmap
     Public
       Landing
       Demande RDV
-      Login / Register
+      Login
+    Accueil
+      Réception
+      Demandes RDV
+      RDV du jour
+      Conversion / Absent
     Patient
-      RDV
-      Dossier
+      Créneaux RDV
+      Dossier et résultats
       Factures
-      Téléconsultation
+      Mobile Expo
     Clinique
-      Planning médecin
-      Dossiers
-      Prescriptions
-      Constantes infirmier
-      Analyses labo
-    Support
+      Parcours 9 étapes
+      Triage
+      Prélèvements
+      Consultation
+      Labo
       Pharmacie
+    Support
       Caisse
+      Notifications
     Administration
       Stats
       Utilisateurs
-      Facturation globale
-    Transversal
-      Notifications
-      SMS / Push
-      Mobile Money
+      Départements
 ```
 
-### b.2 Matrice des fonctionnalités par module
+### b.4 Matrice des fonctionnalités (état actuel)
 
-| Module | Fonctionnalités implémentées (web) | Extensions prévues |
-|--------|-----------------------------------|-------------------|
-| **Authentification** | Inscription patient, login, logout, profil API, rôles | Mot de passe oublié (UI), page profil |
-| **Rendez-vous** | CRUD patient, planning médecin, demande publique, statuts admin | Rappels automatiques 24h/1h |
-| **Dossier médical** | Consultations, diagnostics, prescriptions | Imagerie, pièces jointes |
-| **Laboratoire** | CRUD analyses, publication résultats | Notification auto patient |
-| **Pharmacie** | Stock, délivrance ordonnances | Alertes stock par SMS |
-| **Facturation** | Factures, paiements caisse, paiement patient Mobile Money | Export PDF |
-| **Téléconsultation** | Salles Jitsi, paiement préalable | Enregistrement séance |
-| **Notifications** | In-app, option SMS/push | Page historique complète |
-| **Admin** | Stats, listes, RDV, utilisateurs, facturation | CRUD complet, graphiques réels |
-| **Spécialités** | — | Maternité, chirurgie, écho, kiné, dentisterie, accueil |
+| Module | Fonctionnalités réalisées | Extensions prévues |
+|--------|---------------------------|-------------------|
+| **Accueil** | Formulaire complet, conversion RDV, confirmation avec créneaux | File visuelle priorité walk-in |
+| **Parcours** | Machine à états, dossier unique `/parcours/:id`, facturation d'actes | Hospitalisation lit/chambre |
+| **RDV patient** | Créneaux, report, annulation, rappels J-1/H-2 | Push FCM réel hors mock |
+| **Médecin** | File post-triage, consultation + examens, diagnostic, initiation | Certificats PDF |
+| **Infirmier** | Triage, page prélèvements, constantes | Notes d'évolution hospitalisées |
+| **Labo** | File examens parcours, résultats structurés | Imagerie radio/scanner |
+| **Pharmacie** | Ordonnances parcours, délivrance, stock | Traçabilité avancée lots |
+| **Patient** | Dossier, résultats, prescriptions parcours, RDV web/mobile | Support / messagerie |
+| **Caisse / Admin** | Factures, paiements, stats, utilisateurs | Exports PDF / reporting BI |
+| **Téléconsultation** | Jitsi + paiement préalable | Enregistrement séance |
 
-### b.3 Règles métier principales
+### b.5 Règles métier principales
 
-1. Un patient ne voit que **ses** données (RDV, dossier, factures).
-2. Un médecin modifie les dossiers et RDV qui lui sont **attribués**.
-3. Une facture **annulée** n'accepte plus de paiement.
-4. Le montant payé ne peut **excéder** le reste à payer.
-5. La téléconsultation peut exiger un **paiement confirmé** avant accès à la salle vidéo.
-6. Seul l'**administrateur** crée les comptes du personnel.
+1. **Seul l'accueil** crée le patient et ouvre le dossier d'identité.
+2. Les transitions d'admission sont **contrôlées** (`AdmissionStateMachine`) : aucun saut illégal.
+3. Prescrire des examens **exige** au moins une ligne `ExamenLabo` (évite une file labo vide).
+4. Les ordonnances d'une admission active passent par `ParcoursPrescription` (la pharmacie fait avancer le statut).
+5. Un patient ne voit que **ses** RDV, résultats et factures.
+6. Annuler / reporter un RDV **libère** le créneau pour d'autres patients.
+7. Une facture annulée n'accepte plus de paiement ; le payé ne dépasse pas le reste dû.
 
-### b.4 Cas d'utilisation prioritaires
+### b.6 Cas d'utilisation prioritaires
 
-| ID | Cas d'utilisation | Acteur | Résultat attendu |
-|----|-------------------|--------|------------------|
-| UC-01 | Prendre un rendez-vous | Patient | RDV enregistré, notifications envoyées |
-| UC-02 | Consulter le dossier | Patient | Historique consultations et prescriptions |
-| UC-03 | Rédiger une consultation | Médecin | Dossier enrichi, diagnostic et prescription possibles |
-| UC-04 | Publier un résultat d'analyse | Laborantin | Statut « résultat disponible », notification patient |
-| UC-05 | Émettre une facture | Caissier | Facture numérotée, notification patient |
-| UC-06 | Payer une facture | Patient | Paiement Mobile Money, statut facture mis à jour |
-| UC-07 | Rejoindre une téléconsultation | Patient / Médecin | Session Jitsi ouverte |
-| UC-08 | Superviser l'activité | Admin | Tableaux de bord et listes à jour |
+| ID | Cas d'utilisation | Acteur | Résultat |
+|----|-------------------|--------|----------|
+| UC-01 | Enregistrer un patient walk-in | Réceptionniste | Admission en triage + identifiants patient |
+| UC-02 | Réaliser le triage | Infirmier | Passage en consultation médicale |
+| UC-03 | Consulter et prescrire des examens | Médecin | Création examens + statut prélèvement |
+| UC-04 | Effectuer le prélèvement | Infirmier | Transmission au laboratoire |
+| UC-05 | Publier les résultats | Laborantin | Résultats visibles médecin / patient |
+| UC-06 | Diagnostiquer et prescrire | Médecin | Ordonnance parcours active |
+| UC-07 | Délivrer les médicaments | Pharmacien | Statut délivrance → initiation |
+| UC-08 | Initier le traitement puis suivi | Médecin | Parcours clos en `suivi` |
+| UC-09 | Prendre / confirmer un RDV | Patient / Accueil | Créneau réservé, rappels planifiés |
+| UC-10 | Convertir RDV du jour | Réceptionniste | Admission liée au RDV (patient reçu) |
 
 ---
 
@@ -198,165 +251,207 @@ mindmap
 
 ```mermaid
 flowchart TB
-    subgraph Utilisateurs
-        P[Patient]
-        M[Personnel soignant]
-        A[Administration]
-        V[Visiteur]
-    end
-  subgraph Systeme["Système AMEN (Web + API)"]
-        WEB[Application React]
-        API[API Laravel v1]
-        DB[(Base de données)]
-    end
-    subgraph Externes
-        JIT[Jitsi Meet]
-        SMS[AfricasTalking]
-        FCM[Firebase FCM]
-        MM[Mobile Money]
-    end
-    V --> WEB
-    P --> WEB
-    M --> WEB
-    A --> WEB
-    WEB --> API
-    API --> DB
-    API --> JIT
-    API --> SMS
-    API --> FCM
-    API --> MM
+  subgraph Acteurs
+    Rec[Réceptionniste]
+    Inf[Infirmier]
+    Med[Médecin]
+    Lab[Laborantin]
+    Pha[Pharmacien]
+    Pat[Patient]
+    Adm[Administrateur]
+    Vis[Visiteur]
+  end
+  subgraph Systeme["Système AMEN"]
+    WEB[SPA React]
+    MOB[App Expo]
+    API[API Laravel /api/v1]
+    DB[(SQLite / MySQL)]
+  end
+  subgraph Externes
+    JIT[Jitsi Meet]
+    SMS[AfricasTalking]
+    FCM[Firebase FCM]
+    MM[Mobile Money]
+  end
+  Vis --> WEB
+  Rec --> WEB
+  Inf --> WEB
+  Med --> WEB
+  Lab --> WEB
+  Pha --> WEB
+  Adm --> WEB
+  Pat --> WEB
+  Pat --> MOB
+  WEB --> API
+  MOB --> API
+  API --> DB
+  API --> JIT
+  API --> SMS
+  API --> FCM
+  API --> MM
 ```
 
-### c.2 Architecture logique en trois couches
+### c.2 Architecture logique (API first)
 
 ```mermaid
 flowchart LR
-    subgraph Presentation["Couche présentation"]
-        R[React 18 + Vite]
-        RR[React Router]
-        TW[Tailwind CSS]
-        AX[Axios]
-    end
-    subgraph Metier["Couche métier"]
-        LC[Laravel 11]
-        SAN[Sanctum Auth]
-        MW[Middleware RBAC]
-        SVC[Services métier]
-    end
-    subgraph Donnees["Couche données"]
-        ELO[Eloquent ORM]
-        MY[(MySQL production)]
-        SQL[(SQLite dev)]
-    end
-    R --> AX --> LC
-    LC --> MW --> SVC --> ELO
-    ELO --> MY
-    ELO --> SQL
+  subgraph Presentation
+    R[React 18 + Vite]
+    E[Expo React Native]
+    AX[Axios + Bearer]
+  end
+  subgraph Metier
+    L[Laravel 11]
+    S[Sanctum]
+    RBAC[Middleware role]
+    SM[AdmissionStateMachine]
+    CR[CreneauService]
+    NS[NotificationService]
+  end
+  subgraph Donnees
+    ORM[Eloquent]
+    DB[(Base relationnelle)]
+  end
+  R --> AX
+  E --> AX
+  AX --> L
+  L --> S --> RBAC --> SM
+  RBAC --> CR
+  RBAC --> NS
+  SM --> ORM --> DB
 ```
 
-**Principe API first :** le frontend web et l'application mobile future consomment la même API REST, évitant la duplication de la logique métier.
+**Principe :** une seule API REST alimente le web et le mobile ; la logique métier (parcours, créneaux, notifications) reste côté serveur.
 
-### c.3 Diagramme de déploiement (cible)
+### c.3 Architecture de déploiement
+
+| Environnement | Frontend | API | Base |
+|---------------|----------|-----|------|
+| Développement | Vite `127.0.0.1:5173` | `artisan serve :8000` | SQLite |
+| Démonstration | Build GitHub Pages | API locale / hébergée | SQLite ou MySQL |
+| Production | Assets Nginx | PHP-FPM + Laravel | MySQL 8 |
+
+### c.4 Machine à états du parcours (modèle dynamique)
 
 ```mermaid
-flowchart TB
-    Client[Navigateur / Mobile]
-    CDN[Assets statiques Vite build]
-    LB[Serveur web Nginx/Apache]
-    PHP[PHP-FPM Laravel]
-    DB[(MySQL 8)]
-    Client --> CDN
-    Client --> LB --> PHP --> DB
+stateDiagram-v2
+  [*] --> enregistre : Accueil
+  enregistre --> triage : auto après création
+  triage --> consultation_medicale : Infirmier
+  consultation_medicale --> prelevement : Examens prescrits
+  consultation_medicale --> diagnostic_prescription : Sans examens
+  prelevement --> examens_laboratoire : Prélèvement fait
+  examens_laboratoire --> diagnostic_prescription : Interprétation
+  diagnostic_prescription --> delivrance_medicaments : Pharmacie
+  delivrance_medicaments --> initiation_traitement : Médecin
+  initiation_traitement --> suivi : Suivi / sortie
+  suivi --> [*]
 ```
 
-En **développement**, le frontend tourne sur `127.0.0.1:5173` (Vite) et l'API sur `127.0.0.1:8000` (artisan serve), avec SQLite.
+Cette machine est implémentée dans `AdmissionStateMachine` : toute transition non autorisée renvoie une erreur métier (HTTP 422).
 
-### c.4 Modèle de données — entités principales
+### c.5 Modèle de données — entités centrales
 
 ```mermaid
 erDiagram
-    USERS ||--o| PATIENTS : possede
-    USERS ||--o| MEDECINS : possede
-    DEPARTEMENTS ||--o{ MEDECINS : emploie
-    PATIENTS ||--o{ RENDEZ_VOUS : prend
-    MEDECINS ||--o{ RENDEZ_VOUS : recoit
-    PATIENTS ||--o{ DOSSIERS_MEDICAUX : a
-    DOSSIERS_MEDICAUX ||--o{ DIAGNOSTICS : contient
-    DOSSIERS_MEDICAUX ||--o{ PRESCRIPTIONS : genere
-    PATIENTS ||--o{ ANALYSES_LABORATOIRE : realise
-    PATIENTS ||--o{ FACTURES : recoit
-    FACTURES ||--o{ PAIEMENTS : reglee_par
-    USERS ||--o{ NOTIFICATIONS : recoit
-    RENDEZ_VOUS |o--o| FACTURES : peut_produire
+  USERS ||--o| PATIENTS : profil
+  USERS ||--o| MEDECINS : profil
+  DEPARTEMENTS ||--o{ MEDECINS : affecte
+  PATIENTS ||--o{ ADMISSIONS : subit
+  ADMISSIONS ||--o| RENDEZ_VOUS : origine_rdv
+  ADMISSIONS ||--o| TRIAGES : a
+  ADMISSIONS ||--o{ CONSULTATIONS : contient
+  ADMISSIONS ||--o{ EXAMENS_LABO : prescrit
+  ADMISSIONS ||--o{ PARCOURS_PRESCRIPTIONS : genere
+  ADMISSIONS ||--o{ ADMISSION_STATUT_HISTORIQUES : trace
+  PATIENTS ||--o{ RENDEZ_VOUS : reserve
+  MEDECINS ||--o{ RENDEZ_VOUS : assure
+  PATIENTS ||--o{ DOSSIERS_MEDICAUX : a
+  PATIENTS ||--o{ FACTURES : recoit
+  FACTURES ||--o{ PAIEMENTS : reglee_par
+  USERS ||--o{ NOTIFICATIONS : recoit
 ```
 
-### c.5 Tables relationnelles (extrait)
+### c.6 Tables principales (extrait)
 
-| Table | Rôle | Clés / remarques |
-|-------|------|------------------|
-| `users` | Comptes applicatifs | `role`, `email`, `fcm_token` |
-| `patients` | Données administratives patient | FK `user_id` |
-| `medecins` | Données professionnelles | FK `user_id`, `departement_id` |
-| `departements` | Structure hospitalière | `code`, `nom` |
-| `rendez_vous` | Planification | `type`, `statut`, `lien_video`, `paiement_statut` |
-| `dossiers_medicaux` | Consultations | FK `patient_id`, `medecin_id` |
-| `diagnostics` | Conclusions | FK `dossier_id` |
-| `prescriptions` | Ordonnances (JSON médicaments) | FK `dossier_id` |
-| `analyses_laboratoire` | Examens | `resultats` JSON |
-| `stock_medicaments` | Pharmacie | `seuil_alerte` |
-| `factures` | Facturation | `lignes` JSON, `statut` |
-| `paiements` | Encaissements | `mode_paiement` |
-| `notifications` | Messages utilisateur | `type`, `lu`, `data` JSON |
+| Table | Rôle | Points clés |
+|-------|------|-------------|
+| `users` | Comptes | `role`, `login_identifiant`, `fcm_token` |
+| `patients` | Identité administrative | FK `user_id`, allergies, assurance, photo |
+| `medecins` | Profil médical | `disponibilites` JSON, `departement_id` |
+| `admissions` | **Parcours 9 étapes** | `statut`, `rdv_id`, `mode_arrivee`, motif |
+| `triages` | Constantes d'entrée | niveau d'urgence, TA, T°, SpO₂… |
+| `consultations` | Actes médicaux parcours | anamnèse, diagnostics provisoire / final |
+| `examens_labo` | Analyses liées à l'admission | priorité, résultats JSON, échantillon |
+| `parcours_prescriptions` | Ordonnances du parcours | médicaments JSON, lots délivrance |
+| `admission_statut_historiques` | Audit | statut avant/après, user, rôle |
+| `rendez_vous` | Planification | créneau, rappels J-1/H-2, `lien_video` |
+| `dossiers_medicaux` | Dossier consultation | ouvert à l'accueil, complété médecin |
+| `factures` / `paiements` | Finances | lignes, Mobile Money |
+| `notifications` | Alertes | types RDV, résultats, système |
+| `stock_medicaments` | Pharmacie | seuils, lots |
 
-**Tables prévues (extensions) :** `resultats_echographie`, `seances_kinesitherapie`, `operations_chirurgicales`, `suivis_maternite`, `soins_dentaires`.
-
-### c.6 Diagramme de séquence — Prise de rendez-vous
+### c.7 Diagramme de séquence — Walk-in jusqu'au traitement (synthèse)
 
 ```mermaid
 sequenceDiagram
-    participant P as Patient
-    participant WEB as Frontend React
-    participant API as API Laravel
-    participant DB as Base de données
-    participant N as NotificationService
+  participant R as Réception
+  participant I as Infirmier
+  participant M as Médecin
+  participant L as Labo
+  participant P as Pharmacie
+  participant API as API Laravel
 
-    P->>WEB: Remplit formulaire RDV
-    WEB->>API: POST /patient/rendez-vous
-    API->>DB: Insère rendez_vous
-    API->>N: notify patient + médecin
-    N-->>API: OK
-    API-->>WEB: 201 Created
-    WEB-->>P: Confirmation affichée
+  R->>API: POST /admissions (walk-in)
+  API-->>R: admission en triage
+  I->>API: PATCH .../triage
+  API-->>I: consultation_medicale
+  M->>API: PATCH .../consultation + examens[]
+  API-->>M: prelevement
+  I->>API: PATCH .../prelevement
+  L->>API: PUT examens / résultats
+  M->>API: PATCH .../diagnostic + médicaments
+  P->>API: PUT ordonnances/.../delivrer
+  M->>API: PATCH .../initiation puis .../suivi
+  API-->>M: parcours en suivi
 ```
 
-### c.7 Diagramme de séquence — Paiement facture
+### c.8 Diagramme de séquence — Prise de créneau patient
 
 ```mermaid
 sequenceDiagram
-    participant P as Patient
-    participant API as API
-    participant MM as MobileMoneyService
-    participant DB as Base de données
+  participant Pat as Patient
+  participant WEB as React / Expo
+  participant API as API
+  participant CR as CreneauService
+  participant DB as Base
 
-    P->>API: POST /patient/factures/{id}/paiement
-    API->>MM: initierPaiementFacture
-    MM->>DB: Crée paiement + MAJ facture
-    MM-->>API: success + référence
-    API-->>P: Confirmation
+  Pat->>WEB: Choisit médecin + date
+  WEB->>API: GET /patient/creneaux
+  API->>CR: créneauxDisponibles
+  CR->>DB: RDV occupés
+  CR-->>WEB: horaires libres
+  Pat->>WEB: Réserve une heure
+  WEB->>API: POST /patient/rendez-vous
+  API->>CR: estDisponible ?
+  API->>DB: insert statut en_attente
+  API-->>Pat: RDV enregistré
 ```
 
-### c.8 Modèle de sécurité (accès)
+### c.9 Modèle de sécurité
 
 ```mermaid
 flowchart TD
-    REQ[Requête HTTP] --> AUTH{Token Sanctum valide ?}
-    AUTH -->|Non| E401[401 Unauthorized]
-    AUTH -->|Oui| ROLE{Middleware role}
-    ROLE -->|Non autorisé| E403[403 Forbidden]
-    ROLE -->|OK| CTRL[Contrôleur métier]
-    CTRL --> OWN{Propriétaire ressource ?}
-    OWN -->|Non| E403
-    OWN -->|Oui| OK[200 / 201]
+  REQ[Requête HTTP] --> AUTH{Token Sanctum ?}
+  AUTH -->|Non| E401[401]
+  AUTH -->|Oui| ROLE{Middleware role}
+  ROLE -->|Refusé| E403[403]
+  ROLE -->|OK| CTRL[Contrôleur]
+  CTRL --> SM{Transition parcours ?}
+  SM -->|Illégale| E422[422 métier]
+  SM -->|OK / N/A| OWN{Périmètre patient / médecin}
+  OWN -->|Non| E403
+  OWN -->|Oui| OK[200 / 201]
 ```
 
 ---
@@ -367,46 +462,55 @@ flowchart TD
 
 | Composant | Technologie | Justification |
 |-----------|-------------|---------------|
-| **Backend** | Laravel 11 (PHP 8.3) | Maturité, écosystème, ORM, migrations, Sanctum |
-| **API** | REST JSON `/api/v1` | Standard, compatible web et mobile |
-| **Authentification** | Laravel Sanctum (Bearer token) | Simple, adapté SPA + future app mobile |
-| **Base de données** | MySQL 8 (prod) / SQLite (dev) | Relationnel, intégrité référentielle |
-| **Frontend** | React 18 + Vite | Composants réutilisables, HMR, performance |
-| **Styles** | Tailwind CSS | Développement rapide, responsive |
-| **HTTP client** | Axios | Intercepteurs token, gestion erreurs |
-| **Routing** | React Router v6 | Routes privées par rôle |
-| **Vidéo** | Jitsi Meet (meet.jit.si) | Open source, sans installation lourde |
-| **SMS** | AfricasTalking | Présent en Afrique, API documentée |
-| **Push** | Firebase Cloud Messaging | Standard mobile, token par utilisateur |
-| **Paiement** | Airtel Money / M-Pesa | Opérateurs dominants en RDC |
+| Backend | **Laravel 11** (PHP 8.3) | Migrations, Eloquent, validation, écosystème mature |
+| API | REST JSON **`/api/v1`** | Standard, consommable web + mobile |
+| Auth | **Laravel Sanctum** (Bearer) | SPA et mobile sans OAuth lourd |
+| Base | **MySQL 8** (prod) / **SQLite** (dev) | Intégrité référentielle, simplicité locale |
+| Frontend web | **React 18 + Vite + Tailwind** | SPA par rôles, prototypage rapide, responsive |
+| Mobile | **React Native Expo** | Partage de l'API, déploiement Expo Go / APK |
+| HTTP | **Axios** | Intercepteurs token, gestion d'erreurs |
+| Vidéo | **Jitsi Meet** | Téléconsultation sans infrastructure lourde |
+| SMS / Push | AfricasTalking, FCM | Adaptés au contexte africain / mobile |
+| Paiement | Airtel Money / M-Pesa (+ mock) | Réalité monétaire kinshasa |
 
-### d.2 Choix d'architecture
+### d.2 Choix d'architecture et de conception
 
 | Choix | Alternative écartée | Motif |
 |-------|---------------------|-------|
-| **API first** | Logique métier dans le frontend | Réutilisation mobile, sécurité centralisée |
-| **Monolithe Laravel modulaire** | Microservices | Complexité excessive pour la taille du centre |
-| **RBAC par rôle unique** | Permissions granulaires | Simplicité, 18 rôles métier suffisants en phase 1 |
-| **JSON pour lignes facture / médicaments** | Tables de détail normalisées | Flexibilité, moins de jointures en MVP |
-| **Services d'intégration encapsulés** | Appels directs dans contrôleurs | Mock mode, remplacement fournisseur facilité |
+| **API first** | Logique dans le frontend | Une API pour web et mobile, sécurité centralisée |
+| **Parcours par machine à états** | Statuts libres | Garantit le sens clinique Accueil → Traitement |
+| **Admission comme fil rouge** | Modules isolés sans lien | Une admission = un épisode de soins traçable |
+| **Créneaux calculés** (`CreneauService`) | Heure libre saisie à la main | Évite les doubles réservations |
+| **Monolithe Laravel modulaire** | Microservices | Complexité injustifiée pour un centre de taille moyenne |
+| **RBAC par rôle** | ACL très granulaires | 18 rôles métier suffisent en phase 1 |
+| **Services d'intégration encapsulés** | Appels directs dans les contrôleurs | Mode mock, changement de fournisseur facilité |
 
-### d.3 Organisation du code
+### d.3 Organisation du code source
 
 ```
 hopital-amen/
-├── backend-runtime/     # API Laravel (exécution)
+├── backend-runtime/          # API Laravel
 │   ├── app/Http/Controllers/Api/
-│   ├── app/Services/    # FCM, SMS, Jitsi, Mobile Money
+│   ├── app/Services/         # Creneau, Notifications, Parcours/
+│   ├── app/Enums/            # AdmissionStatut
 │   ├── app/Models/
 │   └── routes/api.php
-├── frontend/            # React
-│   └── src/pages/       # Par rôle métier
-└── docs/                # Documentation TFC + roadmap
+├── frontend/                 # React (espaces par métier)
+│   └── src/pages/
+│       ├── accueil/
+│       ├── infirmier/
+│       ├── medecin/
+│       ├── parcours/         # DossierMedical 9 étapes
+│       ├── laboratoire/
+│       ├── pharmacie/
+│       └── patient/
+├── mobile/                   # Expo (espace patient)
+└── docs/                     # Documentation TFC
 ```
 
 ### d.4 Conventions API
 
-**Format de réponse uniforme :**
+**Réponse uniforme :**
 
 ```json
 {
@@ -417,52 +521,63 @@ hopital-amen/
 }
 ```
 
-**Versionnement :** préfixe `/api/v1` pour permettre une future `v2` sans rupture.
+**Sécurité :** mots de passe hachés (bcrypt), `throttle` sur login, CORS ciblé, validation serveur systématique, tokens à durée limitée.
 
-**Sécurité :**
+**Endpoints représentatifs du parcours :**
 
-- Mots de passe hachés (bcrypt) ;
-- `throttle` sur login et inscription ;
-- CORS configuré pour l'origine frontend (`127.0.0.1:5173`) ;
-- Validation Laravel sur toutes les entrées.
+| Méthode | Endpoint | Rôle |
+|---------|----------|------|
+| `POST` | `/admissions` | Réceptionniste |
+| `PATCH` | `/admissions/{id}/triage` | Infirmier |
+| `PATCH` | `/admissions/{id}/consultation` | Médecin |
+| `PATCH` | `/admissions/{id}/prelevement` | Infirmier |
+| `POST` | `/admissions/{id}/examens` | Médecin / Labo |
+| `PATCH` | `/admissions/{id}/diagnostic` | Médecin |
+| `PUT` | `/pharmacie/ordonnances/{id}/delivrer` | Pharmacien |
+| `PATCH` | `/admissions/{id}/initiation` | Médecin |
+| `PATCH` | `/admissions/{id}/suivi` | Médecin / Accueil |
 
-### d.5 Environnement et outils
+### d.5 Outils et environnement
 
-| Variable / outil | Usage |
-|----------------|-------|
-| `VITE_API_URL` | URL de l'API côté frontend |
-| `.env` Laravel | DB, clés FCM, AfricasTalking, Mobile Money |
-| `MOBILE_MONEY_MOCK=true` | Simulation paiements en développement |
-| Git + GitHub | Versionnement continu ([TFC-ENGWELE](https://github.com/Exauce09/TFC-ENGWELE)) |
-| Composer / npm | Gestion des dépendances PHP et JS |
+| Élément | Usage |
+|---------|--------|
+| `VITE_API_URL` | URL API côté frontend |
+| `.env` Laravel | DB, clés FCM, SMS, Mobile Money |
+| `MOBILE_MONEY_MOCK` | Simulation paiements en développement |
+| `php artisan schedule:work` | Rappels RDV J-1 / H-2 |
+| GitHub [TFC-ENGWELE](https://github.com/Exauce09/TFC-ENGWELE) | Versionnement et démonstration |
 
 ### d.6 Stratégie de déploiement
 
-| Environnement | Base | Usage |
-|---------------|------|-------|
-| Développement | SQLite | Travail local, démonstrations |
-| Test / recette | MySQL | Validation par le personnel AMEN |
-| Production | MySQL + HTTPS | Exploitation réelle au centre |
-
-**Build frontend :** `npm run build` → fichiers statiques servis par Nginx ou hébergement statique, communiquant avec l'API en HTTPS.
+| Phase | Contenu |
+|-------|---------|
+| Développement | SQLite + Vite + mocks (SMS, Mobile Money) |
+| Recette | MySQL + comptes métiers AMEN |
+| Production | HTTPS, MySQL, clés réelles FCM / SMS / Mobile Money, cron Laravel |
 
 ---
 
 ## Conclusion du chapitre
 
-Ce chapitre a présenté une analyse structurée du système proposé : les besoins des utilisateurs ont été classés par acteur et priorisés ; les fonctionnalités attendues ont été cartographiées et associées à des règles métier ; la modélisation (contexte, architecture, données, séquences, sécurité) fournit une base pour l'implémentation ; les choix techniques (Laravel, React, Sanctum, MySQL, intégrations locales) répondent aux contraintes du Centre Médical AMEN à Kinshasa.
+Ce chapitre a présenté l'analyse et la conception du système proposé pour le Centre Médical AMEN :
 
-La suite du travail consiste à **implémenter** et **valider** ces choix (chapitre implémentation), en suivant la feuille de route documentée dans `docs/ROADMAP_WEB.md`, avec un versionnement systématique sur GitHub.
+- les **besoins** ont été recensés par acteur (accueil, soins, patient, support) et priorisés selon le terrain kinshasa ;
+- les **fonctionnalités** s'organisent autour du **parcours en neuf étapes** et du **cycle de vie des rendez-vous** (créneaux, rappels, conversion Jour J) ;
+- la **modélisation** combine architecture API first, machine à états, schéma relationnel centré sur `admissions`, et diagrammes de séquence métier ;
+- les **choix techniques** (Laravel, React, Expo, Sanctum, MySQL/SQLite, Jitsi, Mobile Money) assurent une solution **hybride, sécurisée et évolutive**.
+
+Cette conception a guidé l'implémentation effective (chapitre suivant) : le patient peut être mené de l'**arrivée** à l'**initiation du traitement** et au **suivi** via les écrans métier, sans contournement de la machine à états.
 
 ---
 
 ## Bibliographie
 
-1. Laravel Documentation — [https://laravel.com/docs](https://laravel.com/docs)
-2. React Documentation — [https://react.dev](https://react.dev)
-3. OMS — Cadre pour les systèmes d'information sanitaire
-4. IEEE 830 — Spécifications des exigences logicielles
-5. Documentation AfricasTalking, Jitsi, Firebase FCM
+1. Laravel Documentation — https://laravel.com/docs  
+2. React Documentation — https://react.dev  
+3. Expo Documentation — https://docs.expo.dev  
+4. OMS — Cadre pour les systèmes d'information sanitaire  
+5. IEEE 830 — Spécifications des exigences logicielles  
+6. Documentation AfricasTalking, Jitsi Meet, Firebase Cloud Messaging  
 
 ---
 

@@ -17,18 +17,24 @@ class Admission extends Model
     protected $fillable = [
         'numero_admission',
         'patient_id',
+        'rdv_id',
         'departement_id',
         'enregistre_par',
         'medecin_referent_id',
         'statut',
         'mode_arrivee',
+        'type_visite',
+        'mode_paiement',
+        'niveau_urgence_accueil',
         'motif_arrivee',
         'circuit',
         'observations',
         'arrivee_at',
         'sortie_at',
         'date_suivi_prevue',
+        'rdv_suivi_id',
         'consignes_sortie',
+        'resume_sortie',
         'facturation_ouverte',
     ];
 
@@ -43,12 +49,21 @@ class Admission extends Model
 
     public function getStatutLabelAttribute(): string
     {
-        return AdmissionStatut::tryFrom($this->statut)?->label() ?? $this->statut;
+        $raw = $this->attributes['statut'] ?? null;
+        if ($raw === null || $raw === '') {
+            return 'Statut inconnu';
+        }
+
+        return AdmissionStatut::tryFrom((string) $raw)?->label() ?? (string) $raw;
     }
 
     public function getProchainesEtapesAttribute(): array
     {
-        return app(AdmissionStateMachine::class)->prochainesEtapes($this);
+        try {
+            return app(AdmissionStateMachine::class)->prochainesEtapes($this);
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     public function patient(): BelongsTo
@@ -69,6 +84,16 @@ class Admission extends Model
     public function medecinReferent(): BelongsTo
     {
         return $this->belongsTo(Medecin::class, 'medecin_referent_id');
+    }
+
+    public function rdvSuivi(): BelongsTo
+    {
+        return $this->belongsTo(RendezVous::class, 'rdv_suivi_id');
+    }
+
+    public function rendezVousOrigine(): BelongsTo
+    {
+        return $this->belongsTo(RendezVous::class, 'rdv_id');
     }
 
     public function triage(): HasOne
@@ -94,6 +119,11 @@ class Admission extends Model
     public function prescriptions(): HasMany
     {
         return $this->hasMany(ParcoursPrescription::class);
+    }
+
+    public function notesSuivi(): HasMany
+    {
+        return $this->hasMany(NoteSuiviAmbulatoire::class)->latest('date_note');
     }
 
     public function hospitalisation(): HasOne

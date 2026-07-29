@@ -16,12 +16,14 @@ import PatientDossier from './pages/patient/Dossier';
 import PatientTeleconsultation from './pages/patient/Teleconsultation';
 import MedecinTeleconsultation from './pages/medecin/Teleconsultation';
 import MedecinPatients from './pages/medecin/Patients';
-import MedecinPrescriptions from './pages/medecin/Prescriptions';
+import MedecinPatientDetail from './pages/medecin/PatientDetail';
 import InfirmierDashboard from './pages/infirmier/Dashboard';
 import InfirmierConstantes from './pages/infirmier/Constantes';
 import InfirmierPatients from './pages/infirmier/Patients';
 import InfirmierTriage from './pages/infirmier/Triage';
+import InfirmierPrelevements from './pages/infirmier/Prelevements';
 import AccueilArrivee from './pages/accueil/Arrivee';
+import AccueilReception from './pages/accueil/Reception';
 import AdmissionsList from './pages/parcours/AdmissionsList';
 import DossierMedical from './pages/parcours/DossierMedical';
 import LaboratoireDashboard from './pages/laboratoire/Dashboard';
@@ -53,6 +55,7 @@ import KinesitherapieSeances from './pages/kinesitherapie/Seances';
 import DentisterieDashboard from './pages/dentisterie/Dashboard';
 import DentisterieSoins from './pages/dentisterie/Soins';
 import PrivateRoute from './router/PrivateRoute';
+import { useAuth } from './context/AuthContext';
 
 const MEDECIN_ROLES = [
   'medecin_generaliste', 'medecin_interne', 'pediatre',
@@ -86,6 +89,15 @@ const PARCOURS_ROLES = [
   'caissier',
   ...MEDECIN_ROLES,
 ];
+
+/** Médecins : la file est dans Consultations, pas sur /parcours. */
+function MedecinParcoursRedirect() {
+  const { user } = useAuth();
+  if (MEDECIN_ROLES.includes(user?.role)) {
+    return <Navigate to="/medecin/dossiers" replace />;
+  }
+  return <AdmissionsList />;
+}
 
 export default function App() {
   return (
@@ -142,11 +154,14 @@ export default function App() {
           <Route path="/medecin/patients" element={
             <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinPatients /></PrivateRoute>
           } />
+          <Route path="/medecin/patients/:id" element={
+            <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinPatientDetail /></PrivateRoute>
+          } />
           <Route path="/medecin/prescriptions" element={
-            <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinPrescriptions /></PrivateRoute>
+            <PrivateRoute allowedRoles={MEDECIN_ROLES}><Navigate to="/medecin/dossiers" replace /></PrivateRoute>
           } />
           <Route path="/medecin/parcours" element={
-            <PrivateRoute allowedRoles={MEDECIN_ROLES}><Navigate to="/parcours" replace /></PrivateRoute>
+            <PrivateRoute allowedRoles={MEDECIN_ROLES}><Navigate to="/medecin/dossiers" replace /></PrivateRoute>
           } />
           <Route path="/medecin/teleconsultation" element={
             <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinTeleconsultation /></PrivateRoute>
@@ -234,6 +249,9 @@ export default function App() {
           <Route path="/infirmier/triage" element={
             <PrivateRoute allowedRoles={['infirmier']}><InfirmierTriage /></PrivateRoute>
           } />
+          <Route path="/infirmier/prelevements" element={
+            <PrivateRoute allowedRoles={['infirmier']}><InfirmierPrelevements /></PrivateRoute>
+          } />
           <Route path="/infirmier/constantes" element={
             <PrivateRoute allowedRoles={['infirmier']}><InfirmierConstantes /></PrivateRoute>
           } />
@@ -250,11 +268,16 @@ export default function App() {
           <Route path="/accueil/dashboard" element={
             <PrivateRoute allowedRoles={['receptionniste']}><AccueilDashboard /></PrivateRoute>
           } />
+          <Route path="/accueil/reception" element={
+            <PrivateRoute allowedRoles={['receptionniste']}><AccueilReception /></PrivateRoute>
+          } />
           <Route path="/accueil/arrivee" element={
             <PrivateRoute allowedRoles={['receptionniste']}><AccueilArrivee /></PrivateRoute>
           } />
           <Route path="/parcours" element={
-            <PrivateRoute allowedRoles={PARCOURS_ROLES}><AdmissionsList /></PrivateRoute>
+            <PrivateRoute allowedRoles={PARCOURS_ROLES}>
+              <MedecinParcoursRedirect />
+            </PrivateRoute>
           } />
           <Route path="/parcours/:id" element={
             <PrivateRoute allowedRoles={PARCOURS_ROLES}><DossierMedical /></PrivateRoute>

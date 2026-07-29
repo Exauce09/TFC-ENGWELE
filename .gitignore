@@ -40,3 +40,7 @@ Thumbs.db
 # PHP
 .phpunit.result.cache
 .phpunit.cache
+
+# Word lock files
+~$*.docx
+

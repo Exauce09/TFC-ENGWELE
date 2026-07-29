@@ -60,9 +60,14 @@ class AdmissionStateMachine
     /** @return list<string> */
     public function prochainesEtapes(Admission $admission): array
     {
+        $from = AdmissionStatut::tryFrom((string) ($admission->statut ?? ''));
+        if (! $from) {
+            return [];
+        }
+
         return array_map(
             fn (AdmissionStatut $s) => $s->value,
-            AdmissionStatut::from($admission->statut)->transitionsAutorisees()
+            $from->transitionsAutorisees()
         );
     }
 }

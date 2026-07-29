@@ -1,66 +1,37 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import Layout from '../../components/layout/Layout';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import MedecinLayout from '../../components/layout/MedecinLayout';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { nomMedecin } from '../../utils/format';
 
-const STATUT_CONFIG = {
-  confirme: { bg: 'bg-emerald-100 text-emerald-700', dot: 'bg-emerald-500', label: 'Confirmé' },
-  en_attente: { bg: 'bg-amber-100 text-amber-700', dot: 'bg-amber-500', label: 'En attente' },
-  en_cours: { bg: 'bg-blue-100 text-blue-700', dot: 'bg-blue-500', label: 'En cours' },
-  termine: { bg: 'bg-slate-100 text-slate-500', dot: 'bg-slate-400', label: 'Terminé' },
-  annule: { bg: 'bg-red-100 text-red-700', dot: 'bg-red-400', label: 'Annulé' },
-  absent: { bg: 'bg-orange-100 text-orange-700', dot: 'bg-orange-400', label: 'Absent' },
+const STATUT_RDV = {
+  confirme: { bg: 'bg-emerald-100 text-emerald-700', label: 'Confirmé' },
+  en_attente: { bg: 'bg-amber-100 text-amber-700', label: 'En attente' },
+  en_cours: { bg: 'bg-teal-100 text-teal-800', label: 'En cours' },
+  termine: { bg: 'bg-slate-100 text-slate-500', label: 'Terminé' },
+  absent: { bg: 'bg-orange-100 text-orange-700', label: 'Absent' },
 };
-
-function patientAge(patient) {
-  if (!patient?.date_naissance) return null;
-  const birth = new Date(patient.date_naissance);
-  const now = new Date();
-  let age = now.getFullYear() - birth.getFullYear();
-  const m = now.getMonth() - birth.getMonth();
-  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
-  return age;
-}
-
-function patientName(rdv) {
-  return rdv?.patient?.user?.name || 'Patient';
-}
-
-function formatHeure(heure) {
-  return heure ? String(heure).slice(0, 5) : '—';
-}
-
-function primaryDiagnostic(dossier) {
-  return dossier?.diagnostics?.[0]?.libelle || '—';
-}
 
 export default function MedecinDashboard() {
   const { user } = useAuth();
-  const [stats, setStats] = useState(null);
-  const [planning, setPlanning] = useState([]);
-  const [dossiersRecents, setDossiersRecents] = useState([]);
-  const [selected, setSelected] = useState(null);
-  const [noteForm, setNoteForm] = useState({ diagnostic: '', observation: '' });
-  const [noteSaved, setNoteSaved] = useState(false);
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     setError('');
     try {
       const res = await api.get('/medecin/dashboard');
-      const data = res.data.data || {};
-      setStats(data);
-      setPlanning(data.planning_du_jour || []);
-      setDossiersRecents(data.dossiers_recents || []);
+      setData(res.data.data || {});
     } catch (err) {
       setError(err.response?.data?.message || 'Impossible de charger le tableau de bord');
-      setStats(null);
-      setPlanning([]);
-      setDossiersRecents([]);
+      setData(null);
     } finally {
       setLoading(false);
     }
@@ -68,253 +39,304 @@ export default function MedecinDashboard() {
 
   useEffect(() => { void load(); }, [load]);
 
-  const enCours = stats?.rdv_en_cours || planning.find((p) => p.statut === 'en_cours');
-
-  const updateStatut = async (id, statut) => {
+  const searchPatients = async (q) => {
+    setSearch(q);
+    if (q.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
     try {
-      await api.put(`/medecin/rendez-vous/${id}/statut`, { statut });
-      await load();
-      if (selected?.id === id && statut === 'termine') setSelected(null);
+      const res = await api.get('/medecin/patients', { params: { q } });
+      setSearchResults(res.data.data || []);
     } catch {
-      alert('Impossible de mettre à jour le statut');
-    }
-  };
-
-  const saveNote = async (e) => {
-    e.preventDefault();
-    if (!selected) return;
-    setSaving(true);
-    try {
-      await api.post('/medecin/dossiers', {
-        patient_id: selected.patient_id,
-        departement_id: selected.departement_id,
-        rendez_vous_id: selected.id,
-        date_consultation: selected.date_rdv?.slice?.(0, 10) || new Date().toISOString().slice(0, 10),
-        motif: selected.motif || 'Consultation',
-        observations: noteForm.observation || null,
-        diagnostic: noteForm.diagnostic
-          ? { libelle: noteForm.diagnostic }
-          : undefined,
-      });
-      setNoteSaved(true);
-      setNoteForm({ diagnostic: '', observation: '' });
-      setTimeout(() => setNoteSaved(false), 3000);
-      await load();
-    } catch (err) {
-      alert(err.response?.data?.message || 'Erreur lors de la sauvegarde');
+      setSearchResults([]);
     } finally {
-      setSaving(false);
+      setSearching(false);
     }
   };
 
-  const selectRdv = (rdv) => {
-    setSelected(rdv);
-    setNoteForm({ diagnostic: '', observation: '' });
+  const marquerAbsent = async (rdvId) => {
+    if (!window.confirm('Marquer ce patient comme absent ?')) return;
+    try {
+      await api.put(`/medecin/rendez-vous/${rdvId}/statut`, { statut: 'absent' });
+      void load();
+    } catch {
+      setError('Impossible de marquer le patient absent.');
+    }
   };
+
+  const demarrerRdv = async (rdvId) => {
+    try {
+      await api.put(`/medecin/rendez-vous/${rdvId}/statut`, { statut: 'en_cours' });
+      void load();
+      navigate('/medecin/dossiers');
+    } catch {
+      setError('Impossible de démarrer la consultation.');
+    }
+  };
+
+  const prochain = useMemo(() => {
+    if (!data) return null;
+    if (data.prochain_file) {
+      return {
+        type: 'file',
+        name: data.prochain_file.patient?.user?.name,
+        motif: data.prochain_file.motif_arrivee,
+        heure: data.prochain_file.arrivee_at
+          ? new Date(data.prochain_file.arrivee_at).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+          : null,
+        link: `/parcours/${data.prochain_file.id}`,
+      };
+    }
+    if (data.prochain_rdv) {
+      return {
+        type: 'rdv',
+        name: data.prochain_rdv.patient?.user?.name,
+        motif: data.prochain_rdv.motif,
+        heure: data.prochain_rdv.heure_rdv ? String(data.prochain_rdv.heure_rdv).slice(0, 5) : null,
+        id: data.prochain_rdv.id,
+        link: '/medecin/dossiers',
+      };
+    }
+    return null;
+  }, [data]);
 
   if (loading) {
     return (
-      <Layout title="Espace Médecin">
-        <p className="text-slate-500">Chargement du tableau de bord...</p>
-      </Layout>
+      <MedecinLayout title="Tableau de bord">
+        <p className="text-[#5A8A7A]">Chargement…</p>
+      </MedecinLayout>
     );
   }
 
+  const planning = data?.planning_du_jour || [];
+  const dossiers = data?.dossiers_recents || [];
+  const alertes = data?.examens_disponibles || [];
+  const enAttente = data?.rdv_en_attente ?? 0;
+  const vus = data?.rdv_termines ?? 0;
+  const restants = data?.rdv_restants ?? 0;
+
   return (
-    <Layout title="Espace Médecin">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <MedecinLayout title="Tableau de bord">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Bonjour, {user?.name?.split(' ')[0]} 👨‍⚕️</h2>
-          <p className="mt-1 text-sm text-slate-500">
-            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} · Planning du jour
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1A7A6D]">Cabinet</p>
+          <h2 className="font-medecin-display text-3xl text-[#0D3B3A]">
+            Bonjour, {nomMedecin(user?.name).replace(/^Dr\s+/i, '') || 'Docteur'}
+          </h2>
+          <p className="mt-1 text-sm text-[#5A8A7A]">
+            {new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link to="/medecin/dossiers"
-            className="rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
-            📋 Nouveau dossier
-          </Link>
-          <Link to="/medecin/dossiers"
-            className="rounded-full bg-medical-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5">
-            💊 Nouvelle prescription
-          </Link>
+        <div className="flex flex-wrap gap-2">
+          {prochain?.type === 'file' && (
+            <Link to={prochain.link} className="medecin-btn">Démarrer le prochain →</Link>
+          )}
+          {prochain?.type === 'rdv' && prochain.id && (
+            <button type="button" onClick={() => demarrerRdv(prochain.id)} className="medecin-btn">
+              Démarrer le prochain →
+            </button>
+          )}
+          <Link to="/medecin/dossiers" className="medecin-btn-ghost">Consultations</Link>
         </div>
       </div>
 
-      {error && <p className="mb-4 text-red-600">{error}</p>}
+      {/* Recherche rapide */}
+      <div className="relative mb-6 max-w-xl">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => void searchPatients(e.target.value)}
+          placeholder="Recherche rapide dossier (nom, n° patient…)"
+          className="w-full rounded-xl border border-[#C5D9D0] bg-white px-4 py-2.5 text-sm text-[#0D3B3A]"
+        />
+        {(searching || searchResults.length > 0) && search.trim().length >= 2 && (
+          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-xl border border-[#C5D9D0] bg-white shadow-lg">
+            {searching ? (
+              <p className="px-4 py-3 text-sm text-[#5A8A7A]">Recherche…</p>
+            ) : searchResults.length === 0 ? (
+              <p className="px-4 py-3 text-sm text-[#5A8A7A]">Aucun patient.</p>
+            ) : (
+              searchResults.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => navigate(`/medecin/patients/${p.id}`)}
+                  className="block w-full px-4 py-2.5 text-left text-sm hover:bg-[#E8F5F2]"
+                >
+                  <span className="font-medium text-[#0D3B3A]">{p.user?.name}</span>
+                  <span className="text-[#5A8A7A]"> — {p.numero_patient}</span>
+                </button>
+              ))
+            )}
+          </div>
+        )}
+      </div>
 
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+      {error && <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p>}
+
+      {/* Compteurs jour */}
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
-          { icon: '📅', label: 'RDV du jour', value: stats?.rdv_du_jour ?? 0, sub: 'programmés' },
-          { icon: '✅', label: 'Consultés', value: stats?.rdv_termines ?? 0, sub: "aujourd'hui" },
-          { icon: '⏳', label: 'En attente', value: stats?.rdv_en_attente ?? 0, sub: 'à recevoir' },
-          { icon: '📋', label: 'Dossiers ouverts', value: stats?.dossiers_semaine ?? 0, sub: 'cette semaine' },
-        ].map((s) => (
-          <div key={s.label} className="rounded-2xl border bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm text-slate-500">{s.label}</p>
-                <p className="mt-1 text-3xl font-bold text-slate-900">{s.value}</p>
-                <p className="mt-0.5 text-xs text-slate-400">{s.sub}</p>
-              </div>
-              <span className="text-2xl">{s.icon}</span>
-            </div>
-          </div>
-        ))}
+          { label: 'En attente', value: enAttente, hint: 'RDV à voir' },
+          { label: 'Vus', value: vus, hint: 'Terminés aujourd\'hui' },
+          { label: 'Restants', value: restants, hint: 'Confirmés / attente' },
+          { label: 'File consultation', value: data?.file_count ?? 0, hint: 'Après triage', to: '/medecin/dossiers' },
+          { label: 'Examens en attente', value: data?.examens_en_attente ?? 0, hint: 'Labo / imagerie' },
+        ].map((s) => {
+          const inner = (
+            <>
+              <p className="text-[10px] font-bold uppercase tracking-wide text-[#7A9A90]">{s.label}</p>
+              <p className="mt-1 font-medecin-display text-3xl text-[#0D3B3A]">{s.value}</p>
+              <p className="text-xs text-[#5A8A7A]">{s.hint}</p>
+            </>
+          );
+          return s.to ? (
+            <Link key={s.label} to={s.to} className="medecin-card block p-4 transition hover:border-[#1A7A6D]/40">{inner}</Link>
+          ) : (
+            <div key={s.label} className="medecin-card p-4">{inner}</div>
+          );
+        })}
       </div>
 
-      {enCours && (
-        <div className="mb-6 rounded-2xl bg-gradient-to-r from-blue-600 to-cyan-500 p-5 text-white shadow-xl">
-          <div className="mb-2 flex items-center gap-2">
-            <div className="h-2 w-2 animate-pulse rounded-full bg-white" />
-            <p className="text-xs font-semibold uppercase tracking-widest opacity-90">Consultation en cours</p>
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-xl font-bold">{patientName(enCours)}</p>
-              <p className="text-sm opacity-80">
-                {enCours.motif || 'Consultation'}
-                {patientAge(enCours.patient) != null && ` · ${patientAge(enCours.patient)} ans`}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Link to="/medecin/dossiers"
-                className="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold backdrop-blur-sm transition hover:bg-white/30">
-                📋 Ouvrir dossier
-              </Link>
-              <button type="button" onClick={() => updateStatut(enCours.id, 'termine')}
-                className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow transition hover:bg-blue-50">
-                ✅ Terminer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="grid gap-6 lg:grid-cols-5">
-        <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm lg:col-span-3">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-            <h3 className="font-semibold text-slate-900">Planning du jour</h3>
-            <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-semibold text-medical-primary">
-              {planning.length} patient{planning.length !== 1 ? 's' : ''}
-            </span>
-          </div>
-          {planning.length === 0 ? (
-            <div className="p-10 text-center text-slate-500">
-              <p className="text-4xl">📅</p>
-              <p className="mt-3 font-medium">Aucun rendez-vous aujourd&apos;hui</p>
-              <Link to="/medecin/planning" className="mt-2 inline-block text-sm text-medical-primary hover:underline">
-                Voir le planning complet →
-              </Link>
+      {/* Prochain patient + stats */}
+      <div className="mb-6 grid gap-4 lg:grid-cols-3">
+        <section className="medecin-card-accent p-5 lg:col-span-2">
+          <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1A7A6D]">Prochain patient</p>
+          {prochain ? (
+            <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <h3 className="font-medecin-display text-2xl text-[#0D3B3A]">{prochain.name}</h3>
+                <p className="text-sm text-[#5A8A7A]">
+                  {prochain.motif || 'Consultation'}
+                  {prochain.heure ? ` · ${prochain.heure}` : ''}
+                  {prochain.type === 'file' ? ' · File triage' : ' · RDV'}
+                </p>
+              </div>
+              {prochain.type === 'file' ? (
+                <Link to={prochain.link} className="medecin-btn text-xs">Démarrer</Link>
+              ) : (
+                <button type="button" onClick={() => demarrerRdv(prochain.id)} className="medecin-btn text-xs">Démarrer</button>
+              )}
             </div>
           ) : (
-            <div className="divide-y divide-slate-50">
+            <p className="mt-3 text-sm text-[#7A9A90]">Aucun patient en attente pour le moment.</p>
+          )}
+        </section>
+
+        <section className="medecin-card p-5">
+          <p className="text-[10px] font-bold uppercase tracking-wide text-[#7A9A90]">Statistiques</p>
+          <p className="mt-2 text-sm text-[#0D3B3A]">
+            <strong className="font-medecin-display text-2xl">{data?.dossiers_semaine ?? 0}</strong>
+            <span className="text-[#5A8A7A]"> consultations cette semaine</span>
+          </p>
+          <p className="mt-2 text-sm text-[#0D3B3A]">
+            <strong className="font-medecin-display text-2xl">{data?.dossiers_mois ?? 0}</strong>
+            <span className="text-[#5A8A7A]"> ce mois</span>
+          </p>
+          <p className="mt-2 text-xs text-[#5A8A7A]">
+            {data?.ordonnances_actives ?? 0} ordonnance(s) active(s)
+          </p>
+        </section>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* RDV chronologique */}
+        <section className="medecin-card overflow-hidden">
+          <div className="flex items-center justify-between border-b border-[#C5D9D0] px-5 py-4">
+            <h3 className="font-medecin-display text-lg text-[#0D3B3A]">RDV du jour</h3>
+            <Link to="/medecin/planning" className="text-xs font-semibold text-[#1A7A6D] hover:underline">Planning →</Link>
+          </div>
+          {planning.length === 0 ? (
+            <p className="p-8 text-center text-sm text-[#7A9A90]">Aucun rendez-vous aujourd&apos;hui.</p>
+          ) : (
+            <div className="divide-y divide-[#C5D9D0]/80">
               {planning.map((rdv) => {
-                const cfg = STATUT_CONFIG[rdv.statut] || STATUT_CONFIG.en_attente;
-                const age = patientAge(rdv.patient);
+                const cfg = STATUT_RDV[rdv.statut] || STATUT_RDV.en_attente;
                 return (
-                  <div
-                    key={rdv.id}
-                    onClick={() => selectRdv(rdv)}
-                    className={`flex cursor-pointer items-center gap-3 px-5 py-3.5 transition hover:bg-slate-50 ${selected?.id === rdv.id ? 'bg-blue-50' : ''}`}
-                  >
-                    <div className="w-14 text-center">
-                      <span className="text-sm font-bold text-slate-700">{formatHeure(rdv.heure_rdv)}</span>
-                    </div>
-                    <div className={`h-2 w-2 flex-shrink-0 rounded-full ${cfg.dot}`} />
+                  <div key={rdv.id} className="flex flex-wrap items-center gap-3 px-5 py-3">
+                    <span className="w-12 font-mono text-sm font-bold text-[#1A7A6D]">
+                      {String(rdv.heure_rdv).slice(0, 5)}
+                    </span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-slate-900">{patientName(rdv)}</p>
-                      <p className="truncate text-xs text-slate-500">
-                        {rdv.motif || 'Consultation'}
-                        {age != null && ` · ${age} ans`}
-                      </p>
+                      <p className="truncate text-sm font-medium text-[#0D3B3A]">{rdv.patient?.user?.name}</p>
+                      <p className="truncate text-xs text-[#7A9A90]">{rdv.motif || 'Consultation'}</p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      {rdv.type === 'teleconsultation' && <span title="Téléconsultation" className="text-base">📹</span>}
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${cfg.bg}`}>{cfg.label}</span>
-                    </div>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cfg.bg}`}>{cfg.label}</span>
+                    {['confirme', 'en_attente'].includes(rdv.statut) && (
+                      <>
+                        <button type="button" onClick={() => demarrerRdv(rdv.id)} className="text-[10px] font-bold text-[#1A7A6D] hover:underline">
+                          Démarrer
+                        </button>
+                        <button type="button" onClick={() => marquerAbsent(rdv.id)} className="text-[10px] font-bold text-orange-700 hover:underline">
+                          Absent
+                        </button>
+                      </>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
-        </div>
+        </section>
 
-        <div className="flex flex-col gap-4 lg:col-span-2">
-          <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-            <h3 className="mb-3 font-semibold text-slate-900">
-              {selected ? `Observation — ${patientName(selected)}` : '📝 Note rapide'}
-            </h3>
-            {selected ? (
-              <form onSubmit={saveNote} className="space-y-3">
-                <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Diagnostic</span>
-                  <input
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-medical-primary focus:ring-2 focus:ring-blue-100"
-                    placeholder="Diagnostic principal..."
-                    value={noteForm.diagnostic}
-                    onChange={(e) => setNoteForm((f) => ({ ...f, diagnostic: e.target.value }))}
-                  />
-                </label>
-                <label className="block">
-                  <span className="text-xs font-medium text-slate-600">Observations cliniques</span>
-                  <textarea
-                    rows={4}
-                    className="mt-1 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-medical-primary focus:ring-2 focus:ring-blue-100"
-                    placeholder="Examen clinique, observations..."
-                    value={noteForm.observation}
-                    onChange={(e) => setNoteForm((f) => ({ ...f, observation: e.target.value }))}
-                  />
-                </label>
-                <div className="flex gap-2">
-                  <button type="submit" disabled={saving}
-                    className="flex-1 rounded-xl bg-medical-primary py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60">
-                    {noteSaved ? '✅ Sauvegardé !' : saving ? 'Enregistrement...' : 'Sauvegarder'}
-                  </button>
-                  {selected.statut !== 'termine' && (
-                    <button type="button" onClick={() => updateStatut(selected.id, 'en_cours')}
-                      className="rounded-xl border px-3 py-2 text-sm text-blue-600 hover:bg-blue-50">
-                      ▶ Démarrer
-                    </button>
-                  )}
-                  <button type="button" onClick={() => setSelected(null)}
-                    className="rounded-xl border px-3 py-2 text-sm text-slate-500 hover:bg-slate-50">
-                    ✕
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <p className="text-sm text-slate-400">
-                Cliquez sur un patient dans le planning pour ouvrir le panneau d&apos;observation.
-              </p>
-            )}
-          </div>
-
-          <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-5 py-4">
-              <h3 className="font-semibold text-slate-900">Dossiers récents</h3>
+        {/* Alertes résultats + consultations récentes */}
+        <div className="flex flex-col gap-4">
+          <section className="medecin-card overflow-hidden">
+            <div className="border-b border-[#C5D9D0] px-5 py-4">
+              <h3 className="font-medecin-display text-lg text-[#0D3B3A]">Alertes — résultats disponibles</h3>
             </div>
-            {dossiersRecents.length === 0 ? (
-              <p className="p-5 text-sm text-slate-400">Aucun dossier récent.</p>
+            {alertes.length === 0 ? (
+              <p className="p-6 text-center text-sm text-[#7A9A90]">Aucun nouveau résultat.</p>
             ) : (
-              <div className="divide-y divide-slate-50">
-                {dossiersRecents.map((d) => (
-                  <Link key={d.id} to="/medecin/dossiers"
-                    className="block px-5 py-3 transition hover:bg-slate-50">
-                    <p className="text-sm font-medium text-slate-900">{d.patient?.user?.name || 'Patient'}</p>
-                    <p className="text-xs text-slate-500">{primaryDiagnostic(d)}</p>
-                    <p className="text-xs text-slate-400">
-                      {d.date_consultation
-                        ? new Date(d.date_consultation).toLocaleDateString('fr-FR')
-                        : '—'}
+              <div className="divide-y divide-[#C5D9D0]/80">
+                {alertes.map((ex) => (
+                  <Link
+                    key={ex.id}
+                    to={ex.admission?.id ? `/parcours/${ex.admission.id}` : '/medecin/dossiers'}
+                    className="block px-5 py-3 hover:bg-[#E8F5F2]/60"
+                  >
+                    <p className="text-sm font-medium text-[#0D3B3A]">
+                      {ex.admission?.patient?.user?.name || 'Patient'} — {ex.type_examen}
+                    </p>
+                    <p className="text-xs text-[#5A8A7A]">
+                      {ex.termine_at ? new Date(ex.termine_at).toLocaleString('fr-FR') : 'Résultat prêt'}
                     </p>
                   </Link>
                 ))}
               </div>
             )}
-          </div>
+          </section>
+
+          <section className="medecin-card overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[#C5D9D0] px-5 py-4">
+              <h3 className="font-medecin-display text-lg text-[#0D3B3A]">Consultations récentes</h3>
+              <Link to="/medecin/dossiers" className="text-xs font-semibold text-[#1A7A6D] hover:underline">Tout voir →</Link>
+            </div>
+            {dossiers.length === 0 ? (
+              <p className="p-6 text-center text-sm text-[#7A9A90]">Aucune consultation récente.</p>
+            ) : (
+              <div className="divide-y divide-[#C5D9D0]/80">
+                {dossiers.map((d) => (
+                  <Link
+                    key={d.id}
+                    to={d.patient_id ? `/medecin/patients/${d.patient_id}` : '/medecin/dossiers'}
+                    className="block px-5 py-3 transition hover:bg-[#E8F5F2]/60"
+                  >
+                    <p className="text-sm font-medium text-[#0D3B3A]">{d.patient?.user?.name}</p>
+                    <p className="text-xs text-[#5A8A7A]">
+                      {d.diagnostics?.[0]?.libelle || d.motif || '—'}
+                      {' · '}
+                      {d.date_consultation ? new Date(d.date_consultation).toLocaleDateString('fr-FR') : '—'}
+                    </p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
         </div>
       </div>
-    </Layout>
+    </MedecinLayout>
   );
 }

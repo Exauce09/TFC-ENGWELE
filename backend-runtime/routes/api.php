@@ -50,6 +50,7 @@ Route::prefix('v1')->group(function (): void {
             Route::patch('/{id}/consultation', [AdmissionController::class, 'consultation'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,admin');
             Route::patch('/{id}/prelevement', [AdmissionController::class, 'prelevement'])->middleware('role:infirmier,admin,medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste');
             Route::post('/{id}/examens', [AdmissionController::class, 'examens'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,laborantin,admin');
+            Route::put('/{id}/examens/{examenId}', [AdmissionController::class, 'updateExamen'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,laborantin,admin');
             Route::patch('/{id}/diagnostic', [AdmissionController::class, 'diagnostic'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,admin');
             Route::post('/{id}/prescription', [AdmissionController::class, 'prescription'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,pharmacien,admin');
             Route::patch('/{id}/initiation', [AdmissionController::class, 'initiation'])->middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,admin');
@@ -59,7 +60,9 @@ Route::prefix('v1')->group(function (): void {
         Route::middleware('role:patient')->prefix('patient')->group(function (): void {
             Route::get('/dashboard', [PatientController::class, 'dashboard']);
             Route::get('/rendez-vous', [RendezVousController::class, 'mesRendezVous']);
+            Route::get('/creneaux', [RendezVousController::class, 'creneaux']);
             Route::post('/rendez-vous', [RendezVousController::class, 'prendre']);
+            Route::put('/rendez-vous/{id}/reporter', [RendezVousController::class, 'reporter']);
             Route::post('/rendez-vous/{id}/paiement', [RendezVousController::class, 'payer']);
             Route::delete('/rendez-vous/{id}', [RendezVousController::class, 'annuler']);
             Route::get('/dossier', [DossierController::class, 'monDossier']);
@@ -74,11 +77,15 @@ Route::prefix('v1')->group(function (): void {
                 Route::get('/dashboard', [MedecinController::class, 'dashboard']);
                 Route::get('/planning', [MedecinController::class, 'planning']);
                 Route::get('/patients', [DossierController::class, 'patients']);
+                Route::get('/patients/{id}', [DossierController::class, 'showPatient']);
                 Route::get('/dossiers', [DossierController::class, 'index']);
                 Route::get('/dossiers/{id}', [DossierController::class, 'show']);
                 Route::post('/dossiers', [DossierController::class, 'store']);
                 Route::put('/dossiers/{id}', [DossierController::class, 'update']);
                 Route::post('/prescriptions', [PrescriptionController::class, 'store']);
+                Route::get('/prescriptions/{id}', [PrescriptionController::class, 'show']);
+                Route::put('/prescriptions/{id}', [PrescriptionController::class, 'update']);
+                Route::put('/prescriptions/{id}/annuler', [PrescriptionController::class, 'annuler']);
                 Route::put('/rendez-vous/{id}/statut', [RendezVousController::class, 'updateStatut']);
                 Route::get('/file-consultation', [EpisodeSoinController::class, 'fileConsultation']);
                 Route::post('/episodes/{id}/decision', [EpisodeSoinController::class, 'decision']);
@@ -86,10 +93,13 @@ Route::prefix('v1')->group(function (): void {
             });
 
         Route::middleware('role:infirmier')->prefix('infirmier')->group(function (): void {
+            Route::get('/dashboard', [InfirmierController::class, 'dashboard']);
             Route::get('/patients', [InfirmierController::class, 'patients']);
             Route::get('/constantes', [InfirmierController::class, 'constantes']);
             Route::post('/constantes', [InfirmierController::class, 'enregistrerConstantes']);
-            Route::get('/file-triage', [EpisodeSoinController::class, 'fileTriage']);
+            Route::get('/file-triage', [InfirmierController::class, 'fileTriageAdmissions']);
+            Route::get('/file-prelevement', [InfirmierController::class, 'filePrelevement']);
+            Route::get('/file-triage-episodes', [EpisodeSoinController::class, 'fileTriage']);
             Route::post('/episodes/{id}/triage', [EpisodeSoinController::class, 'triage']);
         });
 
@@ -145,8 +155,12 @@ Route::prefix('v1')->group(function (): void {
             Route::get('/dashboard', [AccueilController::class, 'dashboard']);
             Route::get('/demandes', [AccueilController::class, 'demandes']);
             Route::put('/demandes/{id}', [AccueilController::class, 'traiterDemande']);
+            Route::post('/demandes/{id}/confirmer', [AccueilController::class, 'confirmerDemande']);
             Route::get('/rendez-vous', [AccueilController::class, 'rendezVous']);
+            Route::post('/rendez-vous/{id}/convertir', [AccueilController::class, 'convertirRdv']);
+            Route::post('/rendez-vous/{id}/absent', [AccueilController::class, 'marquerAbsent']);
             Route::get('/patients', [AccueilController::class, 'patients']);
+            Route::get('/creneaux', [RendezVousController::class, 'creneaux']);
             Route::get('/episodes', [EpisodeSoinController::class, 'index']);
             Route::post('/episodes/arrivee', [EpisodeSoinController::class, 'enregistrerArrivee']);
             Route::get('/episodes/{id}', [EpisodeSoinController::class, 'show']);

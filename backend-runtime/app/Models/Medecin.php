@@ -18,14 +18,23 @@ class Medecin extends Model
         'specialite',
         'grade',
         'diplomes',
+        'diplomes_liste',
         'disponibilites',
         'tarif_consultation',
         'duree_consultation',
         'bio',
+        'annees_experience',
+        'etablissements_precedents',
+        'signature_electronique',
+        'langues',
+        'type_contrat',
     ];
 
     protected $casts = [
         'disponibilites' => 'array',
+        'diplomes_liste' => 'array',
+        'etablissements_precedents' => 'array',
+        'langues' => 'array',
         'tarif_consultation' => 'decimal:2',
     ];
 

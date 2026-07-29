@@ -50,14 +50,39 @@ class DossierSeeder extends Seeder
         Prescription::updateOrCreate(
             ['dossier_id' => $dossier1->id, 'date_prescription' => '2026-06-15'],
             [
+                'numero_ordonnance' => 'ORD-20260615-0001',
                 'medecin_id' => $medecin->id,
                 'patient_id' => $patient->id,
                 'date_expiration' => '2026-07-15',
+                'validite_jours' => 30,
+                'diagnostic_motif' => 'Infection virale des voies respiratoires',
                 'medicaments' => [
-                    ['nom' => 'Amoxicilline', 'dosage' => '500mg', 'frequence' => '3x/jour', 'duree' => '7 jours'],
-                    ['nom' => 'Paracetamol', 'dosage' => '1000mg', 'frequence' => '2x/jour', 'duree' => '5 jours'],
+                    [
+                        'nom' => 'Amoxicilline (Clamoxyl)',
+                        'nom_dci' => 'Amoxicilline',
+                        'nom_commercial' => 'Clamoxyl',
+                        'dosage' => '500mg',
+                        'forme' => 'Gélule',
+                        'posologie' => '1 gélule 3x/jour',
+                        'frequence' => '1 gélule 3x/jour',
+                        'duree' => '7 jours',
+                        'quantite' => '21 gélules',
+                        'instructions' => 'Après les repas',
+                    ],
+                    [
+                        'nom' => 'Paracetamol',
+                        'nom_dci' => 'Paracetamol',
+                        'nom_commercial' => null,
+                        'dosage' => '1000mg',
+                        'forme' => 'Comprimé',
+                        'posologie' => '1 comprimé 2x/jour',
+                        'frequence' => '1 comprimé 2x/jour',
+                        'duree' => '5 jours',
+                        'quantite' => '10 comprimés',
+                        'instructions' => 'Si fièvre ou douleur',
+                    ],
                 ],
-                'instructions_generales' => 'Prendre apres les repas. Repos et hydratation.',
+                'instructions_generales' => 'Repos et hydratation. Revoir si aggravation.',
                 'statut' => 'active',
             ]
         );

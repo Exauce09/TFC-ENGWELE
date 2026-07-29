@@ -15,13 +15,18 @@ class Patient extends Model
         'user_id',
         'numero_patient',
         'date_naissance',
+        'age_declare',
         'lieu_naissance',
         'nationalite',
         'profession',
+        'piece_identite_type',
+        'piece_identite_numero',
+        'photo',
         'etat_civil',
         'sexe',
         'adresse',
         'commune',
+        'ville',
         'quartier',
         'groupe_sanguin',
         'allergies',
@@ -35,6 +40,7 @@ class Patient extends Model
         'contact_urgence_nom',
         'contact_urgence_tel',
         'contact_urgence_lien',
+        'medecin_traitant_id',
     ];
 
     protected $casts = [
@@ -47,6 +53,11 @@ class Patient extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function medecinTraitant(): BelongsTo
+    {
+        return $this->belongsTo(Medecin::class, 'medecin_traitant_id');
+    }
+
     public function admissions(): HasMany
     {
         return $this->hasMany(Admission::class)->latest();
@@ -57,6 +68,11 @@ class Patient extends Model
         return $this->hasOne(Admission::class)
             ->whereNotIn('statut', \App\Enums\AdmissionStatut::statutsClotures())
             ->latestOfMany();
+    }
+
+    public function dossiers(): HasMany
+    {
+        return $this->hasMany(DossierMedical::class)->latest('date_consultation');
     }
 
     public function factures(): HasMany

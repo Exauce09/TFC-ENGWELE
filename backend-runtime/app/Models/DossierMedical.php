@@ -63,7 +63,7 @@ class DossierMedical extends Model
 
     public function prescriptions(): HasMany
     {
-        return $this->hasMany(Prescription::class, 'dossier_id');
+        return $this->hasMany(Prescription::class, 'dossier_id')->latest('date_prescription')->latest('id');
     }
 
     public function episode(): \Illuminate\Database\Eloquent\Relations\HasOne
