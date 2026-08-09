@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
+import Modal from '../../components/parcours/Modal';
 import api from '../../services/api';
 
 function ageFrom(patient) {
@@ -19,6 +20,8 @@ export default function PharmacieOrdonnances() {
   const [msg, setMsg] = useState('');
   const [error, setError] = useState('');
   const [notes, setNotes] = useState({});
+  const [confirmItem, setConfirmItem] = useState(null);
+  const [busy, setBusy] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -32,34 +35,50 @@ export default function PharmacieOrdonnances() {
 
   useEffect(() => { void load(); }, []);
 
-  const delivrer = async (p) => {
-    if (!confirm(`Confirmer la délivrance de ${p.numero_ordonnance} ?\nLe stock sera décrémenté (lot / péremption tracés si disponibles).`)) return;
+  const demanderDelivrance = (p) => {
+    setError('');
+    setConfirmItem(p);
+  };
+
+  const confirmerDelivrance = async () => {
+    if (!confirmItem) return;
+    const p = confirmItem;
+    setBusy(true);
     setError('');
     try {
       await api.put(`/pharmacie/ordonnances/${p.id}/delivrer`, {
         source: p.source || 'parcours',
         notes_pharmacien: notes[p.id] || null,
       });
+      setConfirmItem(null);
       setMsg(
-        p.source === 'parcours'
-          ? 'Ordonnance délivrée — parcours avancé vers initiation du traitement.'
-          : 'Ordonnance dossier délivrée. Stock mis à jour.'
+        `${p.numero_ordonnance} délivrée pour ${p.patient?.user?.name || 'le patient'}.`
+        + (p.source === 'parcours'
+          ? ' Le parcours passe à l’initiation du traitement.'
+          : ' Stock mis à jour.')
       );
       void load();
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur lors de la délivrance.');
+      setConfirmItem(null);
+    } finally {
+      setBusy(false);
     }
   };
 
   return (
     <Layout title="Ordonnances">
-      <h2 className="mb-2 text-2xl font-bold text-slate-900">Délivrance des ordonnances</h2>
-      <p className="mb-6 text-sm text-slate-500">
-        Ordonnances du parcours patient (admissions) et dossiers — vérifier allergies, lot et péremption avant délivrance.
-      </p>
+      <h2 className="mb-6 text-2xl font-bold text-slate-900">Ordonnances</h2>
 
-      {msg && <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{msg}</div>}
-      {error && <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
+      {msg && (
+        <div className="mb-4 flex items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          <span>{msg}</span>
+          <button type="button" onClick={() => setMsg('')} className="text-xs font-semibold underline">Fermer</button>
+        </div>
+      )}
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
+      )}
 
       {loading ? (
         <p className="text-slate-500">Chargement…</p>
@@ -107,7 +126,7 @@ export default function PharmacieOrdonnances() {
                 )}
 
                 <div className="mt-3 overflow-x-auto">
-                  <table className="w-full min-w-[520px] text-left text-sm">
+                  <table className="w-full min-w-[520px] text-left text-sm text-slate-900">
                     <thead>
                       <tr className="border-b text-[10px] uppercase tracking-wide text-slate-400">
                         <th className="py-2 pr-2">Médicament</th>
@@ -152,10 +171,10 @@ export default function PharmacieOrdonnances() {
 
                 {p.statut === 'active' && (
                   <div className="mt-4 flex flex-wrap items-end gap-3">
-                    <label className="block flex-1 min-w-[200px]">
+                    <label className="block min-w-[200px] flex-1">
                       <span className="mb-1 block text-xs font-medium text-slate-600">Notes pharmacien</span>
                       <input
-                        className="w-full rounded-lg border px-3 py-2 text-sm"
+                        className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-900"
                         placeholder="Conseil patient, substitution…"
                         value={notes[p.id] || ''}
                         onChange={(e) => setNotes((n) => ({ ...n, [p.id]: e.target.value }))}
@@ -163,7 +182,7 @@ export default function PharmacieOrdonnances() {
                     </label>
                     <button
                       type="button"
-                      onClick={() => delivrer(p)}
+                      onClick={() => demanderDelivrance(p)}
                       className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
                     >
                       Délivrer
@@ -175,6 +194,49 @@ export default function PharmacieOrdonnances() {
           })}
         </div>
       )}
+
+      <Modal
+        open={!!confirmItem}
+        title="Confirmer la délivrance"
+        onClose={() => !busy && setConfirmItem(null)}
+      >
+        {confirmItem && (
+          <div className="space-y-4 text-sm text-slate-800">
+            <p>
+              Confirmer la délivrance de{' '}
+              <strong className="font-mono text-emerald-700">{confirmItem.numero_ordonnance}</strong>
+              {' '}pour{' '}
+              <strong>{confirmItem.patient?.user?.name}</strong> ?
+            </p>
+            <p className="rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              Le stock sera décrémenté. Lot et péremption seront tracés si disponibles.
+            </p>
+            <ul className="rounded-xl border bg-slate-50 px-3 py-2 text-xs text-slate-700">
+              {(confirmItem.medicaments || []).slice(0, 6).map((m, i) => (
+                <li key={i}>• {m.nom_dci || m.nom} {m.dosage ? `(${m.dosage})` : ''}</li>
+              ))}
+            </ul>
+            <div className="flex justify-end gap-2 pt-1">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setConfirmItem(null)}
+                className="rounded-xl border px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={confirmerDelivrance}
+                className="rounded-xl bg-emerald-600 px-4 py-2 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-60"
+              >
+                {busy ? 'Délivrance…' : 'Oui, délivrer'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </Layout>
   );
 }

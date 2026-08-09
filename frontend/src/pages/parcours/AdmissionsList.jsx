@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
-import InfirmierLayout from '../../components/layout/InfirmierLayout';
 import { useAuth } from '../../context/AuthContext';
 import { admissionsApi } from '../../services/admissionsApi';
 
@@ -10,7 +9,6 @@ export default function AdmissionsList() {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const isInfirmier = user?.role === 'infirmier';
-  const Shell = isInfirmier ? InfirmierLayout : Layout;
 
   useEffect(() => {
     admissionsApi.list({ actifs: 1 })
@@ -24,7 +22,7 @@ export default function AdmissionsList() {
   }
 
   return (
-    <Shell title="Parcours patient">
+    <Layout title="Parcours patient">
       <div className="mb-6">
         <h2 className={isInfirmier ? 'font-infirmier-display text-3xl text-[#152238]' : 'text-2xl font-bold text-slate-900'}>
           Parcours patient
@@ -72,6 +70,6 @@ export default function AdmissionsList() {
           ))}
         </div>
       )}
-    </Shell>
+    </Layout>
   );
 }

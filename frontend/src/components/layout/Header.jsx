@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Icon from '../Icon';
 import api from '../../services/api';
 
 function timeAgo(dateStr) {
@@ -90,7 +91,7 @@ export default function Header({ onMenuToggle, title }) {
         className="rounded-lg p-2 text-slate-600 hover:bg-slate-100 lg:hidden"
         aria-label="Menu"
       >
-        ☰
+        <Icon name="menu" className="h-5 w-5" />
       </button>
 
       <h1 className="flex-1 text-lg font-semibold text-slate-900">{title}</h1>
@@ -105,7 +106,7 @@ export default function Header({ onMenuToggle, title }) {
             onClick={toggleNotifs}
             className="relative flex h-9 w-9 items-center justify-center rounded-full hover:bg-slate-100 transition"
           >
-            🔔
+            <Icon name="bell" className="h-5 w-5 text-slate-600" />
             {unread > 0 && (
               <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white border-2 border-white">
                 {unread > 9 ? '9+' : unread}
@@ -154,7 +155,7 @@ export default function Header({ onMenuToggle, title }) {
               {user?.name?.charAt(0)?.toUpperCase() ?? 'U'}
             </div>
             <span className="hidden text-sm font-medium text-slate-700 sm:block">{user?.name?.split(' ')[0]}</span>
-            <span className="text-slate-400 text-xs">▾</span>
+            <Icon name="chevron-down" className="h-4 w-4 text-slate-400" />
           </button>
 
           {dropOpen && (
@@ -171,13 +172,13 @@ export default function Header({ onMenuToggle, title }) {
                   }}
                   className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
                 >
-                  <span>👤</span> Mon profil
+                  <Icon name="user" className="h-4 w-4" /> Mon profil
                 </button>
                 <button
                   onClick={handleLogout}
                   className="flex w-full items-center gap-2 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50"
                 >
-                  <span>🚪</span> Déconnexion
+                  <Icon name="logout" className="h-4 w-4" /> Déconnexion
                 </button>
               </div>
             </div>

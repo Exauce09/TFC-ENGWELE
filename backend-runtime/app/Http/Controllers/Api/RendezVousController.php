@@ -148,11 +148,11 @@ class RendezVousController extends Controller
             'statut' => 'en_attente',
             'cree_par' => $request->user()->id,
             'montant' => $type === 'teleconsultation' ? 15000 : null,
-            'lien_video' => $type === 'teleconsultation' ? $this->jitsi->embedUrl(0) : null,
+            'lien_video' => null,
         ]);
 
         if ($type === 'teleconsultation') {
-            $rdv->update(['lien_video' => $this->jitsi->embedUrl($rdv->id)]);
+            $this->jitsi->ensureDedicatedRoom($rdv);
         }
 
         $rdv = $rdv->load(['medecin.user', 'departement']);

@@ -1,0 +1,17 @@
+erDiagram
+  USERS ||--o| PATIENTS : profil
+  USERS ||--o| MEDECINS : profil
+  DEPARTEMENTS ||--o{ MEDECINS : affecte
+  PATIENTS ||--o{ ADMISSIONS : subit
+  ADMISSIONS ||--o| RENDEZ_VOUS : origine_rdv
+  ADMISSIONS ||--o| TRIAGES : a
+  ADMISSIONS ||--o{ CONSULTATIONS : contient
+  ADMISSIONS ||--o{ EXAMENS_LABO : prescrit
+  ADMISSIONS ||--o{ PARCOURS_PRESCRIPTIONS : genere
+  ADMISSIONS ||--o{ ADMISSION_STATUT_HISTORIQUES : trace
+  PATIENTS ||--o{ RENDEZ_VOUS : reserve
+  MEDECINS ||--o{ RENDEZ_VOUS : assure
+  PATIENTS ||--o{ DOSSIERS_MEDICAUX : a
+  PATIENTS ||--o{ FACTURES : recoit
+  FACTURES ||--o{ PAIEMENTS : reglee_par
+  USERS ||--o{ NOTIFICATIONS : recoit

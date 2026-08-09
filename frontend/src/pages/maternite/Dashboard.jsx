@@ -4,15 +4,14 @@ export default function MaterniteDashboard() {
   return (
     <SpecialiteDashboard
       title="Maternité"
-      subtitle="Suivi prénatal, accouchement et postnatal."
       apiPath="/maternite/dashboard"
       stats={[
-        { key: 'total_suivis', label: 'Total suivis', icon: '🤰' },
-        { key: 'prenatales', label: 'Prénatales', icon: '👶', color: 'bg-pink-50' },
-        { key: 'accouchements', label: 'Accouchements', icon: '🏥', color: 'bg-rose-50' },
-        { key: 'postnatales', label: 'Postnatales', icon: '💗', color: 'bg-violet-50' },
+        { key: 'total_suivis', label: 'Total suivis', icon: 'baby' },
+        { key: 'prenatales', label: 'Prénatales', icon: 'baby', color: 'bg-pink-50' },
+        { key: 'accouchements', label: 'Accouchements', icon: 'hospital', color: 'bg-rose-50' },
+        { key: 'postnatales', label: 'Postnatales', icon: 'heart', color: 'bg-violet-50' },
       ]}
-      links={[{ to: '/maternite/suivis', icon: '📋', label: 'Suivis maternité', desc: 'Enregistrer et consulter les suivis' }]}
+      links={[{ to: '/maternite/suivis', icon: 'clipboard', label: 'Suivis maternité' }]}
     />
   );
 }

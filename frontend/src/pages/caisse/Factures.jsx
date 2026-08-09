@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
+import Icon from '../../components/Icon';
 import api from '../../services/api';
 
 const STATUT_STYLES = {
@@ -101,8 +102,8 @@ export default function CaisseFactures() {
           <h2 className="text-2xl font-bold text-slate-900">Factures</h2>
           <p className="text-sm text-slate-500">Émission et suivi des factures patients.</p>
         </div>
-        <button onClick={() => setShowForm((v) => !v)} className="rounded-xl bg-medical-primary px-5 py-2.5 text-sm font-bold text-white">
-          {showForm ? '✕ Fermer' : '+ Nouvelle facture'}
+        <button onClick={() => setShowForm((v) => !v)} className="inline-flex items-center gap-2 rounded-xl bg-medical-primary px-5 py-2.5 text-sm font-bold text-white">
+          {showForm ? <><Icon name="close" className="h-4 w-4" /> Fermer</> : '+ Nouvelle facture'}
         </button>
       </div>
 

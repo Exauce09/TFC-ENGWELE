@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import Icon from '../Icon';
 import api from '../../services/api';
 import { buildOrdonnanceHtml, downloadHtml, printHtml } from '../../utils/printDownload';
 
@@ -119,34 +120,18 @@ export function OrdonnanceFormModal({ open, dossier, onClose, onSaved }) {
 
     setSubmitting(true);
     try {
-      const admissionId = dossier.admission_active?.id;
-      if (admissionId) {
-        await api.post(`/admissions/${admissionId}/prescription`, {
-          medicaments: medicaments.map((m) => ({
-            nom: m.nom_dci || m.nom_commercial || m.nom,
-            nom_dci: m.nom_dci,
-            dosage: m.dosage,
-            frequence: m.posologie || m.frequence,
-            duree: m.duree,
-            quantite: m.quantite,
-          })),
-          posologie_generale: form.instructions_generales || null,
-          duree_jours: Number(form.validite_jours) || 30,
-          delivrer: false,
-        });
-      } else {
-        await api.post('/medecin/prescriptions', {
-          dossier_id: dossier.id,
-          patient_id: dossier.patient_id || patient?.id,
-          date_prescription: form.date_prescription,
-          validite_jours: Number(form.validite_jours) || 30,
-          poids_kg: form.poids_kg ? Number(form.poids_kg) : null,
-          diagnostic_motif: form.diagnostic_motif || null,
-          instructions_generales: form.instructions_generales || null,
-          renouvellement: form.renouvellement,
-          medicaments,
-        });
-      }
+      // Toujours via le dossier : l'API crée aussi le parcours pharmacie si besoin
+      await api.post('/medecin/prescriptions', {
+        dossier_id: dossier.id,
+        patient_id: dossier.patient_id || patient?.id,
+        date_prescription: form.date_prescription,
+        validite_jours: Number(form.validite_jours) || 30,
+        poids_kg: form.poids_kg ? Number(form.poids_kg) : null,
+        diagnostic_motif: form.diagnostic_motif || null,
+        instructions_generales: form.instructions_generales || null,
+        renouvellement: form.renouvellement,
+        medicaments,
+      });
       onSaved?.();
       onClose();
     } catch (err) {
@@ -165,7 +150,9 @@ export function OrdonnanceFormModal({ open, dossier, onClose, onSaved }) {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1A7A6D]">Ordonnance</p>
             <h3 className="font-medecin-display text-xl text-[#0D3B3A]">Nouvelle prescription</h3>
           </div>
-          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-[#5A8A7A] hover:bg-[#E8F5F2]">✕</button>
+          <button type="button" onClick={onClose} aria-label="Fermer" className="rounded-lg p-1.5 text-[#5A8A7A] hover:bg-[#E8F5F2]">
+            <Icon name="close" className="h-4 w-4" />
+          </button>
         </div>
 
         <form onSubmit={submit} className="space-y-5 p-5">
@@ -182,8 +169,8 @@ export function OrdonnanceFormModal({ open, dossier, onClose, onSaved }) {
                 : ''}
             </p>
             {patient?.allergies ? (
-              <p className="mt-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
-                ⚠ Allergies : {patient.allergies}
+              <p className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-800">
+                <Icon name="alert" className="h-3.5 w-3.5 shrink-0" /> Allergies : {patient.allergies}
               </p>
             ) : (
               <p className="mt-2 text-xs text-[#7A9A90]">Aucune allergie connue déclarée.</p>

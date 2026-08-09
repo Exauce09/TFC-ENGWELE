@@ -1,20 +1,22 @@
-import { useState } from 'react';
-import Sidebar from './Sidebar';
-import Header from './Header';
+import { useAuth } from '../../context/AuthContext';
+import { resolveShellKind } from '../../constants/roleThemes';
+import MedecinLayout from './MedecinLayout';
+import InfirmierLayout from './InfirmierLayout';
+import RoleShell from './RoleShell';
 
+/**
+ * Layout applicatif : choisit automatiquement le design du rôle connecté.
+ */
 export default function Layout({ children, title = 'Centre Médical AMEN' }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth();
+  const kind = resolveShellKind(user?.role);
 
-  return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
-      <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+  if (kind === 'medecin') {
+    return <MedecinLayout title={title}>{children}</MedecinLayout>;
+  }
+  if (kind === 'infirmier') {
+    return <InfirmierLayout title={title}>{children}</InfirmierLayout>;
+  }
 
-      <div className="flex flex-1 flex-col min-w-0 overflow-hidden">
-        <Header onMenuToggle={() => setSidebarOpen(o => !o)} title={title} />
-        <main className="flex-1 overflow-y-auto p-5 lg:p-6">
-          {children}
-        </main>
-      </div>
-    </div>
-  );
+  return <RoleShell title={title}>{children}</RoleShell>;
 }

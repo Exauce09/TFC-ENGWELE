@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import Icon from '../Icon';
 
 const LINKS = [
   { label: 'Tableau de bord', to: '/medecin/dashboard' },
@@ -31,13 +32,13 @@ export default function MedecinLayout({ children, title = 'Espace médecin' }) {
   };
 
   return (
-    <div className="medecin-shell flex h-screen overflow-hidden bg-[#0B2E2C] text-[#E8F5F2]">
+    <div className="medecin-shell flex h-screen overflow-hidden bg-[#0B2E2C]">
       {open && (
         <button type="button" aria-label="Fermer" className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/10 bg-gradient-to-b from-[#0D3B3A] to-[#0B2E2C] transition-transform lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/10 bg-gradient-to-b from-[#0D3B3A] to-[#0B2E2C] text-[#E8F5F2] transition-transform lg:static lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -82,7 +83,7 @@ export default function MedecinLayout({ children, title = 'Espace médecin' }) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#E8F2EF]">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#E8F2EF] text-[#0D3B3A]">
         <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-[#C5D9D0] bg-[#F4FAF8]/92 px-5 py-3.5 backdrop-blur">
           <button
             type="button"
@@ -90,7 +91,7 @@ export default function MedecinLayout({ children, title = 'Espace médecin' }) {
             className="rounded-lg p-2 text-[#1A7A6D] hover:bg-[#DCEEE6] lg:hidden"
             aria-label="Menu"
           >
-            ☰
+            <Icon name="menu" className="h-5 w-5" />
           </button>
           <div className="flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#5A8A7A]">Cabinet médical</p>
@@ -105,7 +106,7 @@ export default function MedecinLayout({ children, title = 'Espace médecin' }) {
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-5 lg:p-7">{children}</main>
+        <main className="flex-1 overflow-y-auto p-5 text-[#0D3B3A] lg:p-7">{children}</main>
       </div>
     </div>
   );

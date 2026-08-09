@@ -1,0 +1,25 @@
+flowchart LR
+  subgraph Presentation
+    R[React 18 + Vite]
+    E[Expo React Native]
+    AX[Axios + Bearer]
+  end
+  subgraph Metier
+    L[Laravel 11]
+    S[Sanctum]
+    RBAC[Middleware role]
+    SM[AdmissionStateMachine]
+    CR[CreneauService]
+    NS[NotificationService]
+  end
+  subgraph Donnees
+    ORM[Eloquent]
+    DB[(Base relationnelle)]
+  end
+  R --> AX
+  E --> AX
+  AX --> L
+  L --> S --> RBAC --> SM
+  RBAC --> CR
+  RBAC --> NS
+  SM --> ORM --> DB

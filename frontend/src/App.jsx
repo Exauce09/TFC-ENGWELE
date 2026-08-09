@@ -40,6 +40,7 @@ import AdminFacturation from './pages/admin/Facturation';
 import AdminStatistiques from './pages/admin/Statistiques';
 import ProfilePage from './pages/shared/Profile';
 import PlaceholderDashboard from './pages/shared/PlaceholderDashboard';
+import NonAutorise from './pages/shared/NonAutorise';
 import AccueilDashboard from './pages/accueil/Dashboard';
 import AccueilDemandes from './pages/accueil/Demandes';
 import AccueilRendezVous from './pages/accueil/RendezVous';
@@ -322,7 +323,7 @@ export default function App() {
             <PrivateRoute allowedRoles={['dentiste']}><DentisterieSoins /></PrivateRoute>
           } />
 
-          <Route path="/non-autorise" element={<PlaceholderDashboard title="Accès non autorisé" />} />
+          <Route path="/non-autorise" element={<NonAutorise />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

@@ -478,13 +478,6 @@ export default function Reception() {
               <input value={form.ville} onChange={set('ville')} className="w-full rounded-xl border px-3 py-2.5 text-sm" />
             </label>
 
-            {estMineur && (
-              <div className="sm:col-span-2 lg:col-span-3 rounded-xl border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                Patient mineur ({ageNum} ans) — en RDC, pas de carte d’électeur / d’identité nationale.
-                Utilisez un acte de naissance, une carte scolaire, la pièce du tuteur, ou « aucune pièce » avec contact d’urgence obligatoire.
-              </div>
-            )}
-
             <label className="block">
               <span className="mb-1 block text-sm font-medium">
                 {estMineur ? 'Document d’identification' : 'Type de pièce d’identité'}

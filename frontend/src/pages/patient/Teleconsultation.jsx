@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
+import Icon from '../../components/Icon';
 import JitsiMeet from '../../components/JitsiMeet';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
-const STATUT_COLORS = {
+const STATUT = {
   confirme: 'bg-emerald-100 text-emerald-700',
   en_cours: 'bg-blue-100 text-blue-700',
 };
@@ -51,9 +52,6 @@ export default function PatientTeleconsultation() {
     <Layout title="Téléconsultation">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Téléconsultation</h2>
-        <p className="text-sm text-slate-500">
-          Rejoignez votre consultation vidéo sécurisée via Jitsi Meet.
-        </p>
       </div>
 
       {error && (
@@ -62,12 +60,20 @@ export default function PatientTeleconsultation() {
 
       {active ? (
         <div className="space-y-4">
-          <button
-            onClick={() => setActive(null)}
-            className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
-          >
-            ← Retour à la liste
-          </button>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => setActive(null)}
+              className="rounded-lg border px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+            >
+              ← Retour
+            </button>
+            {active.room_name && (
+              <span className="rounded-full bg-slate-100 px-3 py-1 font-mono text-xs text-slate-600">
+                Salle {active.room_name}
+              </span>
+            )}
+          </div>
           <JitsiMeet
             roomUrl={active.room_url}
             roomName={active.room_name}
@@ -75,15 +81,13 @@ export default function PatientTeleconsultation() {
           />
         </div>
       ) : loading ? (
-        <p className="text-slate-500">Chargement...</p>
+        <p className="text-slate-500">Chargement…</p>
       ) : salles.length === 0 ? (
         <div className="rounded-2xl border border-dashed bg-white p-12 text-center">
-          <p className="text-4xl">🎥</p>
-          <p className="mt-3 font-medium text-slate-700">Aucune téléconsultation planifiée</p>
-          <p className="mt-1 text-sm text-slate-500">
-            Réservez un rendez-vous de type « téléconsultation » depuis Mes rendez-vous.
-          </p>
+          <Icon name="video" className="mx-auto h-10 w-10 text-slate-300" />
+          <p className="mt-3 font-medium text-slate-700">Aucune téléconsultation</p>
           <button
+            type="button"
             onClick={() => navigate('/patient/rendez-vous')}
             className="mt-4 rounded-xl bg-medical-primary px-5 py-2 text-sm font-semibold text-white"
           >
@@ -97,25 +101,26 @@ export default function PatientTeleconsultation() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="font-semibold text-slate-900">
-                    {new Date(r.date_rdv).toLocaleDateString('fr-FR')} à {String(r.heure_rdv).slice(0, 5)}
+                    {new Date(r.date_rdv).toLocaleDateString('fr-FR')} · {String(r.heure_rdv).slice(0, 5)}
                   </p>
-                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUT_COLORS[r.statut] ?? 'bg-slate-100'}`}>
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUT[r.statut] ?? 'bg-slate-100'}`}>
                     {r.statut?.replace(/_/g, ' ')}
                   </span>
-                  {r.paiement_statut === 'paye' ? (
-                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">Payé</span>
-                  ) : (
-                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs text-amber-700">Paiement requis</span>
+                  {r.room_name && (
+                    <span className="rounded-full bg-cyan-50 px-2 py-0.5 font-mono text-[10px] text-cyan-800">
+                      {r.room_name}
+                    </span>
                   )}
                 </div>
                 <p className="mt-1 text-sm text-slate-600">
-                  {r.medecin?.user?.name || 'Médecin'} — {r.departement?.nom}
+                  {r.medecin?.user?.name || 'Médecin'}
+                  {r.departement?.nom ? ` — ${r.departement.nom}` : ''}
                 </p>
-                {r.motif && <p className="mt-1 text-xs text-slate-400">{r.motif}</p>}
               </div>
               <div className="flex gap-2">
                 {r.paiement_statut !== 'paye' && (
                   <button
+                    type="button"
                     onClick={() => navigate('/patient/rendez-vous')}
                     className="rounded-lg border border-amber-200 px-4 py-2 text-sm text-amber-700 hover:bg-amber-50"
                   >
@@ -123,11 +128,12 @@ export default function PatientTeleconsultation() {
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={() => rejoindre(r)}
                   disabled={joining || r.paiement_statut !== 'paye'}
                   className="rounded-xl bg-medical-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
-                  {joining ? 'Connexion...' : 'Rejoindre'}
+                  {joining ? 'Connexion…' : 'Rejoindre'}
                 </button>
               </div>
             </article>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
+import Icon from '../../components/Icon';
 import api from '../../services/api';
 
 export default function PharmacieStock() {
@@ -65,8 +66,8 @@ export default function PharmacieStock() {
                     <td className="px-4 py-3 font-bold">{m.quantite_stock}</td>
                     <td className="px-4 py-3">{Number(m.prix_unitaire).toLocaleString()} FC</td>
                     <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${bas ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                        {bas ? '⚠️ Stock bas' : 'OK'}
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${bas ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                        {bas ? <><Icon name="alert" className="h-3 w-3" /> Stock bas</> : 'OK'}
                       </span>
                     </td>
                   </tr>

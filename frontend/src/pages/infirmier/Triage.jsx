@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import InfirmierLayout from '../../components/layout/InfirmierLayout';
 import { admissionsApi } from '../../services/admissionsApi';
@@ -137,7 +137,7 @@ export default function InfirmierTriage() {
                         {a.departement?.nom ? ` · ${a.departement.nom}` : ''}
                       </p>
                       {a.patient?.allergies && (
-                        <p className="mt-1 text-[11px] font-semibold text-red-700">⚠ {a.patient.allergies}</p>
+                        <p className="mt-1 text-[11px] font-semibold text-red-700">Attention — {a.patient.allergies}</p>
                       )}
                     </div>
                   </div>

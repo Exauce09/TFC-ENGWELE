@@ -1,0 +1,39 @@
+flowchart TB
+  subgraph Acteurs
+    Rec[Receptionniste]
+    Inf[Infirmier]
+    Med[Medecin]
+    Lab[Laborantin]
+    Pha[Pharmacien]
+    Pat[Patient]
+    Adm[Administrateur]
+    Vis[Visiteur]
+  end
+  subgraph Systeme["Systeme AMEN"]
+    WEB[SPA React]
+    MOB[App Expo]
+    API[API Laravel /api/v1]
+    DB[(SQLite / MySQL)]
+  end
+  subgraph Externes
+    JIT[Jitsi Meet]
+    SMS[AfricasTalking]
+    FCM[Firebase FCM]
+    MM[Mobile Money]
+  end
+  Vis --> WEB
+  Rec --> WEB
+  Inf --> WEB
+  Med --> WEB
+  Lab --> WEB
+  Pha --> WEB
+  Adm --> WEB
+  Pat --> WEB
+  Pat --> MOB
+  WEB --> API
+  MOB --> API
+  API --> DB
+  API --> JIT
+  API --> SMS
+  API --> FCM
+  API --> MM

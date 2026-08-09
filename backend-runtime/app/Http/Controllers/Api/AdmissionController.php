@@ -13,6 +13,7 @@ use App\Models\Medecin;
 use App\Models\NoteSuiviAmbulatoire;
 use App\Models\ParcoursPrescription;
 use App\Models\Patient;
+use App\Models\Prescription;
 use App\Models\RendezVous;
 use App\Models\StockMedicament;
 use App\Models\Triage;
@@ -911,10 +912,12 @@ class AdmissionController extends Controller
                         $this->appliquerStockDelivrance($lignes);
                     }
 
+                    $medecinId = $medecin?->id ?? $admission->medecin_referent_id ?? Medecin::query()->value('id');
+                    $numero = ParcoursPrescription::genererNumero();
                     $prescription = ParcoursPrescription::create([
                         'admission_id' => $admission->id,
-                        'numero_ordonnance' => ParcoursPrescription::genererNumero(),
-                        'medecin_id' => $medecin?->id ?? $admission->medecin_referent_id ?? Medecin::query()->value('id'),
+                        'numero_ordonnance' => $numero,
+                        'medecin_id' => $medecinId,
                         'pharmacien_id' => $isPharmacien ? $request->user()->id : null,
                         'date_prescription' => now()->toDateString(),
                         'medicaments' => $validated['medicaments'],
@@ -926,6 +929,26 @@ class AdmissionController extends Controller
                         'notes_pharmacien' => $validated['notes_pharmacien'] ?? null,
                         'allergies_signalees' => $admission->patient?->allergies,
                     ]);
+
+                    // Miroir sur le dossier médical pour affichage dans « Dossiers »
+                    $dossier = DossierMedical::where('patient_id', $admission->patient_id)
+                        ->latest('date_consultation')
+                        ->first();
+                    if ($dossier && $medecinId) {
+                        $validite = (int) ($validated['duree_jours'] ?? 30);
+                        Prescription::create([
+                            'numero_ordonnance' => $numero,
+                            'dossier_id' => $dossier->id,
+                            'patient_id' => $admission->patient_id,
+                            'medecin_id' => $medecinId,
+                            'date_prescription' => now()->toDateString(),
+                            'date_expiration' => now()->addDays($validite)->toDateString(),
+                            'validite_jours' => $validite,
+                            'medicaments' => $validated['medicaments'],
+                            'instructions_generales' => $validated['posologie_generale'] ?? null,
+                            'statut' => $delivrer ? 'delivree' : 'active',
+                        ]);
+                    }
                 }
 
                 if (! $prescription) {

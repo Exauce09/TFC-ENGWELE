@@ -1,0 +1,20 @@
+sequenceDiagram
+  autonumber
+  actor Pat as Patient
+  actor Rec as Receptionniste
+  participant WEB as Frontend
+  participant API as API Laravel
+  participant CR as CreneauService
+  Pat->>WEB: Choisit medecin + date
+  WEB->>API: GET /patient/creneaux
+  API->>CR: creneauxDisponibles
+  CR-->>API: horaires libres
+  API-->>WEB: liste creneaux
+  Pat->>WEB: Selectionne heure
+  WEB->>API: POST /patient/rendez-vous
+  API->>CR: estDisponible
+  API-->>Pat: RDV en_attente
+  Rec->>API: confirmer demande RDV
+  API->>CR: valider creneau
+  API-->>Rec: RDV confirme
+  Note over API,Pat: Rappels auto J-1 puis H-2

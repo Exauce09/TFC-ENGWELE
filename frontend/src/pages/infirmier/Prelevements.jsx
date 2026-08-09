@@ -99,24 +99,33 @@ export default function InfirmierPrelevements() {
                   </Link>
                 </div>
                 <div className="mt-3 grid gap-2 sm:grid-cols-3">
-                  <input
-                    placeholder="Type d'échantillon"
-                    value={f.type_echantillon || ''}
-                    onChange={(e) => setField(a.id, 'type_echantillon', e.target.value)}
-                    className="rounded-xl border px-3 py-2 text-sm"
-                  />
-                  <input
-                    placeholder="Conditions (à jeun…)"
-                    value={f.conditions || ''}
-                    onChange={(e) => setField(a.id, 'conditions', e.target.value)}
-                    className="rounded-xl border px-3 py-2 text-sm"
-                  />
-                  <input
-                    placeholder="Notes"
-                    value={f.notes || ''}
-                    onChange={(e) => setField(a.id, 'notes', e.target.value)}
-                    className="rounded-xl border px-3 py-2 text-sm"
-                  />
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-[#152238]">Type d&apos;échantillon</span>
+                    <input
+                      placeholder="Sang veineux, urine…"
+                      value={f.type_echantillon || ''}
+                      onChange={(e) => setField(a.id, 'type_echantillon', e.target.value)}
+                      className="w-full rounded-xl border border-[#C9D4E3] bg-white px-3 py-2 text-sm text-[#152238] placeholder:text-slate-400"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-[#152238]">Conditions</span>
+                    <input
+                      placeholder="À jeun…"
+                      value={f.conditions || ''}
+                      onChange={(e) => setField(a.id, 'conditions', e.target.value)}
+                      className="w-full rounded-xl border border-[#C9D4E3] bg-white px-3 py-2 text-sm text-[#152238] placeholder:text-slate-400"
+                    />
+                  </label>
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium text-[#152238]">Notes</span>
+                    <input
+                      placeholder="Observations"
+                      value={f.notes || ''}
+                      onChange={(e) => setField(a.id, 'notes', e.target.value)}
+                      className="w-full rounded-xl border border-[#C9D4E3] bg-white px-3 py-2 text-sm text-[#152238] placeholder:text-slate-400"
+                    />
+                  </label>
                 </div>
                 <button
                   type="button"

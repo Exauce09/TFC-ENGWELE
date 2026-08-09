@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
+import Icon from '../../components/Icon';
 import api from '../../services/api';
 
 const STATUT_STYLES = {
@@ -74,7 +75,7 @@ export default function PatientFactures() {
 
       {loading ? <p className="text-slate-500">Chargement...</p> : factures.length === 0 ? (
         <div className="rounded-2xl border border-dashed bg-white p-12 text-center">
-          <p className="text-4xl">🧾</p>
+          <Icon name="receipt" className="mx-auto h-10 w-10 text-slate-300" />
           <p className="mt-3 font-medium text-slate-700">Aucune facture</p>
           <Link to="/patient/dashboard" className="mt-4 inline-block text-sm text-medical-primary hover:underline">Retour au tableau de bord</Link>
         </div>

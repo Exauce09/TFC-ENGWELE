@@ -1,0 +1,11 @@
+flowchart TD
+  REQ[Requete HTTP] --> AUTH{Token Sanctum ?}
+  AUTH -->|Non| E401[401]
+  AUTH -->|Oui| ROLE{Middleware role}
+  ROLE -->|Refuse| E403[403]
+  ROLE -->|OK| CTRL[Controleur]
+  CTRL --> SM{Transition parcours ?}
+  SM -->|Illegale| E422[422 metier]
+  SM -->|OK / N/A| OWN{Perimetre patient / medecin}
+  OWN -->|Non| E403
+  OWN -->|Oui| OK[200 / 201]

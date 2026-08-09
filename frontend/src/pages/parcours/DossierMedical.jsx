@@ -1,21 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
-import MedecinLayout from '../../components/layout/MedecinLayout';
-import InfirmierLayout from '../../components/layout/InfirmierLayout';
 import Modal from '../../components/parcours/Modal';
 import { useAuth } from '../../context/AuthContext';
+import { MEDECIN_ROLES } from '../../constants/roleThemes';
 import { admissionsApi, stepIndex, stepsForAdmission } from '../../services/admissionsApi';
 
-const MEDECIN_ROLES = [
-  'medecin_generaliste', 'medecin_interne', 'pediatre',
-  'gynecologue', 'ophtalmologue', 'urgentiste', 'admin',
-];
-
-const CLINICIAN_ROLES = [
-  'medecin_generaliste', 'medecin_interne', 'pediatre',
-  'gynecologue', 'ophtalmologue', 'urgentiste',
-];
+const DOSSIER_MEDECIN_ROLES = [...MEDECIN_ROLES, 'admin'];
+const CLINICIAN_ROLES = [...MEDECIN_ROLES];
 
 function Card({ title, actionLabel, onAction, children, badge }) {
   return (
@@ -64,18 +56,20 @@ export default function DossierMedical() {
 
   const can = useMemo(() => ({
     triage: ['infirmier', 'admin'].includes(role),
-    consultation: MEDECIN_ROLES.includes(role),
-    prelevement: ['infirmier', 'admin', ...MEDECIN_ROLES].includes(role),
-    examens: [...MEDECIN_ROLES, 'laborantin'].includes(role),
-    diagnostic: MEDECIN_ROLES.includes(role),
-    prescription: [...MEDECIN_ROLES, 'pharmacien'].includes(role),
-    initiation: MEDECIN_ROLES.includes(role),
-    suivi: [...MEDECIN_ROLES, 'receptionniste'].includes(role),
+    consultation: DOSSIER_MEDECIN_ROLES.includes(role),
+    // Prélèvement = infirmier (le médecin prescrit, il ne prélève pas)
+    prelevement: ['infirmier', 'admin'].includes(role),
+    examens: [...DOSSIER_MEDECIN_ROLES, 'laborantin'].includes(role),
+    diagnostic: DOSSIER_MEDECIN_ROLES.includes(role),
+    prescription: [...DOSSIER_MEDECIN_ROLES, 'pharmacien'].includes(role),
+    initiation: DOSSIER_MEDECIN_ROLES.includes(role),
+    suivi: [...DOSSIER_MEDECIN_ROLES, 'receptionniste'].includes(role),
   }), [role]);
+
+  const isMedecin = MEDECIN_ROLES.includes(role);
 
   const isClinician = CLINICIAN_ROLES.includes(role);
   const isInfirmier = role === 'infirmier';
-  const Shell = isClinician ? MedecinLayout : isInfirmier ? InfirmierLayout : Layout;
   const backTo = isClinician ? '/medecin/dossiers' : isInfirmier
     ? (admission?.statut === 'prelevement' ? '/infirmier/prelevements' : '/infirmier/triage')
     : '/parcours';
@@ -120,15 +114,15 @@ export default function DossierMedical() {
   };
 
   if (loading) {
-    return <Shell title="Dossier médical"><p className="text-slate-500">Chargement...</p></Shell>;
+    return <Layout title="Dossier médical"><p className="text-slate-500">Chargement...</p></Layout>;
   }
 
   if (!admission) {
     return (
-      <Shell title="Dossier médical">
+      <Layout title="Dossier médical">
         <p className="text-red-600">{error || 'Dossier introuvable'}</p>
         <Link to={backTo} className="mt-4 inline-block text-medical-primary">{backLabel}</Link>
-      </Shell>
+      </Layout>
     );
   }
 
@@ -142,7 +136,7 @@ export default function DossierMedical() {
   const historique = admission.historique_statuts || admission.historiqueStatuts || [];
 
   return (
-    <Shell title="Dossier médical">
+    <Layout title="Dossier médical">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-start gap-3">
           {patient?.photo ? (
@@ -164,7 +158,7 @@ export default function DossierMedical() {
               {' · '}{admission.motif_arrivee}
             </p>
             {patient?.allergies && (
-              <p className="mt-1 text-xs font-semibold text-red-700">⚠ Allergies : {patient.allergies}</p>
+              <p className="mt-1 text-xs font-semibold text-red-700">Allergies : {patient.allergies}</p>
             )}
           </div>
         </div>
@@ -226,9 +220,14 @@ export default function DossierMedical() {
         <Card
           title="3. Consultation médicale"
           badge="Médecin — anamnèse & hypothèses"
-          actionLabel={can.consultation && admission.statut === 'consultation_medicale' ? '+ Consultation' : null}
+          actionLabel={can.consultation && admission.statut === 'consultation_medicale' ? 'Enregistrer la consultation' : null}
           onAction={() => setModal('consultation')}
         >
+          {admission.statut === 'consultation_medicale' && consultations.length === 0 && isMedecin ? (
+            <p className="mb-2 rounded-lg border border-teal-100 bg-teal-50 px-3 py-2 text-xs text-teal-900">
+              Étape en cours : enregistrez la consultation. Vous pourrez y demander des examens ou aller au diagnostic.
+            </p>
+          ) : null}
           {consultations.length === 0 ? <Empty text="Pas encore de consultation." /> : (
             <ul className="space-y-3">
               {consultations.map((c) => (
@@ -263,10 +262,11 @@ export default function DossierMedical() {
           title="5. Analyses de laboratoire"
           badge="Laborantin"
           actionLabel={
-            can.examens && (
-              (role === 'laborantin' && admission.statut === 'examens_laboratoire')
-              || (MEDECIN_ROLES.includes(role) && ['consultation_medicale', 'prelevement', 'examens_laboratoire'].includes(admission.statut))
-            ) ? '+ Examen / résultats' : null
+            (role === 'laborantin' && admission.statut === 'examens_laboratoire')
+              ? '+ Saisir résultats'
+              : (isMedecin && admission.statut === 'consultation_medicale')
+                ? '+ Prescrire un examen'
+                : null
           }
           onAction={() => setModal('examens')}
         >
@@ -323,9 +323,11 @@ export default function DossierMedical() {
           title="6. Diagnostic & prescription"
           badge="Médecin — interprétation"
           actionLabel={
-            can.diagnostic && ['examens_laboratoire', 'diagnostic_prescription', 'consultation_medicale'].includes(admission.statut)
+            can.diagnostic && ['examens_laboratoire', 'diagnostic_prescription'].includes(admission.statut)
               ? '+ Diagnostic / Rx'
-              : null
+              : (can.diagnostic && admission.statut === 'consultation_medicale' && examens.length === 0)
+                ? '+ Diagnostic sans examen'
+                : null
           }
           onAction={() => setModal('diagnostic')}
         >
@@ -342,10 +344,11 @@ export default function DossierMedical() {
           title="7. Délivrance médicaments"
           badge="Pharmacien"
           actionLabel={
-            can.prescription && (
-              (role === 'pharmacien' && admission.statut === 'diagnostic_prescription')
-              || (MEDECIN_ROLES.includes(role) && ['diagnostic_prescription', 'consultation_medicale', 'examens_laboratoire'].includes(admission.statut))
-            ) ? (role === 'pharmacien' ? '+ Délivrer' : '+ Ordonnance') : null
+            (role === 'pharmacien' && admission.statut === 'diagnostic_prescription')
+              ? '+ Délivrer'
+              : (isMedecin && admission.statut === 'diagnostic_prescription')
+                ? '+ Ordonnance'
+                : null
           }
           onAction={() => setModal('prescription')}
         >
@@ -473,7 +476,7 @@ export default function DossierMedical() {
         onSubmit={(p) => run(() => admissionsApi.initiation(admission.id, p), 'Traitement initié')} />
       <SuiviModal open={modal === 'suivi'} busy={busy} onClose={() => setModal(null)}
         onSubmit={(p) => run(() => admissionsApi.suivi(admission.id, p), 'Passage en suivi')} />
-    </Shell>
+    </Layout>
   );
 }
 

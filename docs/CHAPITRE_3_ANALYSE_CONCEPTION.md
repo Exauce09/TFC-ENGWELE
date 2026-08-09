@@ -249,77 +249,11 @@ mindmap
 
 ### c.1 Diagramme de contexte
 
-```mermaid
-flowchart TB
-  subgraph Acteurs
-    Rec[Réceptionniste]
-    Inf[Infirmier]
-    Med[Médecin]
-    Lab[Laborantin]
-    Pha[Pharmacien]
-    Pat[Patient]
-    Adm[Administrateur]
-    Vis[Visiteur]
-  end
-  subgraph Systeme["Système AMEN"]
-    WEB[SPA React]
-    MOB[App Expo]
-    API[API Laravel /api/v1]
-    DB[(SQLite / MySQL)]
-  end
-  subgraph Externes
-    JIT[Jitsi Meet]
-    SMS[AfricasTalking]
-    FCM[Firebase FCM]
-    MM[Mobile Money]
-  end
-  Vis --> WEB
-  Rec --> WEB
-  Inf --> WEB
-  Med --> WEB
-  Lab --> WEB
-  Pha --> WEB
-  Adm --> WEB
-  Pat --> WEB
-  Pat --> MOB
-  WEB --> API
-  MOB --> API
-  API --> DB
-  API --> JIT
-  API --> SMS
-  API --> FCM
-  API --> MM
-```
+![Figure 3.1 — Diagramme de contexte du système AMEN](diagrammes/07_contexte.png)
 
 ### c.2 Architecture logique (API first)
 
-```mermaid
-flowchart LR
-  subgraph Presentation
-    R[React 18 + Vite]
-    E[Expo React Native]
-    AX[Axios + Bearer]
-  end
-  subgraph Metier
-    L[Laravel 11]
-    S[Sanctum]
-    RBAC[Middleware role]
-    SM[AdmissionStateMachine]
-    CR[CreneauService]
-    NS[NotificationService]
-  end
-  subgraph Donnees
-    ORM[Eloquent]
-    DB[(Base relationnelle)]
-  end
-  R --> AX
-  E --> AX
-  AX --> L
-  L --> S --> RBAC --> SM
-  RBAC --> CR
-  RBAC --> NS
-  SM --> ORM --> DB
-```
+![Figure 3.2 — Architecture logique API first](diagrammes/08_architecture.png)
 
 **Principe :** une seule API REST alimente le web et le mobile ; la logique métier (parcours, créneaux, notifications) reste côté serveur.
 
@@ -333,44 +267,21 @@ flowchart LR
 
 ### c.4 Machine à états du parcours (modèle dynamique)
 
-```mermaid
-stateDiagram-v2
-  [*] --> enregistre : Accueil
-  enregistre --> triage : auto après création
-  triage --> consultation_medicale : Infirmier
-  consultation_medicale --> prelevement : Examens prescrits
-  consultation_medicale --> diagnostic_prescription : Sans examens
-  prelevement --> examens_laboratoire : Prélèvement fait
-  examens_laboratoire --> diagnostic_prescription : Interprétation
-  diagnostic_prescription --> delivrance_medicaments : Pharmacie
-  delivrance_medicaments --> initiation_traitement : Médecin
-  initiation_traitement --> suivi : Suivi / sortie
-  suivi --> [*]
-```
+![Figure 3.3 — Machine à états du parcours patient](diagrammes/09_etats_parcours.png)
 
 Cette machine est implémentée dans `AdmissionStateMachine` : toute transition non autorisée renvoie une erreur métier (HTTP 422).
 
 ### c.5 Modèle de données — entités centrales
 
-```mermaid
-erDiagram
-  USERS ||--o| PATIENTS : profil
-  USERS ||--o| MEDECINS : profil
-  DEPARTEMENTS ||--o{ MEDECINS : affecte
-  PATIENTS ||--o{ ADMISSIONS : subit
-  ADMISSIONS ||--o| RENDEZ_VOUS : origine_rdv
-  ADMISSIONS ||--o| TRIAGES : a
-  ADMISSIONS ||--o{ CONSULTATIONS : contient
-  ADMISSIONS ||--o{ EXAMENS_LABO : prescrit
-  ADMISSIONS ||--o{ PARCOURS_PRESCRIPTIONS : genere
-  ADMISSIONS ||--o{ ADMISSION_STATUT_HISTORIQUES : trace
-  PATIENTS ||--o{ RENDEZ_VOUS : reserve
-  MEDECINS ||--o{ RENDEZ_VOUS : assure
-  PATIENTS ||--o{ DOSSIERS_MEDICAUX : a
-  PATIENTS ||--o{ FACTURES : recoit
-  FACTURES ||--o{ PAIEMENTS : reglee_par
-  USERS ||--o{ NOTIFICATIONS : recoit
-```
+![Figure 3.4 — Modèle entité-association (extrait)](diagrammes/10_modele_donnees.png)
+
+### c.5bis Diagramme de classes UML
+
+![Figure 3.5 — Diagramme de classes (domaine métier)](diagrammes/01_classes.png)
+
+### c.5ter Diagramme de cas d'utilisation
+
+![Figure 3.6 — Diagramme de cas d'utilisation prioritaires](diagrammes/02_cas_utilisation.png)
 
 ### c.6 Tables principales (extrait)
 
@@ -393,66 +304,21 @@ erDiagram
 
 ### c.7 Diagramme de séquence — Walk-in jusqu'au traitement (synthèse)
 
-```mermaid
-sequenceDiagram
-  participant R as Réception
-  participant I as Infirmier
-  participant M as Médecin
-  participant L as Labo
-  participant P as Pharmacie
-  participant API as API Laravel
-
-  R->>API: POST /admissions (walk-in)
-  API-->>R: admission en triage
-  I->>API: PATCH .../triage
-  API-->>I: consultation_medicale
-  M->>API: PATCH .../consultation + examens[]
-  API-->>M: prelevement
-  I->>API: PATCH .../prelevement
-  L->>API: PUT examens / résultats
-  M->>API: PATCH .../diagnostic + médicaments
-  P->>API: PUT ordonnances/.../delivrer
-  M->>API: PATCH .../initiation puis .../suivi
-  API-->>M: parcours en suivi
-```
+![Figure 3.7 — Séquence walk-in jusqu'à l'initiation du traitement](diagrammes/03_sequence_A_walkin.png)
 
 ### c.8 Diagramme de séquence — Prise de créneau patient
 
-```mermaid
-sequenceDiagram
-  participant Pat as Patient
-  participant WEB as React / Expo
-  participant API as API
-  participant CR as CreneauService
-  participant DB as Base
+![Figure 3.8 — Séquence prise de créneau et confirmation RDV](diagrammes/04_sequence_B_rdv.png)
 
-  Pat->>WEB: Choisit médecin + date
-  WEB->>API: GET /patient/creneaux
-  API->>CR: créneauxDisponibles
-  CR->>DB: RDV occupés
-  CR-->>WEB: horaires libres
-  Pat->>WEB: Réserve une heure
-  WEB->>API: POST /patient/rendez-vous
-  API->>CR: estDisponible ?
-  API->>DB: insert statut en_attente
-  API-->>Pat: RDV enregistré
-```
+### c.8bis Diagrammes d'activité
+
+![Figure 3.9 — Activité parcours clinique (accueil → suivi)](diagrammes/05_activite_A_parcours.png)
+
+![Figure 3.10 — Activité RDV (créneau → jour J)](diagrammes/06_activite_B_rdv.png)
 
 ### c.9 Modèle de sécurité
 
-```mermaid
-flowchart TD
-  REQ[Requête HTTP] --> AUTH{Token Sanctum ?}
-  AUTH -->|Non| E401[401]
-  AUTH -->|Oui| ROLE{Middleware role}
-  ROLE -->|Refusé| E403[403]
-  ROLE -->|OK| CTRL[Contrôleur]
-  CTRL --> SM{Transition parcours ?}
-  SM -->|Illégale| E422[422 métier]
-  SM -->|OK / N/A| OWN{Périmètre patient / médecin}
-  OWN -->|Non| E403
-  OWN -->|Oui| OK[200 / 201]
-```
+![Figure 3.11 — Contrôle d'accès et transitions métier](diagrammes/11_securite.png)
 
 ---
 

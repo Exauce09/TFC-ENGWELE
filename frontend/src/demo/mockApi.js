@@ -575,16 +575,321 @@ export function resolveMock(config) {
 
   if (method === 'get' && p === '/admin/dashboard/stats') {
     return ok({
-      patients: 128,
-      medecins: 12,
-      rdv_aujourdhui: 14,
-      factures_impayees: 3,
-      chiffre_affaires_mois: 4200000,
+      users_total: 48,
+      patients_total: 128,
+      medecins_total: 12,
+      rdv_total: 420,
+      rdv_du_jour: 14,
+      rdv_en_attente: 3,
+      demandes_nouvelles: 2,
+      factures_total: 86,
+      montant_facture: 12500000,
+      montant_paye: 9800000,
+      rdv_par_statut: { confirme: 40, en_attente: 3, termine: 80 },
+      rdv_par_departement: [
+        { departement: 'Médecine Générale', total: 24 },
+        { departement: 'Maternité', total: 18 },
+        { departement: 'Laboratoire', total: 32 },
+        { departement: 'Pédiatrie', total: 14 },
+      ],
+      rdv_semaine: [
+        { jour: 'lun.', date: '2026-08-03', total: 12 },
+        { jour: 'mar.', date: '2026-08-04', total: 18 },
+        { jour: 'mer.', date: '2026-08-05', total: 9 },
+        { jour: 'jeu.', date: '2026-08-06', total: 22 },
+        { jour: 'ven.', date: '2026-08-07', total: 15 },
+        { jour: 'sam.', date: '2026-08-08', total: 7 },
+        { jour: 'dim.', date: '2026-08-09', total: 4 },
+      ],
+      top_medecins: [
+        { id: 1, name: 'Dr. Jean-Pierre Kabila', specialite: 'Médecine interne', consultations: 38 },
+        { id: 2, name: 'Dr. Esperance Mbuyi', specialite: 'Gynécologie', consultations: 29 },
+        { id: 3, name: 'Dr. Celestine Nkosi', specialite: 'Pédiatrie', consultations: 24 },
+      ],
+      activite_recente: [
+        { id: 1, titre: 'Nouveau RDV', message: 'Angélique T. avec Dr. Kabila', type: 'rdv_confirme', created_at: new Date().toISOString() },
+        { id: 2, titre: 'Paiement reçu', message: 'FAC-2026-00078 · 45 000 FC', type: 'paiement', created_at: new Date(Date.now() - 600000).toISOString() },
+        { id: 3, titre: 'Résultats labo', message: 'Marie Kalala — NFS', type: 'resultat_disponible', created_at: new Date(Date.now() - 3600000).toISOString() },
+      ],
     });
   }
   if (method === 'get' && p === '/admin/facturation') {
-    return ok({ total: 12500000, impayees: 7 });
+    return ok({
+      items: DEMO_FACTURES,
+      meta: { montant_facture: 12500000, montant_paye: 9800000, impayees: 7 },
+    });
   }
+
+  // ── Labo / Pharma / Caisse ──────────────────────────────────────────────
+  if (method === 'get' && p === '/laboratoire/dashboard') {
+    return ok({ patients_parcours: 5, en_attente: 2, en_cours: 1, disponibles: 3 });
+  }
+  if (method === 'get' && p === '/laboratoire/analyses') {
+    return ok([
+      {
+        id: 101,
+        type_examen: 'NFS',
+        statut: 'en_cours',
+        priorite: 'routine',
+        patient: { user: { name: 'Marie Kalala' }, numero_patient: 'PAT-00003' },
+        prescrit_at: new Date().toISOString(),
+        resultats: [],
+      },
+      {
+        id: 102,
+        type_examen: 'Glycémie',
+        statut: 'prescrit',
+        priorite: 'urgent',
+        patient: { user: { name: 'Joseph Mbala' }, numero_patient: 'PAT-00012' },
+        prescrit_at: new Date().toISOString(),
+        resultats: [],
+      },
+    ]);
+  }
+  if (method === 'get' && p === '/laboratoire/file-examens') {
+    return ok([
+      {
+        id: 201,
+        type_examen: 'GE / TDR Paludisme',
+        statut: 'prescrit',
+        priorite: 'stat',
+        patient: { user: { name: 'Alice Nzuzi' } },
+        admission: { numero_admission: 'ADM-DEMO-001' },
+      },
+    ]);
+  }
+  if (method === 'put' && /\/laboratoire\/analyses\/\d+\/resultats/.test(p)) {
+    return ok(null, 'Résultats enregistrés (démo)');
+  }
+
+  if (method === 'get' && p === '/pharmacie/dashboard') {
+    return ok({ medicaments_total: 42, stock_bas: 3, ordonnances_actives: 4, ordonnances_delivrees: 18 });
+  }
+  if (method === 'get' && p === '/pharmacie/stock') {
+    return ok([
+      { id: 1, nom: 'Paracétamol 500 mg', dci: 'Paracétamol', quantite: 240, seuil_alerte: 50, date_expiration: '2027-06-01' },
+      { id: 2, nom: 'Amoxicilline 500 mg', dci: 'Amoxicilline', quantite: 18, seuil_alerte: 30, date_expiration: '2026-12-01' },
+      { id: 3, nom: 'Artemether-Lumefantrine', dci: 'AL', quantite: 8, seuil_alerte: 20, date_expiration: '2026-09-15' },
+    ]);
+  }
+  if (method === 'get' && p === '/pharmacie/ordonnances') {
+    return ok([
+      {
+        id: 1,
+        source: 'parcours',
+        numero_ordonnance: 'ORD-P-DEMO-0001',
+        statut: 'active',
+        statut_label: 'En attente',
+        date_prescription: new Date().toISOString().slice(0, 10),
+        patient: { user: { name: 'Marie Kalala' }, allergies: 'Pénicilline' },
+        medicaments: [{ nom: 'Paracétamol', dosage: '500 mg', frequence: '3×/j', duree: '5 j' }],
+      },
+      {
+        id: 2,
+        source: 'dossier',
+        numero_ordonnance: 'ORD-20260809-0002',
+        statut: 'active',
+        statut_label: 'En attente',
+        date_prescription: new Date().toISOString().slice(0, 10),
+        patient: { user: { name: 'Joseph Mbala' } },
+        medicaments: [{ nom: 'Amoxicilline', dosage: '500 mg', frequence: '2×/j', duree: '7 j' }],
+      },
+    ]);
+  }
+  if (method === 'put' && /\/pharmacie\/ordonnances\/\d+\/delivrer/.test(p)) {
+    return ok(null, 'Ordonnance délivrée (démo)');
+  }
+  if (method === 'post' && p === '/pharmacie/stock') {
+    return ok({ id: Date.now(), ...((config.data && JSON.parse(typeof config.data === 'string' ? config.data : JSON.stringify(config.data))) || {}) }, 'Stock ajouté (démo)');
+  }
+
+  if (method === 'get' && p === '/caisse/dashboard') {
+    return ok({
+      factures_du_jour: 6,
+      montant_du_jour: 285000,
+      paiements_du_jour: 210000,
+      impayees: 4,
+      montant_impaye: 175000,
+    });
+  }
+  if (method === 'get' && p === '/caisse/factures') {
+    return ok([
+      {
+        id: 1,
+        numero_facture: 'FAC-2026-001',
+        statut: 'emise',
+        montant_total: 85000,
+        montant_paye: 0,
+        patient: { user: { name: 'Marie Kalala' }, numero_patient: 'PAT-00003' },
+        date_facture: new Date().toISOString().slice(0, 10),
+      },
+      {
+        id: 2,
+        numero_facture: 'FAC-2026-002',
+        statut: 'partiellement_payee',
+        montant_total: 120000,
+        montant_paye: 50000,
+        patient: { user: { name: 'Joseph Mbala' }, numero_patient: 'PAT-00012' },
+        date_facture: new Date().toISOString().slice(0, 10),
+      },
+    ]);
+  }
+  if (method === 'get' && p === '/caisse/paiements') {
+    return ok([
+      {
+        id: 1,
+        montant: 45000,
+        mode_paiement: 'cash',
+        date_paiement: new Date().toISOString(),
+        facture: { numero_facture: 'FAC-2026-002' },
+        patient: { user: { name: 'Joseph Mbala' } },
+      },
+    ]);
+  }
+  if (method === 'get' && p === '/caisse/patients') {
+    return ok([
+      { id: 3, numero_patient: 'PAT-00003', user: { name: 'Marie Kalala', phone: '+243 900 000 003' } },
+      { id: 12, numero_patient: 'PAT-00012', user: { name: 'Joseph Mbala', phone: '+243 900 111 222' } },
+    ]);
+  }
+  if (method === 'post' && (p === '/caisse/factures' || p === '/caisse/paiements')) {
+    return ok({ id: Date.now() }, 'Enregistré (démo)');
+  }
+  if (method === 'put' && /\/caisse\/factures\/\d+\/annuler/.test(p)) {
+    return ok(null, 'Facture annulée (démo)');
+  }
+
+  // ── Spécialités ─────────────────────────────────────────────────────────
+  if (method === 'get' && p === '/maternite/dashboard') {
+    return ok({ total_suivis: 24, prenatales: 14, accouchements: 4, postnatales: 6 });
+  }
+  if (method === 'get' && p === '/chirurgie/dashboard') {
+    return ok({ total: 18, planifiees: 5, en_cours: 1, realisees: 12 });
+  }
+  if (method === 'get' && p === '/echographie/dashboard') {
+    return ok({ total: 31, en_attente: 4, termines: 27 });
+  }
+  if (method === 'get' && p === '/kinesitherapie/dashboard') {
+    return ok({ total: 40, planifiees: 8, realisees: 32 });
+  }
+  if (method === 'get' && p === '/dentisterie/dashboard') {
+    return ok({ total_soins: 22, consultations: 7, soins: 15 });
+  }
+
+  if (method === 'get' && p === '/maternite/suivis') {
+    return ok([
+      {
+        id: 1,
+        type_visite: 'consultation_prenatale',
+        grossesse_semaines: 28,
+        poids_kg: 68,
+        tension_arterielle: '120/80',
+        observations: 'Évolution normale',
+        date_accouchement_prevue: '2026-10-12',
+        patient: { id: 3, user: { name: 'Marie Kalala' }, numero_patient: 'PAT-00003' },
+        created_at: new Date().toISOString(),
+      },
+    ]);
+  }
+  if (method === 'get' && p === '/chirurgie/operations') {
+    return ok([
+      {
+        id: 1,
+        type_operation: 'Appendicectomie',
+        statut: 'planifiee',
+        date_operation: new Date().toISOString().slice(0, 10),
+        salle: 'Bloc 1',
+        patient: { id: 12, user: { name: 'Joseph Mbala' }, numero_patient: 'PAT-00012' },
+      },
+    ]);
+  }
+  if (method === 'get' && p === '/echographie/examens') {
+    return ok([
+      {
+        id: 1,
+        type_echo: 'Écho abdominale',
+        organe_examine: 'Abdomen',
+        statut: 'termine',
+        conclusion: 'Foie et rate normaux',
+        compte_rendu: 'Examen sans anomalie majeure',
+        patient: { id: 3, user: { name: 'Marie Kalala' }, numero_patient: 'PAT-00003' },
+        date_examen: new Date().toISOString().slice(0, 10),
+      },
+    ]);
+  }
+  if (method === 'get' && p === '/kinesitherapie/seances') {
+    return ok([
+      {
+        id: 1,
+        techniques: 'Rééducation genou',
+        numero_seance: 3,
+        total_seances: 10,
+        evolution: 'amelioration',
+        statut: 'planifiee',
+        patient: { id: 12, user: { name: 'Joseph Mbala' }, numero_patient: 'PAT-00012' },
+        date_seance: new Date().toISOString().slice(0, 10),
+      },
+    ]);
+  }
+  if (method === 'get' && p === '/dentisterie/soins') {
+    return ok([
+      {
+        id: 1,
+        type_soin: 'Détartrage',
+        dents_traitees: '16, 26',
+        statut: 'termine',
+        patient: { id: 3, user: { name: 'Marie Kalala' }, numero_patient: 'PAT-00003' },
+        date_soin: new Date().toISOString().slice(0, 10),
+      },
+    ]);
+  }
+  if (method === 'get' && /\/(maternite|chirurgie|echographie|kinesitherapie|dentisterie)\/patients/.test(p)) {
+    return ok([
+      { id: 3, numero_patient: 'PAT-00003', user: { name: 'Marie Kalala', phone: '+243 900 000 003' } },
+      { id: 12, numero_patient: 'PAT-00012', user: { name: 'Joseph Mbala', phone: '+243 900 111 222' } },
+    ]);
+  }
+  if (method === 'post' && /\/(maternite|chirurgie|echographie|kinesitherapie|dentisterie)\//.test(p)) {
+    return ok({ id: Date.now() }, 'Enregistrement réussi (démo)');
+  }
+
+  // ── Téléconsultation ────────────────────────────────────────────────────
+  if (method === 'get' && p === '/teleconsultation') {
+    const today = new Date().toISOString().slice(0, 10);
+    return ok([
+      {
+        id: 88,
+        date_rdv: today,
+        heure_rdv: '15:00:00',
+        statut: 'confirme',
+        type: 'teleconsultation',
+        paiement_statut: 'paye',
+        motif: 'Suivi',
+        room_name: 'amen-rdv-88-demo12ab',
+        salle_dediee: true,
+        medecin: { user: { name: 'Dr. Jean-Pierre Kabila' } },
+        patient: { user: { name: 'Marie Kalala' } },
+        departement: { nom: 'Médecine Générale' },
+      },
+    ]);
+  }
+  if (method === 'post' && /\/teleconsultation\/\d+\/rejoindre/.test(p)) {
+    return ok({
+      rendez_vous: {
+        id: 88,
+        patient: { user: { name: 'Marie Kalala' } },
+        medecin: { user: { name: 'Dr. Jean-Pierre Kabila' } },
+      },
+      room_url: 'https://meet.jit.si/amen-rdv-88-demo12ab#config.prejoinPageEnabled=false',
+      room_name: 'amen-rdv-88-demo12ab',
+      salle_dediee: true,
+      jitsi_domain: 'meet.jit.si',
+    }, 'Salle dédiée ouverte');
+  }
+  if (method === 'post' && /\/teleconsultation\/\d+\/fermer/.test(p)) {
+    return ok(null, 'Téléconsultation clôturée');
+  }
+
   if (method === 'get' && p.startsWith('/admin/')) {
     return ok([]);
   }
@@ -593,7 +898,7 @@ export function resolveMock(config) {
     return ok({ total: 12, en_attente: 3, termines: 9 });
   }
 
-  if (method === 'get' && (p.includes('/file-triage') || p.includes('/file-consultation') || p.includes('/file-examens') || p.includes('/episodes'))) {
+  if (method === 'get' && (p.includes('/file-triage') || p.includes('/file-consultation') || p.includes('/episodes'))) {
     return ok([]);
   }
 
@@ -628,7 +933,7 @@ export function resolveMock(config) {
     }, 'Patient créé. Dossier DOS-DEMO-0001 ouvert — orienté vers le triage.');
   }
 
-  if (method === 'get' && (p.includes('/patients') || p.includes('/operations') || p.includes('/examens') || p.includes('/seances') || p.includes('/soins') || p.includes('/suivis') || p.includes('/demandes') || p.includes('/rendez-vous') || p.includes('/analyses') || p.includes('/stock') || p.includes('/ordonnances') || p.includes('/factures') || p.includes('/paiements') || p.includes('/constantes'))) {
+  if (method === 'get' && (p.includes('/patients') || p.includes('/demandes') || p.includes('/rendez-vous') || p.includes('/constantes'))) {
     return ok([]);
   }
 

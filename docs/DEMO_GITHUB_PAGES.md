@@ -58,9 +58,13 @@ Sans variable `VITE_API_URL`, le visiteur peut :
 
 ---
 
-## Comptes demo (quand l'API est en ligne)
+## Comptes demo (mode démo GitHub Pages)
 
-`Password@123` — `patient@amen.cd`, `medecin@amen.cd`, `admin@amen.cd`
+Mot de passe : `Password@123`
+
+`admin@amen.cd` · `receptionniste@amen.cd` · `medecin@amen.cd` · `laborantin@amen.cd` · `pharmacien@amen.cd` · `caissier@amen.cd` · `sagefemme@amen.cd` · `chirurgien@amen.cd` · `echographiste@amen.cd` · `kine@amen.cd` · `dentiste@amen.cd` · `patient@amen.cd`
+
+Données simulées pour labo, pharmacie, caisse, spécialités et téléconsultation.
 
 ---
 

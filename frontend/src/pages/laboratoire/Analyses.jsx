@@ -61,13 +61,14 @@ export default function LaboratoireAnalyses() {
 
   const addLigne = () => {
     if (!ligne.parametre.trim()) return;
+    const toNum = (v) => (v === '' || v == null ? null : Number(v));
     setResultats((r) => [...r, {
       parametre: ligne.parametre,
       valeur: ligne.valeur,
       unite: ligne.unite,
       norme: ligne.norme || (ligne.ref_min && ligne.ref_max ? `${ligne.ref_min}–${ligne.ref_max}` : ''),
-      ref_min: ligne.ref_min || null,
-      ref_max: ligne.ref_max || null,
+      ref_min: toNum(ligne.ref_min),
+      ref_max: toNum(ligne.ref_max),
       flag: ligne.flag || 'N',
     }]);
     setLigne({ parametre: '', valeur: '', unite: '', norme: '', ref_min: '', ref_max: '', flag: 'N' });
@@ -79,9 +80,15 @@ export default function LaboratoireAnalyses() {
       return;
     }
     setError('');
+    const toNum = (v) => (v === '' || v == null || Number.isNaN(Number(v)) ? null : Number(v));
+    const clean = resultats.map((r) => ({
+      ...r,
+      ref_min: toNum(r.ref_min),
+      ref_max: toNum(r.ref_max),
+    }));
     try {
       await api.put(`/laboratoire/analyses/${selected.id}/resultats`, {
-        resultats,
+        resultats: clean,
         interpretation,
         technique: technique || null,
         statut: 'termine',
@@ -90,7 +97,9 @@ export default function LaboratoireAnalyses() {
       setSelected(null);
       void load();
     } catch (err) {
-      setError(err.response?.data?.message || 'Impossible de publier les résultats.');
+      const errors = err.response?.data?.errors;
+      const first = errors ? Object.values(errors).flat()[0] : null;
+      setError(first || err.response?.data?.message || 'Impossible de publier les résultats.');
     }
   };
 

@@ -14,6 +14,7 @@ return [
     'jitsi' => [
         'domain' => env('JITSI_DOMAIN', 'meet.jit.si'),
         'room_prefix' => env('JITSI_ROOM_PREFIX', 'amen-rdv'),
+        'room_secret' => env('JITSI_ROOM_SECRET', env('APP_KEY')),
     ],
     'mobile_money' => [
         'airtel_enabled' => env('AIRTEL_MONEY_ENABLED', false),

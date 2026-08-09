@@ -1,0 +1,78 @@
+classDiagram
+  direction TB
+  class User {
+    +id
+    +name
+    +email
+    +role
+    +phone
+  }
+  class Patient {
+    +id
+    +numero_patient
+    +sexe
+    +allergies
+  }
+  class Medecin {
+    +id
+    +specialite
+    +disponibilites
+  }
+  class Departement {
+    +id
+    +code
+    +nom
+  }
+  class Admission {
+    +id
+    +numero_admission
+    +statut
+    +mode_arrivee
+    +motif_arrivee
+  }
+  class Triage {
+    +id
+    +niveau_urgence
+    +temperature
+    +tension_arterielle
+  }
+  class Consultation {
+    +id
+    +anamnese
+    +examen_clinique
+    +diagnostic_final
+  }
+  class ExamenLabo {
+    +id
+    +type_examen
+    +priorite
+    +statut
+    +resultats
+  }
+  class ParcoursPrescription {
+    +id
+    +numero_ordonnance
+    +medicaments
+    +statut
+  }
+  class RendezVous {
+    +id
+    +date_rdv
+    +heure_rdv
+    +statut
+    +type
+  }
+  User "1" --> "0..1" Patient : possede
+  User "1" --> "0..1" Medecin : possede
+  Departement "1" --> "*" Medecin : emploie
+  Patient "1" --> "*" Admission : subit
+  Patient "1" --> "*" RendezVous : reserve
+  Medecin "1" --> "*" RendezVous : assure
+  Medecin "1" --> "*" Admission : referent
+  Admission "1" --> "0..1" RendezVous : origine
+  Admission "1" --> "0..1" Triage : a
+  Admission "1" --> "*" Consultation : contient
+  Admission "1" --> "*" ExamenLabo : prescrit
+  Admission "1" --> "*" ParcoursPrescription : genere
+  Medecin "1" --> "*" Consultation : realise
+  Medecin "1" --> "*" ParcoursPrescription : prescrit

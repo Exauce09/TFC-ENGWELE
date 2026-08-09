@@ -206,6 +206,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/integrations/fcm-token', [IntegrationController::class, 'registerFcmToken']);
         Route::get('/teleconsultation', [TeleconsultationController::class, 'mesSalles']);
         Route::post('/teleconsultation/{id}/rejoindre', [TeleconsultationController::class, 'rejoindre']);
+        Route::post('/teleconsultation/{id}/fermer', [TeleconsultationController::class, 'fermer']);
 
         Route::get('/notifications', [NotificationController::class, 'index']);
         Route::put('/notifications/{id}/lu', [NotificationController::class, 'marquerLu']);

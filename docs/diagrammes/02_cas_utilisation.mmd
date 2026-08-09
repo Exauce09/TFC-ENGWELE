@@ -1,0 +1,29 @@
+flowchart LR
+  subgraph Systeme["Systeme AMEN"]
+    UC1((UC1 Enregistrer patient))
+    UC2((UC2 Faire triage))
+    UC3((UC3 Consulter et prescrit examens))
+    UC4((UC4 Prelever echantillon))
+    UC5((UC5 Publier resultats))
+    UC6((UC6 Diagnostiquer et prescrit))
+    UC7((UC7 Delivrer medicaments))
+    UC8((UC8 Initier traitement))
+    UC9((UC9 Prendre RDV creneau))
+    UC10((UC10 Convertir RDV jour J))
+  end
+  Rec[Receptionniste]
+  Inf[Infirmier]
+  Med[Medecin]
+  Lab[Laborantin]
+  Pha[Pharmacien]
+  Pat[Patient]
+  Rec --> UC1
+  Rec --> UC10
+  Inf --> UC2
+  Inf --> UC4
+  Med --> UC3
+  Med --> UC6
+  Med --> UC8
+  Lab --> UC5
+  Pha --> UC7
+  Pat --> UC9

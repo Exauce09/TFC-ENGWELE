@@ -179,7 +179,7 @@ flowchart LR
 
 | Écran | Route | Fonctionnalités visibles |
 |-------|-------|--------------------------|
-| Tableau de bord | `/admin/dashboard` | Statistiques globales (API), graphiques partiels |
+| Tableau de bord | `/admin/dashboard` | Statistiques globales, graphiques et activité (API) |
 | Rendez-vous | `/admin/rendez-vous` | Liste, validation, changement de statut |
 | Patients | `/admin/patients` | Consultation liste patients |
 | Médecins | `/admin/medecins` | Liste du personnel médical |
@@ -214,7 +214,8 @@ flowchart LR
 |----------------|-----|-----------|--------|
 | Inscription patient | `POST /register` | Register | ✅ Implémenté |
 | Connexion / déconnexion | `POST /login`, `POST /logout` | Login | ✅ Implémenté |
-| Profil utilisateur | `GET /me`, `PUT /profile` | — | ⚠️ API seule (UI à venir) |
+| Profil utilisateur | `GET /me`, `PUT /profile` | `/profile` | ✅ |
+| Mot de passe oublié | `POST /forgot-password` | `/forgot-password` | ✅ |
 | Mot de passe oublié | `POST /forgot-password` | — | ⚠️ API seule (UI à venir) |
 | Contrôle d'accès par rôle | Middleware `role` + `PrivateRoute` | Toutes les routes | ✅ Implémenté |
 

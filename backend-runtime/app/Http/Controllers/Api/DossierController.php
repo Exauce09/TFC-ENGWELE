@@ -10,10 +10,12 @@ use App\Models\DossierMedical;
 use App\Models\EpisodeSoin;
 use App\Models\ExamenLabo;
 use App\Models\Medecin;
+use App\Models\ParcoursPrescription;
 use App\Models\Patient;
 use App\Models\Prescription;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class DossierController extends Controller
 {
@@ -22,22 +24,133 @@ class DossierController extends Controller
     public function monDossier(Request $request): JsonResponse
     {
         $patient = Patient::where('user_id', $request->user()->id)->firstOrFail();
+
         $dossiers = DossierMedical::with(self::WITH)
             ->where('patient_id', $patient->id)
             ->latest('date_consultation')
-            ->paginate(15);
+            ->get();
+
+        $admissions = Admission::with([
+            'departement:id,nom',
+            'triage.infirmier:id,name',
+            'consultations.medecin.user:id,name',
+            'examensLabo',
+            'prescriptions.medecin.user:id,name',
+            'medecinReferent.user:id,name',
+        ])
+            ->where('patient_id', $patient->id)
+            ->latest('arrivee_at')
+            ->get();
+
+        // Consultations visibles = parcours (réelles) + fiches dossier (si déjà remplies)
+        $consultationsParcours = $admissions->flatMap(function (Admission $admission) {
+            if ($admission->consultations->isEmpty()) {
+                // Accueil seul : au moins la fiche d'arrivée
+                return [[
+                    'id' => 'adm-'.$admission->id,
+                    'source' => 'parcours',
+                    'admission_id' => $admission->id,
+                    'numero_admission' => $admission->numero_admission,
+                    'motif' => $admission->motif_arrivee ?: 'Visite',
+                    'date_consultation' => optional($admission->arrivee_at)?->toDateString(),
+                    'anamnese' => null,
+                    'examen_clinique' => null,
+                    'observations' => $admission->observations,
+                    'diagnostic_provisoire' => null,
+                    'diagnostic_final' => null,
+                    'departement' => $admission->departement,
+                    'medecin' => $admission->medecinReferent,
+                    'statut_parcours' => $admission->statut,
+                    'statut_parcours_label' => $admission->statut_label ?? $admission->statut,
+                    'triage' => $admission->triage,
+                    'diagnostics' => [],
+                ]];
+            }
+
+            return $admission->consultations->map(function ($c) use ($admission) {
+                $diagnostics = [];
+                if ($c->diagnostic_final) {
+                    $diagnostics[] = [
+                        'id' => 'final-'.$c->id,
+                        'libelle' => $c->diagnostic_final,
+                        'code_cim10' => $c->code_cim10 ?? null,
+                    ];
+                } elseif ($c->diagnostic_provisoire) {
+                    $diagnostics[] = [
+                        'id' => 'prov-'.$c->id,
+                        'libelle' => $c->diagnostic_provisoire,
+                        'code_cim10' => null,
+                    ];
+                }
+
+                return [
+                    'id' => 'cons-'.$c->id,
+                    'source' => 'parcours',
+                    'admission_id' => $admission->id,
+                    'numero_admission' => $admission->numero_admission,
+                    'motif' => $c->motif ?: $admission->motif_arrivee,
+                    'date_consultation' => optional($c->created_at)?->toDateString()
+                        ?? optional($admission->arrivee_at)?->toDateString(),
+                    'anamnese' => $c->anamnese,
+                    'examen_clinique' => $c->examen_clinique,
+                    'observations' => $c->observations,
+                    'diagnostic_provisoire' => $c->diagnostic_provisoire,
+                    'diagnostic_final' => $c->diagnostic_final,
+                    'departement' => $admission->departement,
+                    'medecin' => $c->medecin,
+                    'statut_parcours' => $admission->statut,
+                    'statut_parcours_label' => $admission->statut_label ?? $admission->statut,
+                    'triage' => $admission->triage,
+                    'diagnostics' => $diagnostics,
+                ];
+            });
+        })->values();
+
+        $consultationsDossier = $dossiers
+            ->filter(fn (DossierMedical $d) => filled($d->anamnese) || filled($d->examen_clinique) || $d->diagnostics->isNotEmpty())
+            ->map(fn (DossierMedical $d) => array_merge($d->toArray(), [
+                'source' => 'dossier',
+                'statut_parcours' => null,
+            ]))
+            ->values();
+
+        $consultations = $consultationsParcours
+            ->concat($consultationsDossier)
+            ->sortByDesc(fn ($row) => $row['date_consultation'] ?? '')
+            ->values();
+
+        $examens = $admissions->flatMap(fn (Admission $a) => $a->examensLabo->map(fn ($ex) => array_merge(
+            $ex->toArray(),
+            [
+                'numero_admission' => $a->numero_admission,
+                'source' => 'parcours',
+            ]
+        )))->values();
+
+        $visites = $admissions->map(fn (Admission $a) => [
+            'id' => $a->id,
+            'numero_admission' => $a->numero_admission,
+            'statut' => $a->statut,
+            'statut_label' => $a->statut_label ?? $a->statut,
+            'motif' => $a->motif_arrivee,
+            'service' => $a->departement?->nom,
+            'arrivee_at' => optional($a->arrivee_at)?->toIso8601String(),
+            'niveau_urgence' => $a->triage?->niveau_urgence,
+        ])->values();
 
         return response()->json([
             'success' => true,
             'message' => 'Dossier medical',
             'data' => [
                 'patient' => $patient->load('user:id,name,email,phone'),
-                'consultations' => $dossiers->items(),
+                'consultations' => $consultations,
+                'examens' => $examens,
+                'analyses' => [],
+                'derniers_resultats' => $examens->where('statut', 'termine')->values(),
+                'visites' => $visites,
             ],
             'meta' => [
-                'total' => $dossiers->total(),
-                'per_page' => $dossiers->perPage(),
-                'current_page' => $dossiers->currentPage(),
+                'total' => $consultations->count(),
             ],
         ]);
     }
@@ -84,12 +197,58 @@ class DossierController extends Controller
 
         $data = $dossier->toArray();
         $data['admission_active'] = $dossier->patient?->admissionActive;
+        // Inclure aussi les ordonnances parcours (pharmacie) du patient
+        $data['prescriptions'] = $this->ordonnancesPourPatient($dossier->patient_id, $dossier->id)->all();
 
         return response()->json([
             'success' => true,
             'message' => 'Detail dossier',
             'data' => $data,
         ]);
+    }
+
+    /**
+     * Fusionne prescriptions dossier + parcours (même patient), sans doublons de numéro.
+     */
+    private function ordonnancesPourPatient(int $patientId, ?int $dossierId = null): Collection
+    {
+        $dossierRx = Prescription::with(['medecin.user:id,name', 'medecin.departement:id,nom'])
+            ->when($dossierId, fn ($q) => $q->where('dossier_id', $dossierId))
+            ->when(! $dossierId, fn ($q) => $q->where('patient_id', $patientId))
+            ->latest('date_prescription')
+            ->get()
+            ->map(fn (Prescription $p) => array_merge($p->toArray(), ['source' => 'dossier']));
+
+        $parcoursRx = ParcoursPrescription::with(['medecin.user:id,name', 'medecin.departement:id,nom'])
+            ->whereHas('admission', fn ($q) => $q->where('patient_id', $patientId))
+            ->latest('date_prescription')
+            ->get()
+            ->map(fn (ParcoursPrescription $p) => [
+                'id' => 'parcours-'.$p->id,
+                'numero_ordonnance' => $p->numero_ordonnance,
+                'date_prescription' => $p->date_prescription?->toDateString(),
+                'medicaments' => $p->medicaments,
+                'instructions_generales' => $p->posologie_generale,
+                'diagnostic_motif' => $p->diagnostic_motif,
+                'statut' => $p->statut,
+                'statut_label' => $p->statut_label,
+                'medecin' => $p->medecin,
+                'source' => 'parcours',
+                'parcours_id' => $p->id,
+            ]);
+
+        $seen = [];
+        $merged = collect();
+        foreach ($dossierRx->concat($parcoursRx) as $rx) {
+            $key = $rx['numero_ordonnance'] ?? ('id-'.($rx['id'] ?? uniqid('', true)));
+            if (isset($seen[$key])) {
+                continue;
+            }
+            $seen[$key] = true;
+            $merged->push($rx);
+        }
+
+        return $merged->sortByDesc(fn ($r) => $r['date_prescription'] ?? '')->values();
     }
 
     /**
@@ -274,11 +433,7 @@ class DossierController extends Controller
             ->limit(30)
             ->get();
 
-        $ordonnances = Prescription::with(['medecin.user:id,name', 'medecin.departement:id,nom', 'dossier:id,numero_dossier'])
-            ->where('patient_id', $patient->id)
-            ->latest('date_prescription')
-            ->limit(20)
-            ->get();
+        $ordonnances = $this->ordonnancesPourPatient($patient->id)->take(30)->values();
 
         $derniereVisite = $admissions->first();
         $derniersResultats = $examensParcours

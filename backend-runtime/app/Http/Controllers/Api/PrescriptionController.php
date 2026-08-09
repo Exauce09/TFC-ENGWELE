@@ -144,48 +144,10 @@ class PrescriptionController extends Controller
             ];
         }
 
-        // Admission en phase diagnostic → ParcoursPrescription (pharmacie avance le parcours)
         $admission = Admission::where('patient_id', $validated['patient_id'])
             ->whereNotIn('statut', AdmissionStatut::statutsClotures())
             ->latest('id')
             ->first();
-
-        if ($admission && in_array($admission->statut, [
-            AdmissionStatut::ExamensLaboratoire->value,
-            AdmissionStatut::DiagnosticPrescription->value,
-        ], true)) {
-            $parcoursRx = ParcoursPrescription::create([
-                'admission_id' => $admission->id,
-                'numero_ordonnance' => ParcoursPrescription::genererNumero(),
-                'medecin_id' => $medecin->id,
-                'date_prescription' => $validated['date_prescription'],
-                'medicaments' => $medicaments,
-                'posologie_generale' => $validated['instructions_generales'] ?? null,
-                'diagnostic_motif' => $validated['diagnostic_motif'] ?? $dossier->motif,
-                'statut' => 'active',
-                'allergies_signalees' => $admission->patient?->allergies,
-            ]);
-
-            if ($admission->statut === AdmissionStatut::ExamensLaboratoire->value) {
-                // Rx créée ; le médecin doit encore valider le diagnostic pour basculer
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Ordonnance parcours créée — visible en pharmacie',
-                'data' => array_merge($parcoursRx->toArray(), [
-                    'source' => 'parcours',
-                    'admission_id' => $admission->id,
-                ]),
-            ], 201);
-        }
-
-        if ($admission && $admission->statut === AdmissionStatut::ConsultationMedicale->value) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Terminez d\'abord la consultation sur le parcours (ou le diagnostic) avant de prescrire.',
-            ], 422);
-        }
 
         $validite = (int) ($validated['validite_jours'] ?? 30);
         $datePrescription = Carbon::parse($validated['date_prescription'])->startOfDay();
@@ -193,8 +155,11 @@ class PrescriptionController extends Controller
             ? Carbon::parse($validated['date_expiration'])->startOfDay()
             : $datePrescription->copy()->addDays($validite);
 
+        $numero = Prescription::genererNumero();
+
+        // Toujours enregistrer sur le dossier médical (affichage médecin / patient)
         $prescription = Prescription::create([
-            'numero_ordonnance' => Prescription::genererNumero(),
+            'numero_ordonnance' => $numero,
             'dossier_id' => $validated['dossier_id'],
             'patient_id' => $validated['patient_id'],
             'medecin_id' => $medecin->id,
@@ -209,7 +174,24 @@ class PrescriptionController extends Controller
             'statut' => 'active',
         ]);
 
-        // Lier le médecin au dossier s'il n'y est pas encore
+        // En phase labo / diagnostic → aussi visible pharmacie (parcours)
+        if ($admission && in_array($admission->statut, [
+            AdmissionStatut::ExamensLaboratoire->value,
+            AdmissionStatut::DiagnosticPrescription->value,
+        ], true)) {
+            ParcoursPrescription::create([
+                'admission_id' => $admission->id,
+                'numero_ordonnance' => $numero,
+                'medecin_id' => $medecin->id,
+                'date_prescription' => $validated['date_prescription'],
+                'medicaments' => $medicaments,
+                'posologie_generale' => $validated['instructions_generales'] ?? null,
+                'diagnostic_motif' => $validated['diagnostic_motif'] ?? $dossier->motif,
+                'statut' => 'active',
+                'allergies_signalees' => $admission->patient?->allergies,
+            ]);
+        }
+
         if (! $dossier->medecin_id) {
             $dossier->update(['medecin_id' => $medecin->id, 'statut' => 'en_consultation']);
         }

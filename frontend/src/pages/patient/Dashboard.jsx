@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
+import Icon from '../../components/Icon';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { ROLE_THEMES } from '../../constants/roleThemes';
+
+const T = ROLE_THEMES.patient;
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -15,22 +19,6 @@ const STATUT_COLORS = {
   absent: 'bg-orange-100 text-orange-700',
 };
 
-const DEMO_RDV = [
-  { id: 1, date_rdv: '2026-06-25', heure_rdv: '10:00', statut: 'confirme', type: 'presentiel', medecin: { user: { name: 'Dr. Jean-Pierre Kabila' } }, departement: 'Médecine Interne', motif: 'Consultation de suivi' },
-  { id: 2, date_rdv: '2026-06-28', heure_rdv: '14:30', statut: 'en_attente', type: 'presentiel', medecin: { user: { name: 'Dr. Esperance Mbuyi' } }, departement: 'Gynécologie', motif: 'Visite prénatale' },
-  { id: 3, date_rdv: '2026-06-15', heure_rdv: '09:00', statut: 'termine', type: 'teleconsultation', medecin: { user: { name: 'Dr. Celestine Nkosi' } }, departement: 'Pédiatrie', motif: 'Fièvre persistante' },
-];
-
-const DEMO_PRESCRIPTIONS = [
-  { id: 1, date_prescription: '2026-06-15', statut: 'active', medicaments: [{ nom: 'Amoxicilline', dosage: '500mg', frequence: '3×/jour', duree: '7 jours' }, { nom: 'Paracétamol', dosage: '1000mg', frequence: '2×/jour', duree: '5 jours' }], medecin: 'Dr. Kabila' },
-  { id: 2, date_prescription: '2026-05-20', statut: 'expiree', medicaments: [{ nom: 'Ibuprofène', dosage: '400mg', frequence: '3×/jour', duree: '5 jours' }], medecin: 'Dr. Nkosi' },
-];
-
-const DEMO_DOSSIER = [
-  { id: 1, date_consultation: '2026-06-15', departement: 'Médecine Interne', motif: 'Fièvre et douleurs articulaires', diagnostic: 'Grippe saisonnière', medecin: 'Dr. Kabila' },
-  { id: 2, date_consultation: '2026-05-10', departement: 'Gynécologie', motif: 'Consultation de routine', diagnostic: 'Etat de santé satisfaisant', medecin: 'Dr. Mbuyi' },
-];
-
 // ── sub-components ────────────────────────────────────────────────────────────
 
 function StatCard({ icon, label, value, sub, color }) {
@@ -42,7 +30,7 @@ function StatCard({ icon, label, value, sub, color }) {
           <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
           {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
         </div>
-        <span className="text-3xl">{icon}</span>
+        <Icon name={icon} className="h-7 w-7 text-slate-400" />
       </div>
     </div>
   );
@@ -69,46 +57,196 @@ export default function PatientDashboard() {
   const [dossiers, setDossiers] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [factures, setFactures] = useState([]);
-  const [tab, setTab] = useState('rdv');
+  const [accueil, setAccueil] = useState(null);
+  const [showCreation, setShowCreation] = useState(true);
+  const [tab, setTab] = useState('prescriptions');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/patient/rendez-vous').then((res) => setRdv(res.data.data || [])).catch(() => setRdv(DEMO_RDV));
-    api.get('/patient/dossier').then((res) => setDossiers(res.data.data?.consultations || [])).catch(() => setDossiers(DEMO_DOSSIER));
-    api.get('/patient/prescriptions').then((res) => setPrescriptions(res.data.data || [])).catch(() => setPrescriptions(DEMO_PRESCRIPTIONS));
-    api.get('/patient/factures').then((res) => setFactures(res.data.data || [])).catch(() => setFactures([]));
-  }, []);
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const [dashRes, rdvRes, dosRes, rxRes, facRes] = await Promise.allSettled([
+          api.get('/patient/dashboard'),
+          api.get('/patient/rendez-vous'),
+          api.get('/patient/dossier'),
+          api.get('/patient/prescriptions'),
+          api.get('/patient/factures'),
+        ]);
+        if (cancelled) return;
 
-  const prochainRdv = rdv.filter(r => ['confirme', 'en_attente'].includes(r.statut));
-  const facturesImpayees = factures.filter(f => ['emise', 'partiellement_payee'].includes(f.statut)).length;
-  const prescriptionsActives = prescriptions.filter(p => p.statut === 'active').length;
+        if (dashRes.status === 'fulfilled') {
+          const data = dashRes.value.data.data || null;
+          setAccueil(data);
+          const key = `amen_seen_creation_${data?.numero_patient || user?.id}`;
+          if (localStorage.getItem(key) === '1') setShowCreation(false);
+        } else {
+          setAccueil(null);
+        }
+
+        setRdv(rdvRes.status === 'fulfilled' ? (rdvRes.value.data.data || []) : []);
+        setDossiers(dosRes.status === 'fulfilled' ? (dosRes.value.data.data?.consultations || []) : []);
+        setPrescriptions(rxRes.status === 'fulfilled' ? (rxRes.value.data.data || []) : []);
+        setFactures(facRes.status === 'fulfilled' ? (facRes.value.data.data || []) : []);
+
+        const rx = rxRes.status === 'fulfilled' ? (rxRes.value.data.data || []) : [];
+        const hasActiveRx = rx.some((p) => p.statut === 'active');
+        const hasAdmission = dashRes.status === 'fulfilled' && dashRes.value.data.data?.admission_en_cours;
+        if (hasActiveRx || hasAdmission) setTab('prescriptions');
+        else if ((dosRes.status === 'fulfilled' ? (dosRes.value.data.data?.consultations || []) : []).length > 0) setTab('dossier');
+        else setTab('rdv');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [user?.id]);
+
+  const masquerCreation = () => {
+    const key = `amen_seen_creation_${accueil?.numero_patient || user?.id}`;
+    localStorage.setItem(key, '1');
+    setShowCreation(false);
+  };
+
+  const prochainRdv = rdv.filter((r) => ['confirme', 'en_attente'].includes(r.statut));
+  const facturesImpayees = factures.filter((f) => ['emise', 'partiellement_payee'].includes(f.statut)).length;
+  const prescriptionsActives = prescriptions.filter((p) => p.statut === 'active');
+  const prescriptionsDelivrees = prescriptions.filter((p) => p.statut === 'delivree');
+  const delivrees = accueil?.ordonnances_delivrees || [];
+  const visite = accueil?.admission_en_cours;
+
+  const medLabel = (m) => m.nom_dci || m.nom || m.nom_commercial || 'Médicament';
+  const medPosologie = (m) => m.posologie || m.frequence || '—';
+
+  if (loading) {
+    return (
+      <Layout title="Mon Espace Patient">
+        <p className="text-sm text-slate-500">Chargement de votre dossier…</p>
+      </Layout>
+    );
+  }
 
   return (
     <Layout title="Mon Espace Patient">
-      {/* Welcome */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Bonjour, {user?.name?.split(' ')[0]}</h2>
-          <p className="mt-1 text-sm text-slate-500">Voici un aperçu de votre santé aujourd'hui.</p>
+          <h2 className="font-patient-display text-3xl" style={{ color: T.titleColor }}>
+            Bonjour, {user?.name?.split(' ')[0]}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {accueil?.numero_patient
+              ? `N° patient ${accueil.numero_patient} — Centre Médical AMEN`
+              : 'Voici un aperçu de votre santé aujourd’hui.'}
+          </p>
         </div>
         <Link
           to="/patient/rendez-vous"
-          className="rounded-full bg-medical-primary px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/20 transition hover:-translate-y-0.5"
+          className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5"
+          style={{ background: T.accent }}
         >
-          📅 Nouveau rendez-vous
+          <Icon name="calendar" className="h-4 w-4" /> Nouveau rendez-vous
         </Link>
       </div>
 
-      {/* KPI cards */}
+      {/* Toujours visible : visite / ordonnance en cours */}
+      {visite && (
+        <div className="mb-5 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm text-sky-950 shadow-sm">
+          <p className="font-bold text-sky-900">Votre visite est en cours</p>
+          <p className="mt-1">
+            <span className="font-mono font-semibold">{visite.numero_admission}</span>
+            {' · '}{visite.statut_label || visite.statut}
+            {visite.service ? ` · ${visite.service}` : ''}
+          </p>
+          {visite.motif && <p className="mt-1 text-sky-800/90">Motif : {visite.motif}</p>}
+          {visite.statut === 'diagnostic_prescription' && (
+            <p className="mt-2 rounded-lg bg-white/80 px-3 py-2 text-xs font-semibold text-amber-800">
+              Étape actuelle : attente de la délivrance des médicaments à la pharmacie.
+            </p>
+          )}
+        </div>
+      )}
+
+      {showCreation && accueil?.compte_cree && (
+        <div className="mb-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-950 shadow-sm">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="font-bold text-emerald-900">Votre dossier patient est créé</p>
+              <p className="mt-1 text-emerald-800/90">
+                {accueil.message_creation || 'Votre dossier a été ouvert à la réception du Centre Médical AMEN.'}
+              </p>
+              <p className="mt-2 font-mono text-base font-bold tracking-wide text-emerald-900">
+                N° patient : {accueil.numero_patient || '—'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={masquerCreation}
+              className="rounded-lg border border-emerald-300 bg-white px-3 py-1.5 text-xs font-semibold text-emerald-800 hover:bg-emerald-100"
+            >
+              J&apos;ai compris
+            </button>
+          </div>
+        </div>
+      )}
+
+      {prescriptionsActives.length > 0 && (
+        <div className="mb-5 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-950 shadow-sm">
+          <p className="font-bold text-amber-900">Ordonnance en attente à la pharmacie</p>
+          <p className="mt-1 text-xs text-amber-800">Présentez-vous à la pharmacie interne pour retirer vos médicaments.</p>
+          <ul className="mt-3 space-y-2">
+            {prescriptionsActives.map((p) => (
+              <li key={`${p.source}-${p.id}`} className="rounded-xl border border-amber-100 bg-white px-3 py-2">
+                <p className="font-mono text-xs font-bold text-emerald-700">{p.numero_ordonnance || `ORD-${p.id}`}</p>
+                <p className="text-xs text-slate-600">
+                  {(p.medicaments || []).map((m) => medLabel(m)).join(', ') || 'Médicaments prescrits'}
+                </p>
+              </li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => setTab('prescriptions')}
+            className="mt-3 text-xs font-semibold text-amber-900 underline"
+          >
+            Voir le détail des prescriptions →
+          </button>
+        </div>
+      )}
+
+      {(delivrees.length > 0 || prescriptionsDelivrees.length > 0) && (
+        <div className="mb-5 rounded-2xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm text-teal-950">
+          <p className="font-bold text-teal-900">Médicaments déjà délivrés</p>
+          <ul className="mt-2 space-y-1 text-xs text-teal-800">
+            {(delivrees.length ? delivrees : prescriptionsDelivrees.map((p) => ({
+              id: p.id,
+              numero_ordonnance: p.numero_ordonnance,
+              delivree_at: p.delivree_at || p.updated_at,
+            }))).map((o) => (
+              <li key={o.id}>
+                <span className="font-mono font-semibold">{o.numero_ordonnance}</span>
+                {o.delivree_at
+                  ? ` — délivré le ${new Date(o.delivree_at).toLocaleString('fr-FR')}`
+                  : ' — délivré'}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard icon="📅" label="Prochains RDV" value={prochainRdv.length} sub="rendez-vous à venir" />
-        <StatCard icon="💊" label="Prescriptions actives" value={prescriptionsActives} sub="en cours de traitement" />
-        <StatCard icon="🧾" label="Factures impayées" value={facturesImpayees} sub="en attente de paiement" />
-        <StatCard icon="📋" label="Consultations" value={dossiers.length} sub="dans votre dossier" />
+        <StatCard icon="calendar" label="Prochains RDV" value={prochainRdv.length} sub="rendez-vous à venir" />
+        <StatCard icon="pill" label="À retirer" value={prescriptionsActives.length} sub="ordonnance(s) pharmacie" />
+        <StatCard icon="receipt" label="Factures impayées" value={facturesImpayees} sub="en attente de paiement" />
+        <StatCard icon="clipboard" label="Consultations" value={dossiers.length} sub="dans votre dossier" />
       </div>
 
       {/* Prochain RDV */}
       {prochainRdv[0] && (
-        <div className="mb-6 overflow-hidden rounded-2xl bg-gradient-to-r from-medical-primary to-cyan-500 p-5 text-white shadow-xl">
+        <div
+          className="mb-6 overflow-hidden rounded-2xl p-5 text-white shadow-xl"
+          style={{ background: `linear-gradient(105deg, ${T.sidebarFrom}, ${T.accent})` }}
+        >
           <p className="text-xs font-semibold uppercase tracking-widest opacity-80">Prochain rendez-vous</p>
           <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -128,17 +266,17 @@ export default function PatientDashboard() {
       <div className="rounded-2xl bg-white shadow-sm border border-slate-100 overflow-hidden">
         <div className="flex border-b border-slate-100 overflow-x-auto">
           {[
-            { key: 'rdv', label: '📅 Rendez-vous' },
-            { key: 'dossier', label: '📋 Dossier médical' },
-            { key: 'prescriptions', label: '💊 Prescriptions' },
-            { key: 'factures', label: '🧾 Factures' },
+            { key: 'rdv', label: 'Rendez-vous', icon: 'calendar' },
+            { key: 'dossier', label: 'Dossier médical', icon: 'clipboard' },
+            { key: 'prescriptions', label: 'Prescriptions', icon: 'pill' },
+            { key: 'factures', label: 'Factures', icon: 'receipt' },
           ].map(t => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`whitespace-nowrap px-5 py-3.5 text-sm font-medium transition border-b-2 ${tab === t.key ? 'border-medical-primary text-medical-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+              className={`inline-flex items-center gap-2 whitespace-nowrap px-5 py-3.5 text-sm font-medium transition border-b-2 ${tab === t.key ? 'border-medical-primary text-medical-primary' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
             >
-              {t.label}
+              <Icon name={t.icon} className="h-4 w-4" /> {t.label}
             </button>
           ))}
         </div>
@@ -147,16 +285,25 @@ export default function PatientDashboard() {
           {/* RDV */}
           {tab === 'rdv' && (
             <div className="space-y-3">
-              {rdv.map(r => (
-                <div key={r.id} className="flex items-center gap-4 rounded-xl border border-slate-100 p-4 hover:bg-slate-50 transition">
+              {rdv.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-500">Aucun rendez-vous pour le moment.</p>
+              ) : rdv.map((r) => (
+                <div key={r.id} className="flex items-center gap-4 rounded-xl border border-slate-100 p-4 transition hover:bg-slate-50">
                   <div className="flex h-12 w-12 flex-shrink-0 flex-col items-center justify-center rounded-xl bg-blue-50 text-center">
                     <span className="text-xs font-bold text-medical-primary">{new Date(r.date_rdv).toLocaleDateString('fr-FR', { day: '2-digit' })}</span>
-                    <span className="text-[10px] text-slate-400 uppercase">{new Date(r.date_rdv).toLocaleDateString('fr-FR', { month: 'short' })}</span>
+                    <span className="text-[10px] uppercase text-slate-400">{new Date(r.date_rdv).toLocaleDateString('fr-FR', { month: 'short' })}</span>
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="font-semibold text-slate-900">{r.medecin?.user?.name}</p>
-                    <p className="text-xs text-slate-500">{deptLabel(r.departement)} · {String(r.heure_rdv).slice(0, 5)} · {r.type === 'teleconsultation' ? '📹 Téléconsultation' : '🏥 Présentiel'}</p>
-                    <p className="text-xs text-slate-400 mt-0.5">{r.motif}</p>
+                    <p className="text-xs text-slate-500 inline-flex flex-wrap items-center gap-1">
+                      {deptLabel(r.departement)} · {String(r.heure_rdv).slice(0, 5)} ·{' '}
+                      {r.type === 'teleconsultation' ? (
+                        <span className="inline-flex items-center gap-1"><Icon name="video" className="h-3 w-3" /> Téléconsultation</span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1"><Icon name="hospital" className="h-3 w-3" /> Présentiel</span>
+                      )}
+                    </p>
+                    <p className="mt-0.5 text-xs text-slate-400">{r.motif}</p>
                   </div>
                   <Badge statut={r.statut} />
                 </div>
@@ -167,24 +314,26 @@ export default function PatientDashboard() {
           {/* Dossier */}
           {tab === 'dossier' && (
             <div className="space-y-3">
-              {dossiers.map(d => (
-                <div key={d.id} className="rounded-xl border border-slate-100 p-4 hover:bg-slate-50 transition">
+              {dossiers.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-500">Aucune consultation enregistrée pour l’instant.</p>
+              ) : dossiers.map((d) => (
+                <div key={d.id} className="rounded-xl border border-slate-100 p-4 transition hover:bg-slate-50">
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-semibold text-slate-900">{d.motif}</p>
-                      <p className="text-xs text-slate-500 mt-0.5">{d.departement?.nom} · {d.medecin?.user?.name}</p>
-                      <p className="text-xs text-slate-400">{new Date(d.date_consultation).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+                      <p className="font-semibold text-slate-900">{d.motif || 'Consultation'}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{d.departement?.nom || d.departement} · {d.medecin?.user?.name || 'Médecin'}</p>
+                      <p className="text-xs text-slate-400">{d.date_consultation ? new Date(d.date_consultation).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</p>
                     </div>
                   </div>
                   {d.diagnostics?.[0] && (
                     <div className="mt-3 rounded-lg bg-emerald-50 p-3">
                       <p className="text-xs font-semibold text-emerald-700">Diagnostic</p>
-                      <p className="text-sm text-slate-700 mt-0.5">{d.diagnostics[0].libelle}</p>
+                      <p className="mt-0.5 text-sm text-slate-700">{d.diagnostics[0].libelle}</p>
                     </div>
                   )}
                 </div>
               ))}
-              <Link to="/patient/dossier" className="block text-center text-sm text-medical-primary font-medium hover:underline">
+              <Link to="/patient/dossier" className="block text-center text-sm font-medium text-medical-primary hover:underline">
                 Voir le dossier complet →
               </Link>
             </div>
@@ -193,24 +342,33 @@ export default function PatientDashboard() {
           {/* Prescriptions */}
           {tab === 'prescriptions' && (
             <div className="space-y-4">
-              {prescriptions.map(p => (
-                <div key={p.id} className="rounded-xl border border-slate-100 p-4">
-                  <div className="flex items-center justify-between mb-3">
+              {prescriptions.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-500">Aucune ordonnance pour le moment.</p>
+              ) : prescriptions.map((p) => (
+                <div key={`${p.source || 'rx'}-${p.id}`} className="rounded-xl border border-slate-100 p-4">
+                  <div className="mb-3 flex items-center justify-between gap-2">
                     <div>
-                      <p className="font-semibold text-slate-900">Prescription du {new Date(p.date_prescription).toLocaleDateString('fr-FR')}</p>
-                      <p className="text-xs text-slate-500">Par {p.medecin?.user?.name || p.medecin}</p>
+                      <p className="font-mono text-xs font-bold text-emerald-700">{p.numero_ordonnance || `ORD-${p.id}`}</p>
+                      <p className="font-semibold text-slate-900">
+                        Prescription du {p.date_prescription ? new Date(p.date_prescription).toLocaleDateString('fr-FR') : '—'}
+                      </p>
+                      <p className="text-xs text-slate-500">Par {p.medecin?.user?.name || (typeof p.medecin === 'string' ? p.medecin : 'Médecin')}</p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${p.statut === 'active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'}`}>
-                      {p.statut}
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      p.statut === 'active' ? 'bg-amber-100 text-amber-800'
+                        : p.statut === 'delivree' ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {p.statut_label || (p.statut === 'active' ? 'À retirer à la pharmacie' : p.statut)}
                     </span>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {(p.medicaments ?? []).map((m, i) => (
                       <div key={i} className="flex items-center gap-3 rounded-lg bg-blue-50 p-3">
-                        <span className="text-xl">💊</span>
+                        <Icon name="pill" className="h-5 w-5 shrink-0 text-blue-600" />
                         <div>
-                          <p className="text-sm font-semibold text-slate-900">{m.nom} {m.dosage}</p>
-                          <p className="text-xs text-slate-500">{m.frequence} · {m.duree}</p>
+                          <p className="text-sm font-semibold text-slate-900">{medLabel(m)} {m.dosage || ''}</p>
+                          <p className="text-xs text-slate-500">{medPosologie(m)}{m.duree ? ` · ${m.duree}` : ''}</p>
                         </div>
                       </div>
                     ))}

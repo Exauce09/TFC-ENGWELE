@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
+import Icon from '../../components/Icon';
 import api from '../../services/api';
 
 function timeAgo(dateStr) {
@@ -70,17 +71,17 @@ export default function AdminStatistiques() {
         <>
           <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { label: 'Patients', value: stats?.patients_total, icon: '👥' },
-              { label: 'Médecins', value: stats?.medecins_total, icon: '👨‍⚕️' },
-              { label: 'Utilisateurs', value: stats?.users_total, icon: '🔐' },
-              { label: 'RDV total', value: stats?.rdv_total, icon: '📅' },
-              { label: 'RDV du jour', value: stats?.rdv_du_jour, icon: '🗓️' },
-              { label: 'RDV en attente', value: stats?.rdv_en_attente, icon: '⏳' },
-              { label: 'Demandes RDV', value: stats?.demandes_nouvelles, icon: '📩' },
-              { label: 'Recouvrement', value: `${recouvrement}%`, icon: '💰' },
+              { label: 'Patients', value: stats?.patients_total, icon: 'users' },
+              { label: 'Médecins', value: stats?.medecins_total, icon: 'doctor' },
+              { label: 'Utilisateurs', value: stats?.users_total, icon: 'lock' },
+              { label: 'RDV total', value: stats?.rdv_total, icon: 'calendar' },
+              { label: 'RDV du jour', value: stats?.rdv_du_jour, icon: 'calendar-days' },
+              { label: 'RDV en attente', value: stats?.rdv_en_attente, icon: 'clock' },
+              { label: 'Demandes RDV', value: stats?.demandes_nouvelles, icon: 'inbox' },
+              { label: 'Recouvrement', value: `${recouvrement}%`, icon: 'wallet' },
             ].map((s) => (
               <div key={s.label} className="rounded-2xl border bg-white p-5 shadow-sm">
-                <p className="text-2xl">{s.icon}</p>
+                <Icon name={s.icon} className="h-6 w-6 text-slate-500" />
                 <p className="mt-2 text-2xl font-bold">{s.value ?? '—'}</p>
                 <p className="text-sm text-slate-500">{s.label}</p>
               </div>
@@ -188,7 +189,7 @@ export default function AdminStatistiques() {
                 <p className="p-6 text-sm text-slate-400">Aucune activité récente</p>
               ) : (stats?.activite_recente || []).map((a) => (
                 <div key={a.id} className="flex items-start gap-3 px-6 py-3">
-                  <span className="mt-0.5 text-lg">🔔</span>
+                  <Icon name="bell" className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                   <div>
                     <p className="text-sm font-medium text-slate-800">{a.titre}</p>
                     <p className="text-sm text-slate-600">{a.message}</p>

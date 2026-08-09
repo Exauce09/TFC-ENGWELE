@@ -4,13 +4,12 @@ export default function DentisterieDashboard() {
   return (
     <SpecialiteDashboard
       title="Dentisterie"
-      subtitle="Soins dentaires et suivi bucco-dentaire."
       apiPath="/dentisterie/dashboard"
       stats={[
-        { key: 'total', label: 'Total soins', icon: '🦷' },
-        { key: 'ce_mois', label: 'Ce mois', icon: '📅', color: 'bg-cyan-50' },
+        { key: 'total', label: 'Total soins', icon: 'tooth' },
+        { key: 'ce_mois', label: 'Ce mois', icon: 'calendar', color: 'bg-cyan-50' },
       ]}
-      links={[{ to: '/dentisterie/soins', icon: '📋', label: 'Soins dentaires', desc: 'Enregistrer les actes' }]}
+      links={[{ to: '/dentisterie/soins', icon: 'clipboard', label: 'Soins dentaires' }]}
     />
   );
 }

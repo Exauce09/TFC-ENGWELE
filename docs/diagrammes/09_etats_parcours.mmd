@@ -1,0 +1,12 @@
+stateDiagram-v2
+  [*] --> enregistre : Accueil
+  enregistre --> triage : auto apres creation
+  triage --> consultation_medicale : Infirmier
+  consultation_medicale --> prelevement : Examens prescrits
+  consultation_medicale --> diagnostic_prescription : Sans examens
+  prelevement --> examens_laboratoire : Prelevement fait
+  examens_laboratoire --> diagnostic_prescription : Interpretation
+  diagnostic_prescription --> delivrance_medicaments : Pharmacie
+  delivrance_medicaments --> initiation_traitement : Medecin
+  initiation_traitement --> suivi : Suivi / sortie
+  suivi --> [*]

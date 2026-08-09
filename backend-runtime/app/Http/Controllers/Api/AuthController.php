@@ -182,18 +182,25 @@ class AuthController extends Controller
         $validated = $request->validate([
             'password' => 'required|string|min:8|confirmed',
             'phone' => 'required|string|max:25',
-            'date_naissance' => 'required|date|before:today',
+            'date_naissance' => 'nullable|date|before:today|required_without:age_declare',
+            'age_declare' => 'nullable|integer|min:0|max:120|required_without:date_naissance',
             'sexe' => 'required|in:M,F',
-            'adresse' => 'nullable|string',
+            'etat_civil' => 'nullable|in:celibataire,marie,divorce,veuf,autre',
+            'adresse' => 'nullable|string|max:255',
+            'quartier' => 'nullable|string|max:100',
             'commune' => 'nullable|string|max:100',
+            'ville' => 'nullable|string|max:80',
+            'piece_identite_type' => 'nullable|string|max:40',
+            'piece_identite_numero' => 'nullable|string|max:60',
             'contact_urgence_nom' => 'nullable|string|max:100',
             'contact_urgence_tel' => 'nullable|string|max:25',
             'contact_urgence_lien' => 'nullable|string|max:80',
             'groupe_sanguin' => 'nullable|in:A+,A-,B+,B-,AB+,AB-,O+,O-',
-            'allergies' => 'nullable|string',
-            'antecedents_medicaux' => 'nullable|string',
+            'allergies' => 'nullable|string|max:500',
+            'antecedents_medicaux' => 'nullable|string|max:1000',
         ]);
 
+        // L'identité (nom / n° patient) reste figée — créée à la réception uniquement.
         $user->update([
             'phone' => $validated['phone'],
             'password' => $validated['password'], // cast hashed
@@ -204,23 +211,29 @@ class AuthController extends Controller
         $patient = $user->patient;
         if ($patient) {
             $patient->update([
-                'date_naissance' => $validated['date_naissance'],
+                'date_naissance' => $validated['date_naissance'] ?? $patient->date_naissance,
+                'age_declare' => array_key_exists('age_declare', $validated) ? $validated['age_declare'] : $patient->age_declare,
                 'sexe' => $validated['sexe'],
+                'etat_civil' => $validated['etat_civil'] ?? $patient->etat_civil,
                 'adresse' => $validated['adresse'] ?? $patient->adresse,
+                'quartier' => $validated['quartier'] ?? $patient->quartier,
                 'commune' => $validated['commune'] ?? $patient->commune,
-                'contact_urgence_nom' => $validated['contact_urgence_nom'] ?? null,
-                'contact_urgence_tel' => $validated['contact_urgence_tel'] ?? null,
-                'contact_urgence_lien' => $validated['contact_urgence_lien'] ?? null,
-                'groupe_sanguin' => $validated['groupe_sanguin'] ?? null,
-                'allergies' => $validated['allergies'] ?? null,
-                'antecedents_medicaux' => $validated['antecedents_medicaux'] ?? null,
+                'ville' => $validated['ville'] ?? $patient->ville,
+                'piece_identite_type' => $validated['piece_identite_type'] ?? $patient->piece_identite_type,
+                'piece_identite_numero' => $validated['piece_identite_numero'] ?? $patient->piece_identite_numero,
+                'contact_urgence_nom' => $validated['contact_urgence_nom'] ?? $patient->contact_urgence_nom,
+                'contact_urgence_tel' => $validated['contact_urgence_tel'] ?? $patient->contact_urgence_tel,
+                'contact_urgence_lien' => $validated['contact_urgence_lien'] ?? $patient->contact_urgence_lien,
+                'groupe_sanguin' => $validated['groupe_sanguin'] ?? $patient->groupe_sanguin,
+                'allergies' => $validated['allergies'] ?? $patient->allergies,
+                'antecedents_medicaux' => $validated['antecedents_medicaux'] ?? $patient->antecedents_medicaux,
             ]);
         }
 
         return new JsonResponse([
             'success' => true,
             'message' => 'Profil complété. Bienvenue dans votre espace patient.',
-            'data' => $user->fresh()->load('patient'),
+            'data' => StaffProfileService::loadFull($user->fresh()),
             'redirect' => '/patient/dashboard',
         ]);
     }

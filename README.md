@@ -104,18 +104,18 @@ Voir le guide complet : [`docs/PRODUCTION.md`](docs/PRODUCTION.md)
 | Role | Email |
 |------|-------|
 | Admin | `admin@amen.cd` |
-| Medecin | `medecin@amen.cd` |
-| Patient | `patient@amen.cd` |
-| Caissier | `caissier@amen.cd` |
+| Receptionniste | `receptionniste@amen.cd` |
 | Infirmier | `infirmier@amen.cd` |
+| Medecin | `medecin@amen.cd` |
 | Laborantin | `laborantin@amen.cd` |
 | Pharmacien | `pharmacien@amen.cd` |
-| Receptionniste | `receptionniste@amen.cd` |
-| Sage-femme | `sage-femme@amen.cd` |
+| Caissier | `caissier@amen.cd` |
+| Sage-femme | `sagefemme@amen.cd` |
 | Chirurgien | `chirurgien@amen.cd` |
 | Echographiste | `echographiste@amen.cd` |
-| Kinesitherapeute | `kinesitherapeute@amen.cd` |
+| Kinesitherapeute | `kine@amen.cd` |
 | Dentiste | `dentiste@amen.cd` |
+| Patient | `patient@amen.cd` |
 
 ## Etat du projet
 

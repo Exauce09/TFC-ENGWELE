@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import Icon from '../components/Icon';
 import { HOSPITAL, HOSPITAL_STATS } from '../constants/hospital';
 import api from '../services/api';
 
@@ -8,137 +9,74 @@ import api from '../services/api';
 const SERVICES = [
   {
     id: 1,
-    nom: 'Maternité',
-    icon: '🤱',
-    desc: "Accompagnement prénatal, accouchement et soins postnatal dans un cadre bienveillant et sécurisé.",
-    img: 'https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=800&q=80',
-    color: 'from-pink-500 to-rose-400',
-    bg: 'bg-pink-50',
-  },
-  {
-    id: 2,
-    nom: 'Laboratoire',
-    icon: '🔬',
-    desc: "Analyses biologiques de précision avec des équipements de dernière génération pour des diagnostics fiables.",
-    img: 'https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&w=800&q=80',
-    color: 'from-violet-500 to-purple-400',
-    bg: 'bg-violet-50',
-  },
-  {
-    id: 3,
-    nom: 'Échographie',
-    icon: '📡',
-    desc: "Imagerie médicale de haute résolution pour un suivi précis de votre état de santé et de vos grossesses.",
-    img: 'https://images.unsplash.com/photo-1559757175-0eb30cd8c063?auto=format&fit=crop&w=800&q=80',
-    color: 'from-cyan-500 to-sky-400',
-    bg: 'bg-cyan-50',
-  },
-  {
-    id: 4,
-    nom: 'Kinésithérapie',
-    icon: '💪',
-    desc: "Rééducation fonctionnelle et thérapie par le mouvement pour récupérer mobilité et qualité de vie.",
-    img: 'https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?auto=format&fit=crop&w=800&q=80',
-    color: 'from-amber-500 to-yellow-400',
-    bg: 'bg-amber-50',
-  },
-  {
-    id: 5,
-    nom: 'Médecine Interne',
-    icon: '🩺',
-    desc: "Prise en charge des maladies complexes par des internistes expérimentés avec approche globale du patient.",
-    img: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?auto=format&fit=crop&w=800&q=80',
-    color: 'from-blue-600 to-blue-400',
-    bg: 'bg-blue-50',
-  },
-  {
-    id: 6,
-    nom: 'Médecine Générale',
-    icon: '👨‍⚕️',
-    desc: "Consultations générales, bilans de santé et suivi médical continu pour toute la famille.",
+    nom: 'Médecine générale',
+    icon: 'doctor',
+    desc: 'Consultations générales, bilans de santé et suivi médical continu pour toute la famille.',
     img: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=800&q=80',
     color: 'from-teal-500 to-emerald-400',
     bg: 'bg-teal-50',
   },
   {
-    id: 7,
-    nom: 'Gynécologie',
-    icon: '🌸',
-    desc: "Suivi gynécologique complet, consultation prénatale et prise en charge des pathologies féminines.",
-    img: 'https://images.unsplash.com/photo-1631815588090-d1bcbe9b4b97?auto=format&fit=crop&w=800&q=80',
-    color: 'from-rose-500 to-pink-400',
-    bg: 'bg-rose-50',
+    id: 2,
+    nom: 'Urgences',
+    icon: 'siren',
+    desc: "Prise en charge immédiate des situations d'urgence avec triage et orientation rapide.",
+    img: 'https://images.unsplash.com/photo-1611689342806-0863700ce1e4?auto=format&fit=crop&w=800&q=80',
+    color: 'from-red-600 to-rose-400',
+    bg: 'bg-red-50',
   },
   {
-    id: 8,
-    nom: 'Pharmacie Interne',
-    icon: '💊',
-    desc: "Dispensation sécurisée des médicaments sur prescription, conseil pharmaceutique et gestion des traitements.",
-    img: 'https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=800&q=80',
-    color: 'from-green-600 to-emerald-400',
-    bg: 'bg-green-50',
-  },
-  {
-    id: 9,
+    id: 3,
     nom: 'Pédiatrie',
-    icon: '👶',
-    desc: "Soins médicaux dédiés aux enfants de la naissance à l'adolescence avec expertise et douceur.",
+    icon: 'baby',
+    desc: "Soins médicaux dédiés aux enfants de la naissance à l'adolescence, avec douceur et expertise.",
     img: 'https://images.unsplash.com/photo-1579684453423-f84349ef60b0?auto=format&fit=crop&w=800&q=80',
     color: 'from-sky-500 to-cyan-400',
     bg: 'bg-sky-50',
   },
   {
-    id: 10,
-    nom: 'Chirurgie',
-    icon: '⚕️',
-    desc: "Interventions chirurgicales réalisées par des spécialistes dans un bloc opératoire entièrement équipé.",
-    img: 'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?auto=format&fit=crop&w=800&q=80',
-    color: 'from-orange-500 to-amber-400',
-    bg: 'bg-orange-50',
+    id: 4,
+    nom: 'Maternité / Gynécologie',
+    icon: 'heart',
+    desc: 'Suivi de grossesse, accouchement, soins postnataux et santé de la femme.',
+    img: 'https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=800&q=80',
+    color: 'from-pink-500 to-rose-400',
+    bg: 'bg-pink-50',
   },
   {
-    id: 11,
-    nom: 'Ophtalmologie',
-    icon: '👁️',
-    desc: "Examens de la vue, traitements des pathologies oculaires et suivi ophtalmologique avec équipements modernes.",
-    img: 'https://images.unsplash.com/photo-1516117172878-fd2c41f4a759?auto=format&fit=crop&w=800&q=80',
-    color: 'from-indigo-500 to-blue-400',
-    bg: 'bg-indigo-50',
+    id: 5,
+    nom: 'Laboratoire',
+    icon: 'microscope',
+    desc: 'Analyses biologiques de précision pour des diagnostics fiables et un suivi du parcours patient.',
+    img: 'https://images.unsplash.com/photo-1530026405186-ed1f139313f8?auto=format&fit=crop&w=800&q=80',
+    color: 'from-violet-500 to-purple-400',
+    bg: 'bg-violet-50',
   },
   {
-    id: 12,
-    nom: 'Dentisterie',
-    icon: '🦷',
-    desc: "Soins dentaires complets : détartrage, caries, extractions et chirurgie buccale dans un cabinet moderne.",
-    img: 'https://images.unsplash.com/photo-1606811841689-23dfddce3e95?auto=format&fit=crop&w=800&q=80',
-    color: 'from-sky-600 to-blue-400',
-    bg: 'bg-sky-50',
-  },
-  {
-    id: 13,
-    nom: 'Urgence Médicale',
-    icon: '🚨',
-    desc: "Prise en charge immédiate 24h/24, 7j/7 des situations d'urgence avec une équipe médicale d'intervention rapide.",
-    img: 'https://images.unsplash.com/photo-1611689342806-0863700ce1e4?auto=format&fit=crop&w=800&q=80',
-    color: 'from-red-600 to-rose-400',
-    bg: 'bg-red-50',
+    id: 6,
+    nom: 'Pharmacie',
+    icon: 'pill',
+    desc: 'Dispensation sécurisée des médicaments sur ordonnance et conseil pharmaceutique.',
+    img: 'https://images.unsplash.com/photo-1585435557343-3b092031a831?auto=format&fit=crop&w=800&q=80',
+    color: 'from-green-600 to-emerald-400',
+    bg: 'bg-green-50',
   },
 ];
 
 const DOCTORS = [
   {
+    name: 'Dr. Jean Mukendi Kalala',
+    specialite: 'Médecine générale',
+    exp: '12 ans',
+    dispo: 'Lun – Sam',
+    img: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=400&q=80',
+  },
+  {
     name: 'Dr. Esperance Mbuyi',
-    specialite: 'Gynécologie Obstétrique',
+    specialite: 'Maternité / Gynécologie',
     exp: '14 ans',
     dispo: 'Lun – Ven',
     img: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&w=400&q=80',
-  },
-  {
-    name: 'Dr. Jean-Pierre Kabila',
-    specialite: 'Médecine Interne',
-    exp: '18 ans',
-    dispo: 'Lun – Sam',
-    img: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=400&q=80',
   },
   {
     name: 'Dr. Celestine Nkosi',
@@ -148,19 +86,19 @@ const DOCTORS = [
     img: 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=400&q=80',
   },
   {
-    name: 'Dr. François Mutombo',
-    specialite: 'Chirurgie Générale',
-    exp: '20 ans',
-    dispo: 'Lun – Ven',
+    name: 'Dr. Patrick Ilunga',
+    specialite: 'Urgences',
+    exp: '9 ans',
+    dispo: '24h / 7j',
     img: 'https://images.unsplash.com/photo-1537368910025-700350fe46c7?auto=format&fit=crop&w=400&q=80',
   },
 ];
 
 const STATS = [
-  { label: 'Patients soignés', value: '12 000+', icon: '❤️' },
-  { label: 'Médecins spécialistes', value: '35+', icon: '👨‍⚕️' },
-  { label: 'Services médicaux', value: '13', icon: '🏥' },
-  { label: "Années d'expérience", value: '10+', icon: '⭐' },
+  { label: 'Patients soignés', value: '12 000+', icon: 'heart' },
+  { label: 'Médecins spécialistes', value: '35+', icon: 'doctor' },
+  { label: 'Services médicaux', value: '6', icon: 'hospital' },
+  { label: "Années d'expérience", value: '10+', icon: 'star' },
 ];
 
 const TESTIMONIALS = [
@@ -240,7 +178,9 @@ function useReveal() {
 function StarRating({ n }) {
   return (
     <div className="flex gap-0.5 text-amber-400">
-      {Array.from({ length: n }).map((_, i) => <span key={i}>★</span>)}
+      {Array.from({ length: n }).map((_, i) => (
+        <Icon key={i} name="star" className="h-4 w-4 fill-current" />
+      ))}
     </div>
   );
 }
@@ -309,8 +249,8 @@ export default function Landing() {
 
           {/* Boutons toujours visibles */}
           <div className="flex items-center gap-2">
-            <a href="tel:+243000000000" className={`hidden text-sm font-medium lg:block mr-1 ${scrolled ? 'text-slate-600' : 'text-white/80'}`}>
-              📞 +243 000 000 000
+            <a href="tel:+243000000000" className={`hidden items-center gap-2 text-sm font-medium lg:inline-flex mr-1 ${scrolled ? 'text-slate-600' : 'text-white/80'}`}>
+              <Icon name="phone" className="h-4 w-4" /> +243 000 000 000
             </a>
             <Link
               to="/login"
@@ -334,7 +274,7 @@ export default function Landing() {
               onClick={() => setMenuOpen((o) => !o)}
               aria-label="Menu"
             >
-              {menuOpen ? '✕' : '☰'}
+              {menuOpen ? <Icon name="close" className="h-5 w-5" /> : <Icon name="menu" className="h-5 w-5" />}
             </button>
           </div>
         </nav>
@@ -368,9 +308,9 @@ export default function Landing() {
             </div>
             <button
               onClick={() => scrollTo('#rdv')}
-              className="mt-2 w-full rounded-full border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:text-medical-primary"
+              className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-full border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:text-medical-primary"
             >
-              📅 Prendre rendez-vous
+              <Icon name="calendar" className="h-4 w-4" /> Prendre rendez-vous
             </button>
           </div>
         )}
@@ -393,7 +333,7 @@ export default function Landing() {
 
         <div className="relative flex min-h-screen flex-col items-center justify-center px-5 text-center text-white pt-20">
           <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-4 py-1.5 text-xs font-medium uppercase tracking-widest backdrop-blur-sm">
-            🏥 FOSPHA ONGD/ASBL — Kinshasa, RDC
+            <Icon name="hospital" className="h-4 w-4" /> FOSPHA ONGD/ASBL — Kinshasa, RDC
           </span>
           <h1 className="max-w-4xl text-4xl font-extrabold leading-tight sm:text-6xl lg:text-7xl">
             Votre santé,{' '}
@@ -407,25 +347,27 @@ export default function Landing() {
           <div className="mt-10 flex flex-wrap justify-center gap-4">
             <button
               onClick={() => scrollTo('#rdv')}
-              className="rounded-full bg-medical-primary px-8 py-4 text-base font-semibold text-white shadow-2xl shadow-blue-500/40 transition hover:-translate-y-1 hover:bg-blue-700"
+              className="inline-flex items-center gap-2 rounded-full bg-medical-primary px-8 py-4 text-base font-semibold text-white shadow-2xl shadow-blue-500/40 transition hover:-translate-y-1 hover:bg-blue-700"
             >
-              📅 Prendre rendez-vous
+              <Icon name="calendar" className="h-5 w-5" /> Prendre rendez-vous
             </button>
             <button
               onClick={() => scrollTo('#services')}
-              className="rounded-full border border-white/30 bg-white/10 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:-translate-y-1 hover:bg-white/20"
+              className="inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-8 py-4 text-base font-semibold text-white backdrop-blur-sm transition hover:-translate-y-1 hover:bg-white/20"
             >
-              🏥 Nos services
+              <Icon name="hospital" className="h-5 w-5" /> Nos services
             </button>
             <a
               href="tel:+243000000000"
-              className="rounded-full bg-red-600 px-8 py-4 text-base font-semibold text-white shadow-lg transition hover:-translate-y-1 hover:bg-red-700"
+              className="inline-flex items-center gap-2 rounded-full bg-red-600 px-8 py-4 text-base font-semibold text-white shadow-lg transition hover:-translate-y-1 hover:bg-red-700"
             >
-              🚨 Urgences 24h/24
+              <Icon name="siren" className="h-5 w-5" /> Urgences 24h/24
             </a>
           </div>
 
-          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce text-white/60 text-2xl">↓</div>
+          <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce text-white/60">
+            <Icon name="arrow-right" className="h-6 w-6 rotate-90" />
+          </div>
         </div>
       </section>
 
@@ -459,10 +401,10 @@ export default function Landing() {
       {/* Floating urgency button */}
       <a
         href="tel:+243000000000"
-        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-2xl shadow-2xl shadow-red-500/50 transition hover:scale-110 animate-pulse"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-white shadow-2xl shadow-red-500/50 transition hover:scale-110 animate-pulse"
         title="Urgences"
       >
-        🚨
+        <Icon name="siren" className="h-7 w-7" />
       </a>
     </div>
   );
@@ -498,7 +440,9 @@ function APropos() {
                 { text: 'Organisation administrative structurée' },
               ].map((item) => (
                 <div key={item.text} className="flex items-center gap-2 text-sm text-slate-700">
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-xs font-bold">✓</span>
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                    <Icon name="check" className="h-3 w-3" />
+                  </span>
                   <span>{item.text}</span>
                 </div>
               ))}
@@ -556,13 +500,15 @@ function ServiceCard({ service: s }) {
       <div className="relative h-44 overflow-hidden">
         <img src={s.img} alt={s.nom} className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110" />
         <div className={`absolute inset-0 bg-gradient-to-t ${s.color} opacity-40`} />
-        <span className="absolute right-3 top-3 rounded-full bg-white/90 px-3 py-1 text-xl shadow">{s.icon}</span>
+        <span className="absolute right-3 top-3 flex items-center justify-center rounded-full bg-white/90 p-2 text-medical-primary shadow">
+          <Icon name={s.icon} className="h-5 w-5" />
+        </span>
       </div>
       <div className="p-4">
         <h3 className="font-bold text-slate-900">{s.nom}</h3>
         <p className="mt-1 text-xs text-slate-500 leading-relaxed line-clamp-3">{s.desc}</p>
-        <button className="mt-3 text-xs font-semibold text-medical-primary hover:underline">
-          En savoir plus →
+        <button className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-medical-primary hover:underline">
+          En savoir plus <Icon name="arrow-right" className="h-3 w-3" />
         </button>
       </div>
     </article>
@@ -589,8 +535,12 @@ function MedecinsSection() {
                 <h3 className="font-bold text-slate-900">{doc.name}</h3>
                 <p className="mt-0.5 text-xs font-semibold text-medical-primary">{doc.specialite}</p>
                 <div className="mt-3 flex justify-center gap-4 text-xs text-slate-500">
-                  <span>🎓 {doc.exp}</span>
-                  <span>📅 {doc.dispo}</span>
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="graduation" className="h-3.5 w-3.5" /> {doc.exp}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Icon name="calendar" className="h-3.5 w-3.5" /> {doc.dispo}
+                  </span>
                 </div>
                 <button className="mt-4 w-full rounded-full bg-medical-primary py-2 text-xs font-semibold text-white transition hover:bg-blue-700">
                   Prendre rendez-vous
@@ -616,7 +566,9 @@ function StatsSection() {
         <div className="grid grid-cols-2 gap-8 text-center text-white lg:grid-cols-4">
           {STATS.map((s) => (
             <div key={s.label} className="rounded-2xl bg-white/10 p-6 backdrop-blur-sm border border-white/10">
-              <div className="text-4xl">{s.icon}</div>
+              <div className="flex justify-center text-white/90">
+                <Icon name={s.icon} className="h-10 w-10" />
+              </div>
               <p className="mt-2 text-4xl font-extrabold">{s.value}</p>
               <p className="mt-1 text-sm font-medium text-blue-100">{s.label}</p>
             </div>
@@ -694,7 +646,9 @@ function RdvSection() {
         />
         {sent ? (
           <div className="mt-10 rounded-2xl bg-emerald-50 border border-emerald-200 p-10 text-center">
-            <div className="text-5xl">✅</div>
+            <div className="flex justify-center text-emerald-600">
+              <Icon name="check-circle" className="h-14 w-14" />
+            </div>
             <h3 className="mt-4 text-xl font-bold text-emerald-700">Demande envoyée avec succès !</h3>
             <p className="mt-2 text-sm text-emerald-600">Notre équipe vous contactera très prochainement pour confirmer votre rendez-vous.</p>
             <button onClick={() => setSent(false)} className="mt-6 rounded-full bg-medical-primary px-6 py-2 text-sm font-semibold text-white">
@@ -766,7 +720,9 @@ function ActualitesSection() {
                 </div>
                 <h3 className="mt-2 font-bold text-slate-900">{n.titre}</h3>
                 <p className="mt-1 text-xs text-slate-500 leading-relaxed line-clamp-3">{n.resume}</p>
-                <button className="mt-3 text-xs font-semibold text-medical-primary hover:underline">Lire la suite →</button>
+                <button className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-medical-primary hover:underline">
+                  Lire la suite <Icon name="arrow-right" className="h-3 w-3" />
+                </button>
               </div>
             </article>
           ))}
@@ -833,8 +789,10 @@ function Footer({ scrollTo }) {
               {HOSPITAL.tagline}. Des soins de qualité à {HOSPITAL.commune} {HOSPITAL_STATS.depuis.toLowerCase()}.
             </p>
             <div className="mt-4 flex gap-3">
-              {['📘', '📸', '🐦', '▶️'].map((icon, i) => (
-                <button key={i} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 text-sm hover:bg-medical-primary transition">{icon}</button>
+              {['facebook', 'instagram', 'twitter', 'play'].map((name) => (
+                <button key={name} className="flex h-9 w-9 items-center justify-center rounded-full bg-white/5 hover:bg-medical-primary transition">
+                  <Icon name={name} className="h-4 w-4" />
+                </button>
               ))}
             </div>
           </div>
@@ -864,8 +822,8 @@ function Footer({ scrollTo }) {
           <div>
             <p className="font-semibold text-white">Contact d'urgence</p>
             <div className="mt-3 space-y-3">
-              <a href="tel:+243000000000" className="flex items-center gap-2 rounded-xl bg-red-900/40 p-3 text-sm font-semibold text-red-300 hover:bg-red-800/40 transition">
-                🚨 +243 000 000 000
+              <a href="tel:+243000000000" className="inline-flex items-center gap-2 rounded-xl bg-red-900/40 p-3 text-sm font-semibold text-red-300 hover:bg-red-800/40 transition">
+                <Icon name="siren" className="h-4 w-4" /> +243 000 000 000
               </a>
               <p className="text-xs text-slate-500">Disponible 24h/24, 7j/7</p>
               <div className="mt-4 rounded-xl bg-white/5 p-3 text-xs text-slate-400">

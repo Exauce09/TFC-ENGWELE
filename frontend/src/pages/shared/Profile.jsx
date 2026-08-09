@@ -1,13 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Layout from '../../components/layout/Layout';
-import MedecinLayout from '../../components/layout/MedecinLayout';
-import InfirmierLayout from '../../components/layout/InfirmierLayout';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
+import { MEDECIN_ROLES } from '../../constants/roleThemes';
 
-const MEDECIN_ROLES = [
-  'medecin_generaliste', 'medecin_interne', 'pediatre',
-  'gynecologue', 'ophtalmologue', 'urgentiste', 'chirurgien', 'anesthesiste', 'dentiste',
+const PROFILE_MEDECIN_ROLES = [
+  ...MEDECIN_ROLES,
+  'chirurgien', 'anesthesiste', 'dentiste',
 ];
 
 const STATUTS = [
@@ -33,9 +32,8 @@ function Field({ label, children, labelCls }) {
 
 export default function ProfilePage() {
   const { user, setCurrentUser } = useAuth();
-  const isMedecin = MEDECIN_ROLES.includes(user?.role);
+  const isMedecin = PROFILE_MEDECIN_ROLES.includes(user?.role);
   const isInfirmier = user?.role === 'infirmier' || user?.role === 'sage_femme';
-  const Shell = isMedecin ? MedecinLayout : isInfirmier ? InfirmierLayout : Layout;
 
   const [form, setForm] = useState({
     nom: '',
@@ -432,7 +430,7 @@ export default function ProfilePage() {
   })();
 
   return (
-    <Shell title="Mon Profil">
+    <Layout title="Mon Profil">
       <div className="mx-auto max-w-4xl space-y-6">
         <div className={cardCls}>
           <h2 className={titleCls}>Mon profil</h2>
@@ -530,6 +528,6 @@ export default function ProfilePage() {
           </button>
         </form>
       </div>
-    </Shell>
+    </Layout>
   );
 }

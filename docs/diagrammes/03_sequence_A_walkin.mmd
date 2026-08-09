@@ -1,0 +1,24 @@
+sequenceDiagram
+  autonumber
+  actor Rec as Receptionniste
+  actor Inf as Infirmier
+  actor Med as Medecin
+  actor Lab as Laborantin
+  actor Pha as Pharmacien
+  participant API as API Laravel
+  Rec->>API: POST /admissions walk-in
+  API-->>Rec: admission triage
+  Inf->>API: PATCH triage
+  API-->>Inf: consultation_medicale
+  Med->>API: PATCH consultation + examens
+  API-->>Med: prelevement
+  Inf->>API: PATCH prelevement
+  API-->>Inf: examens_laboratoire
+  Lab->>API: PUT resultats
+  API-->>Lab: termines
+  Med->>API: PATCH diagnostic + medicaments
+  API-->>Med: diagnostic_prescription
+  Pha->>API: PUT delivrer ordonnance
+  API-->>Pha: delivrance_medicaments
+  Med->>API: PATCH initiation
+  API-->>Med: initiation_traitement

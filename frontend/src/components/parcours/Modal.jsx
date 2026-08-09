@@ -1,3 +1,5 @@
+import Icon from '../Icon';
+
 export default function Modal({ open, title, onClose, children, wide = false }) {
   if (!open) return null;
 
@@ -10,7 +12,7 @@ export default function Modal({ open, title, onClose, children, wide = false }) 
         onClick={onClose}
       />
       <div
-        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white shadow-2xl ${
+        className={`relative max-h-[90vh] w-full overflow-y-auto rounded-2xl bg-white text-slate-900 shadow-2xl ${
           wide ? 'max-w-2xl' : 'max-w-lg'
         }`}
       >
@@ -19,12 +21,15 @@ export default function Modal({ open, title, onClose, children, wide = false }) 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg px-2 py-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+            aria-label="Fermer"
+            className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
           >
-            ✕
+            <Icon name="close" className="h-4 w-4" />
           </button>
         </div>
-        <div className="p-5">{children}</div>
+        <div className="space-y-1 p-5 text-slate-900 [&_input]:text-slate-900 [&_select]:text-slate-900 [&_textarea]:text-slate-900 [&_label]:text-slate-800">
+          {children}
+        </div>
       </div>
     </div>
   );

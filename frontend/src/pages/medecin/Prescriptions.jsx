@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import api from '../../services/api';
@@ -60,7 +60,7 @@ export default function MedecinPrescriptions() {
                     {p.patient?.numero_patient ? ` · ${p.patient.numero_patient}` : ''}
                   </p>
                   {p.patient?.allergies && (
-                    <p className="mt-1 text-xs font-semibold text-red-600">⚠ Allergies : {p.patient.allergies}</p>
+                    <p className="mt-1 text-xs font-semibold text-red-600">Allergies : {p.patient.allergies}</p>
                   )}
                 </div>
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import MedecinLayout from '../../components/layout/MedecinLayout';
 import { OrdonnanceCard, OrdonnanceFormModal } from '../../components/medecin/OrdonnanceForm';
@@ -228,7 +228,8 @@ export default function MedecinDossiers() {
       <div className="mb-6">
         <h2 className="font-medecin-display text-3xl text-[#0D3B3A]">Consultations</h2>
         <p className="mt-1 text-sm text-[#5A8A7A]">
-          Commencez par la file du jour, puis ouvrez le dossier patient. Les ordonnances se créent uniquement dans le dossier.
+          File du jour : ouvrez un patient, consultez-le, puis revenez à la file pour le suivant.
+          Plusieurs patients peuvent attendre en même temps — chacun a son dossier.
         </p>
       </div>
 
@@ -241,7 +242,9 @@ export default function MedecinDossiers() {
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1A7A6D]">Aujourd&apos;hui</p>
             <h3 className="font-medecin-display text-xl text-[#0D3B3A]">File de consultation</h3>
-            <p className="text-xs text-[#5A8A7A]">Patients après triage, prêts pour consultation</p>
+            <p className="text-xs text-[#5A8A7A]">
+              Patients après triage. Cliquez sur une carte pour ouvrir le dossier (les autres restent en attente).
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             {departements.length > 0 && (
@@ -302,7 +305,7 @@ export default function MedecinDossiers() {
                   </span>
                 )}
                 <p className="mt-3 text-[11px] font-semibold text-[#1A7A6D] opacity-0 transition group-hover:opacity-100">
-                  Démarrer la consultation →
+                  Ouvrir le dossier →
                 </p>
               </Link>
             ))}
@@ -372,7 +375,7 @@ export default function MedecinDossiers() {
                     <h3 className="font-medecin-display text-xl text-[#0D3B3A]">{selected.patient?.user?.name}</h3>
                     <p className="text-sm text-[#5A8A7A]">{selected.numero_dossier} · {selected.motif}</p>
                     {selected.patient?.allergies && (
-                      <p className="mt-1 text-xs font-semibold text-red-700">⚠ Allergies : {selected.patient.allergies}</p>
+                      <p className="mt-1 text-xs font-semibold text-red-700">Allergies : {selected.patient.allergies}</p>
                     )}
                     {selected.patient_id && (
                       <Link
@@ -511,8 +514,8 @@ export default function MedecinDossiers() {
                             prescription={pr}
                             patient={selected.patient}
                             dossier={selected}
-                            onAnnuler={annulerOrdonnance}
-                            onDupliquer={dupliquerOrdonnance}
+                            onAnnuler={pr.source === 'parcours' ? undefined : annulerOrdonnance}
+                            onDupliquer={pr.source === 'parcours' ? undefined : dupliquerOrdonnance}
                           />
                         ))}
                       </div>

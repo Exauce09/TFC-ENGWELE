@@ -1,0 +1,13 @@
+flowchart TD
+  Start([Debut]) --> Choix[Patient choisit un creneau]
+  Choix --> Dispo{Creneau libre?}
+  Dispo -->|Non| Choix
+  Dispo -->|Oui| Create[RDV cree en_attente]
+  Create --> Conf[Reception confirme]
+  Conf --> Rappels[Rappels J-1 et H-2]
+  Rappels --> JourJ{Jour J patient present?}
+  JourJ -->|Oui| Conv[Convertir RDV en admission]
+  Conv --> Parcours[Parcours clinique]
+  JourJ -->|Non| Absent[Marquer absent]
+  Parcours --> Fin([Fin])
+  Absent --> Fin

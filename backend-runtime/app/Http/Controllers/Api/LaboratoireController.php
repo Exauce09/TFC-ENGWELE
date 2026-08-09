@@ -203,6 +203,25 @@ class LaboratoireController extends Controller
 
     public function publierResultat(Request $request, int $id): JsonResponse
     {
+        $payload = $request->all();
+        if (isset($payload['resultats']) && is_array($payload['resultats'])) {
+            $payload['resultats'] = array_map(static function ($ligne) {
+                foreach (['ref_min', 'ref_max'] as $key) {
+                    if (! array_key_exists($key, $ligne)) {
+                        continue;
+                    }
+                    if ($ligne[$key] === '' || $ligne[$key] === null) {
+                        $ligne[$key] = null;
+                    } elseif (is_numeric($ligne[$key])) {
+                        $ligne[$key] = $ligne[$key] + 0;
+                    }
+                }
+
+                return $ligne;
+            }, $payload['resultats']);
+            $request->merge($payload);
+        }
+
         $validated = $request->validate([
             'resultats' => 'required|array|min:1',
             'resultats.*.parametre' => 'required|string',

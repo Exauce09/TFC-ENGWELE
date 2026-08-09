@@ -8,7 +8,14 @@ export default function EchographieExamens() {
       listEndpoint="/echographie/examens"
       createEndpoint="/echographie/examens"
       patientsEndpoint="/echographie/patients"
-      defaultForm={{ patient_id: '', date_examen: new Date().toISOString().slice(0, 10), type_echo: '', organe_examine: '', compte_rendu: '', conclusion: '' }}
+      defaultForm={{
+        patient_id: '',
+        date_examen: new Date().toISOString().slice(0, 10),
+        type_echo: '',
+        organe_examine: '',
+        compte_rendu: '',
+        conclusion: '',
+      }}
       fields={[
         { name: 'date_examen', label: 'Date *', type: 'date', required: true },
         { name: 'type_echo', label: 'Type d\'écho' },
@@ -17,10 +24,12 @@ export default function EchographieExamens() {
         { name: 'conclusion', label: 'Conclusion', type: 'textarea', fullWidth: true },
       ]}
       renderItem={(e) => (
-        <article key={e.id} className="rounded-xl border bg-white p-4 shadow-sm">
-          <p className="font-semibold">{e.patient?.user?.name} — {e.type_echo || 'Échographie'}</p>
-          <p className="text-sm text-slate-500">{e.date_examen} · {e.organe_examine}</p>
-          <p className="text-xs text-slate-400 line-clamp-2">{e.conclusion || e.compte_rendu}</p>
+        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-[#0D6E6E]/40">
+          <p className="font-semibold text-slate-900">{e.patient?.user?.name}</p>
+          <p className="mt-1 text-sm text-slate-500">
+            {e.type_echo || 'Échographie'}
+            {e.date_examen ? ` · ${e.date_examen}` : ''}
+          </p>
         </article>
       )}
     />

@@ -1,0 +1,13 @@
+flowchart TD
+  Start([Debut]) --> Accueil[Accueil enregistrer patient]
+  Accueil --> Triage[Triage infirmier]
+  Triage --> Consult[Consultation medicale]
+  Consult --> Exam{Examens prescrits?}
+  Exam -->|Oui| Prelev[Prelevement]
+  Prelev --> Labo[Analyses laboratoire]
+  Labo --> Diag[Diagnostic + ordonnance]
+  Exam -->|Non| Diag
+  Diag --> Pharma[Delivrance pharmacie]
+  Pharma --> Init[Initiation traitement]
+  Init --> Suivi[Suivi / sortie]
+  Suivi --> Fin([Fin])

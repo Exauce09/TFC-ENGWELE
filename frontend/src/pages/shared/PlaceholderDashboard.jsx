@@ -1,11 +1,14 @@
+import { Link } from 'react-router-dom';
+
 export default function PlaceholderDashboard({ title }) {
   return (
-    <main className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-5xl rounded-xl bg-white p-6 shadow-sm">
-        <h1 className="text-2xl font-semibold text-medical-primary">{title}</h1>
-        <p className="mt-2 text-gray-600">
-          Base web initiale prete. Les modules metiers de ce role seront ajoutes dans les prochains sprints.
-        </p>
+    <main className="flex min-h-screen items-center justify-center bg-[#F7FAF9] p-6">
+      <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
+        <h1 className="font-[Fraunces,Georgia,serif] text-2xl text-[#0D3B3A]">{title}</h1>
+        <p className="mt-2 text-sm text-slate-500">Page introuvable dans cet espace.</p>
+        <Link to="/" className="mt-6 inline-block rounded-xl bg-[#0D6E6E] px-5 py-2.5 text-sm font-semibold text-white">
+          Accueil
+        </Link>
       </div>
     </main>
   );

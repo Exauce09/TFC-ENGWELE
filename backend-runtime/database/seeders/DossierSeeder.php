@@ -87,13 +87,13 @@ class DossierSeeder extends Seeder
             ]
         );
 
-        $depGyn = Departement::where('code', 'GYN')->first();
-        if ($depGyn) {
+        $depMat = Departement::where('code', 'MAT')->first();
+        if ($depMat) {
             $dossier2 = DossierMedical::updateOrCreate(
                 ['patient_id' => $patient->id, 'date_consultation' => '2026-05-10'],
                 [
                     'medecin_id' => $medecin->id,
-                    'departement_id' => $depGyn->id,
+                    'departement_id' => $depMat->id,
                     'motif' => 'Consultation de routine',
                     'anamnese' => 'Pas d antecedents particuliers.',
                     'examen_clinique' => 'Examen normal.',

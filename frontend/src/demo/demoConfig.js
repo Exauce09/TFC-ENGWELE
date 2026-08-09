@@ -9,6 +9,7 @@ export const isDemoMode = () => {
   return false;
 };
 
+/** Comptes démo (parcours + spécialités). */
 export const DEMO_USERS = {
   'admin@amen.cd': {
     id: 1,
@@ -17,26 +18,12 @@ export const DEMO_USERS = {
     role: 'admin',
     phone: '+243 900 000 001',
   },
-  'medecin@amen.cd': {
-    id: 2,
-    name: 'Dr. Jean-Pierre Kabila',
-    email: 'medecin@amen.cd',
-    role: 'medecin_generaliste',
-    phone: '+243 900 000 002',
-  },
-  'patient@amen.cd': {
-    id: 3,
-    name: 'Marie Kalala',
-    email: 'patient@amen.cd',
-    role: 'patient',
-    phone: '+243 900 000 003',
-  },
-  'caissier@amen.cd': {
-    id: 4,
-    name: 'Caissier AMEN',
-    email: 'caissier@amen.cd',
-    role: 'caissier',
-    phone: '+243 900 000 004',
+  'receptionniste@amen.cd': {
+    id: 8,
+    name: 'Réceptionniste AMEN',
+    email: 'receptionniste@amen.cd',
+    role: 'receptionniste',
+    phone: '+243 900 000 008',
   },
   'infirmier@amen.cd': {
     id: 5,
@@ -44,6 +31,13 @@ export const DEMO_USERS = {
     email: 'infirmier@amen.cd',
     role: 'infirmier',
     phone: '+243 900 000 005',
+  },
+  'medecin@amen.cd': {
+    id: 2,
+    name: 'Dr. Jean-Pierre Kabila',
+    email: 'medecin@amen.cd',
+    role: 'medecin_generaliste',
+    phone: '+243 900 000 002',
   },
   'laborantin@amen.cd': {
     id: 6,
@@ -59,47 +53,54 @@ export const DEMO_USERS = {
     role: 'pharmacien',
     phone: '+243 900 000 007',
   },
-  'receptionniste@amen.cd': {
-    id: 8,
-    name: 'Réceptionniste AMEN',
-    email: 'receptionniste@amen.cd',
-    role: 'receptionniste',
-    phone: '+243 900 000 008',
-  },
-  'sage-femme@amen.cd': {
+  'caissier@amen.cd': {
     id: 9,
-    name: 'Sage-femme AMEN',
-    email: 'sage-femme@amen.cd',
-    role: 'sage_femme',
+    name: 'Caissier AMEN',
+    email: 'caissier@amen.cd',
+    role: 'caissier',
     phone: '+243 900 000 009',
   },
-  'chirurgien@amen.cd': {
+  'sagefemme@amen.cd': {
     id: 10,
+    name: 'Sage-femme AMEN',
+    email: 'sagefemme@amen.cd',
+    role: 'sage_femme',
+    phone: '+243 900 000 010',
+  },
+  'chirurgien@amen.cd': {
+    id: 11,
     name: 'Dr. Chirurgien AMEN',
     email: 'chirurgien@amen.cd',
     role: 'chirurgien',
-    phone: '+243 900 000 010',
+    phone: '+243 900 000 011',
   },
   'echographiste@amen.cd': {
-    id: 11,
+    id: 12,
     name: 'Échographiste AMEN',
     email: 'echographiste@amen.cd',
     role: 'echographiste',
-    phone: '+243 900 000 011',
-  },
-  'kinesitherapeute@amen.cd': {
-    id: 12,
-    name: 'Kinésithérapeute AMEN',
-    email: 'kinesitherapeute@amen.cd',
-    role: 'kinesitherapeute',
     phone: '+243 900 000 012',
   },
-  'dentiste@amen.cd': {
+  'kine@amen.cd': {
     id: 13,
+    name: 'Kinésithérapeute AMEN',
+    email: 'kine@amen.cd',
+    role: 'kinesitherapeute',
+    phone: '+243 900 000 013',
+  },
+  'dentiste@amen.cd': {
+    id: 14,
     name: 'Dentiste AMEN',
     email: 'dentiste@amen.cd',
     role: 'dentiste',
-    phone: '+243 900 000 013',
+    phone: '+243 900 000 014',
+  },
+  'patient@amen.cd': {
+    id: 3,
+    name: 'Marie Kalala',
+    email: 'patient@amen.cd',
+    role: 'patient',
+    phone: '+243 900 000 003',
   },
 };
 

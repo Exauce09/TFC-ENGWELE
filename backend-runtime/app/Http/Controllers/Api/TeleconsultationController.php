@@ -12,6 +12,11 @@ use Illuminate\Http\Request;
 
 class TeleconsultationController extends Controller
 {
+    private const MEDECIN_ROLES = [
+        'medecin_generaliste', 'medecin_interne', 'pediatre',
+        'gynecologue', 'ophtalmologue', 'urgentiste',
+    ];
+
     public function __construct(private JitsiService $jitsi) {}
 
     public function mesSalles(Request $request): JsonResponse
@@ -25,22 +30,29 @@ class TeleconsultationController extends Controller
         if ($user->role === 'patient') {
             $patientId = Patient::where('user_id', $user->id)->value('id');
             $query->where('patient_id', $patientId);
-        } elseif (in_array($user->role, ['medecin_generaliste', 'medecin_interne', 'pediatre', 'gynecologue', 'ophtalmologue', 'urgentiste'], true)) {
+        } elseif (in_array($user->role, self::MEDECIN_ROLES, true)) {
             $medecinId = Medecin::where('user_id', $user->id)->value('id');
             $query->where('medecin_id', $medecinId);
         } else {
-            return response()->json(['success' => false, 'message' => 'Acces refuse', 'errors' => []], 403);
+            return response()->json(['success' => false, 'message' => 'Accès refusé', 'errors' => []], 403);
         }
 
-        $rdvs = $query->orderBy('date_rdv')->orderBy('heure_rdv')->get()->map(fn ($r) => [
-            ...$r->toArray(),
-            'salle_url' => $r->lien_video ?: $this->jitsi->embedUrl($r->id, $user->name),
-            'room_name' => $this->jitsi->roomName($r->id),
-        ]);
+        $isMedecin = in_array($user->role, self::MEDECIN_ROLES, true);
+
+        $rdvs = $query->orderBy('date_rdv')->orderBy('heure_rdv')->get()->map(function ($r) use ($user, $isMedecin) {
+            $room = $this->jitsi->ensureDedicatedRoom($r);
+
+            return [
+                ...$r->fresh(['medecin.user', 'patient.user', 'departement'])->toArray(),
+                'salle_url' => $this->jitsi->embedUrl($r->id, $user->name, $isMedecin),
+                'room_name' => $room['room_name'],
+                'salle_dediee' => true,
+            ];
+        });
 
         return response()->json([
             'success' => true,
-            'message' => 'Salles de teleconsultation',
+            'message' => 'Salles de téléconsultation',
             'data' => $rdvs,
         ]);
     }
@@ -48,10 +60,10 @@ class TeleconsultationController extends Controller
     public function rejoindre(Request $request, int $id): JsonResponse
     {
         $user = $request->user();
-        $rdv = RendezVous::with(['medecin.user', 'patient.user'])->findOrFail($id);
+        $rdv = RendezVous::with(['medecin.user', 'patient.user', 'departement'])->findOrFail($id);
 
         if ($rdv->type !== 'teleconsultation') {
-            return response()->json(['success' => false, 'message' => 'Ce rendez-vous n est pas une teleconsultation', 'errors' => []], 422);
+            return response()->json(['success' => false, 'message' => 'Ce rendez-vous n\'est pas une téléconsultation', 'errors' => []], 422);
         }
 
         $denied = $this->checkRdvAccess($user, $rdv);
@@ -59,23 +71,63 @@ class TeleconsultationController extends Controller
             return $denied;
         }
 
-        if (!$rdv->lien_video) {
-            $rdv->update(['lien_video' => $this->jitsi->embedUrl($rdv->id)]);
+        $isPatient = $user->role === 'patient';
+        $isMedecin = in_array($user->role, self::MEDECIN_ROLES, true);
+
+        if ($isPatient && $rdv->paiement_statut !== 'paye') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Paiement requis avant d\'entrer dans la salle.',
+                'errors' => [],
+            ], 422);
         }
+
+        $room = $this->jitsi->ensureDedicatedRoom($rdv);
 
         if ($rdv->statut === 'confirme') {
             $rdv->update(['statut' => 'en_cours']);
         }
 
+        $rdv = $rdv->fresh(['medecin.user', 'patient.user', 'departement']);
+
         return response()->json([
             'success' => true,
-            'message' => 'Salle de teleconsultation',
+            'message' => 'Salle dédiée ouverte',
             'data' => [
-                'rendez_vous' => $rdv->fresh(['medecin.user', 'patient.user', 'departement']),
-                'room_url' => $this->jitsi->embedUrl($rdv->id, $user->name),
-                'room_name' => $this->jitsi->roomName($rdv->id),
-                'jitsi_domain' => config('integrations.jitsi.domain'),
+                'rendez_vous' => $rdv,
+                'room_url' => $this->jitsi->embedUrl($rdv->id, $user->name, $isMedecin),
+                'room_name' => $room['room_name'],
+                'jitsi_domain' => $this->jitsi->domain(),
+                'salle_dediee' => true,
+                'role_salle' => $isMedecin ? 'medecin' : 'patient',
             ],
+        ]);
+    }
+
+    public function fermer(Request $request, int $id): JsonResponse
+    {
+        $user = $request->user();
+        $rdv = RendezVous::findOrFail($id);
+
+        if ($rdv->type !== 'teleconsultation') {
+            return response()->json(['success' => false, 'message' => 'Ce rendez-vous n\'est pas une téléconsultation', 'errors' => []], 422);
+        }
+
+        if (! in_array($user->role, self::MEDECIN_ROLES, true)) {
+            return response()->json(['success' => false, 'message' => 'Seul le médecin peut clôturer la salle', 'errors' => []], 403);
+        }
+
+        $denied = $this->checkRdvAccess($user, $rdv);
+        if ($denied) {
+            return $denied;
+        }
+
+        $rdv->update(['statut' => 'termine']);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Téléconsultation clôturée',
+            'data' => $rdv->fresh(['medecin.user', 'patient.user', 'departement']),
         ]);
     }
 
@@ -83,14 +135,16 @@ class TeleconsultationController extends Controller
     {
         if ($user->role === 'patient') {
             $patientId = Patient::where('user_id', $user->id)->value('id');
-            if ($rdv->patient_id !== $patientId) {
-                return response()->json(['success' => false, 'message' => 'Acces refuse', 'errors' => []], 403);
+            if ((int) $rdv->patient_id !== (int) $patientId) {
+                return response()->json(['success' => false, 'message' => 'Accès refusé', 'errors' => []], 403);
             }
-        } elseif (in_array($user->role, ['medecin_generaliste', 'medecin_interne', 'pediatre', 'gynecologue', 'ophtalmologue', 'urgentiste'], true)) {
+        } elseif (in_array($user->role, self::MEDECIN_ROLES, true)) {
             $medecinId = Medecin::where('user_id', $user->id)->value('id');
-            if ($rdv->medecin_id !== $medecinId) {
-                return response()->json(['success' => false, 'message' => 'Acces refuse', 'errors' => []], 403);
+            if ((int) $rdv->medecin_id !== (int) $medecinId) {
+                return response()->json(['success' => false, 'message' => 'Accès refusé', 'errors' => []], 403);
             }
+        } else {
+            return response()->json(['success' => false, 'message' => 'Accès refusé', 'errors' => []], 403);
         }
 
         return null;

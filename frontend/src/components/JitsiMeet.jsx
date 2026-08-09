@@ -1,3 +1,5 @@
+import Icon from './Icon';
+
 export default function JitsiMeet({ roomUrl, roomName, displayName }) {
   if (!roomUrl) {
     return (
@@ -14,13 +16,15 @@ export default function JitsiMeet({ roomUrl, roomName, displayName }) {
   return (
     <div className="overflow-hidden rounded-2xl border bg-slate-900 shadow-lg">
       <div className="flex items-center justify-between bg-slate-800 px-4 py-2 text-xs text-slate-300">
-        <span>🎥 Téléconsultation — {roomName}</span>
+        <span className="inline-flex items-center gap-1.5">
+          <Icon name="video" className="h-3.5 w-3.5" /> Téléconsultation — {roomName}
+        </span>
         <a href={src} target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">
           Ouvrir dans un nouvel onglet
         </a>
       </div>
       <iframe
-        title="Téléconsultation Jitsi"
+        title={roomName || 'Téléconsultation'}
         src={src}
         allow="camera; microphone; fullscreen; display-capture; autoplay"
         className="h-[70vh] w-full border-0"

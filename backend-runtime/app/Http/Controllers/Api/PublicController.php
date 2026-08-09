@@ -11,7 +11,10 @@ class PublicController extends Controller
 {
     public function departements(): JsonResponse
     {
-        $items = Departement::orderBy('nom')->get(['id', 'nom', 'code']);
+        $items = Departement::query()
+            ->where('is_active', true)
+            ->orderBy('nom')
+            ->get(['id', 'nom', 'code']);
 
         return response()->json([
             'success' => true,

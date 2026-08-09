@@ -23,11 +23,6 @@ class SpecialitesSeeder extends Seeder
 
         $users = [
             ['email' => 'receptionniste@amen.cd', 'name' => 'Receptionniste Demo', 'role' => 'receptionniste'],
-            ['email' => 'sage-femme@amen.cd', 'name' => 'Sage-femme Demo', 'role' => 'sage_femme', 'dept' => 'MAT'],
-            ['email' => 'chirurgien@amen.cd', 'name' => 'Chirurgien Demo', 'role' => 'chirurgien', 'dept' => 'CHIR'],
-            ['email' => 'echographiste@amen.cd', 'name' => 'Echographiste Demo', 'role' => 'echographiste', 'dept' => 'ECH'],
-            ['email' => 'kinesitherapeute@amen.cd', 'name' => 'Kinesitherapeute Demo', 'role' => 'kinesitherapeute', 'dept' => 'KIN'],
-            ['email' => 'dentiste@amen.cd', 'name' => 'Dentiste Demo', 'role' => 'dentiste', 'dept' => 'DENT'],
         ];
 
         $created = [];

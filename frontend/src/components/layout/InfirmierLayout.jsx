@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import Icon from '../Icon';
 
 const LINKS = [
   { label: 'Tableau de bord', to: '/infirmier/dashboard' },
@@ -23,13 +24,13 @@ export default function InfirmierLayout({ children, title = 'Infirmerie' }) {
   };
 
   return (
-    <div className="infirmier-shell flex h-screen overflow-hidden bg-[#101B2D] text-[#E8EEF6]">
+    <div className="infirmier-shell flex h-screen overflow-hidden bg-[#101B2D]">
       {open && (
         <button type="button" aria-label="Fermer" className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/10 bg-gradient-to-b from-[#152238] to-[#101B2D] transition-transform lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-white/10 bg-gradient-to-b from-[#152238] to-[#101B2D] text-[#E8EEF6] transition-transform lg:static lg:translate-x-0 ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -74,7 +75,7 @@ export default function InfirmierLayout({ children, title = 'Infirmerie' }) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#EEF2F7]">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#EEF2F7] text-[#152238]">
         <header className="sticky top-0 z-20 flex items-center gap-4 border-b border-[#C9D4E3] bg-[#F7F9FC]/92 px-5 py-3.5 backdrop-blur">
           <button
             type="button"
@@ -82,7 +83,7 @@ export default function InfirmierLayout({ children, title = 'Infirmerie' }) {
             className="rounded-lg p-2 text-[#E07A5F] hover:bg-[#F8E8E2] lg:hidden"
             aria-label="Menu"
           >
-            ☰
+            <Icon name="menu" className="h-5 w-5" />
           </button>
           <div className="flex-1">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#7A8FA8]">Unité de soins</p>
@@ -97,7 +98,7 @@ export default function InfirmierLayout({ children, title = 'Infirmerie' }) {
           </button>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-5 lg:p-7">{children}</main>
+        <main className="flex-1 overflow-y-auto p-5 text-[#152238] lg:p-7">{children}</main>
       </div>
     </div>
   );

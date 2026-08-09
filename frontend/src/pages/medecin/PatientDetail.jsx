@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import MedecinLayout from '../../components/layout/MedecinLayout';
 import { OrdonnanceCard } from '../../components/medecin/OrdonnanceForm';
@@ -170,7 +170,7 @@ export default function MedecinPatientDetail() {
 
             {patient.allergies && (
               <p className="mt-3 inline-block rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-800">
-                ⚠ Allergies : {patient.allergies}
+                Allergies : {patient.allergies}
               </p>
             )}
 

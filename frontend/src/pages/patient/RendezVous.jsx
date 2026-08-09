@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
+import Icon from '../../components/Icon';
 import api from '../../services/api';
 
 const STATUT_COLORS = {
@@ -186,9 +187,9 @@ export default function PatientRendezVous() {
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="rounded-xl bg-medical-primary px-5 py-2.5 text-sm font-semibold text-white shadow hover:-translate-y-0.5 transition"
+          className="inline-flex items-center gap-2 rounded-xl bg-medical-primary px-5 py-2.5 text-sm font-semibold text-white shadow hover:-translate-y-0.5 transition"
         >
-          {showForm ? '✕ Fermer' : '+ Nouveau rendez-vous'}
+          {showForm ? <><Icon name="close" className="h-4 w-4" /> Fermer</> : '+ Nouveau rendez-vous'}
         </button>
       </div>
 
