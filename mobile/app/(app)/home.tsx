@@ -1,12 +1,21 @@
+import { useEffect } from 'react';
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { ROLE_LABELS } from '@/src/constants/roles';
+import { ROLE_LABELS, getHomeRoute } from '@/src/constants/roles';
 import { colors } from '@/src/constants/theme';
 import { useAuth } from '@/src/context/AuthContext';
 
+/** Écran de secours si un rôle n'a pas encore d'espace dédié. */
 export default function StaffHomeScreen() {
   const { user, logout } = useAuth();
+
+  useEffect(() => {
+    const home = getHomeRoute(user?.role);
+    if (home !== '/(app)/home') {
+      router.replace(home as never);
+    }
+  }, [user?.role]);
 
   const handleLogout = async () => {
     await logout();
@@ -17,15 +26,13 @@ export default function StaffHomeScreen() {
     <View style={styles.container}>
       <Text style={styles.greeting}>Bonjour, {user?.name}</Text>
       <Text style={styles.role}>{ROLE_LABELS[user?.role ?? ''] ?? user?.role}</Text>
-
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>Espace personnel — bientôt</Text>
+        <Text style={styles.cardTitle}>Espace non configuré</Text>
         <Text style={styles.cardText}>
-          La version mobile pour le personnel est prévue en phase 2. Utilisez la plateforme web pour
-          l'instant.
+          Votre rôle n'a pas encore d'écran mobile dédié. Utilisez la plateforme web pour les
+          opérations avancées.
         </Text>
       </View>
-
       <Pressable style={styles.logout} onPress={handleLogout}>
         <Text style={styles.logoutText}>Se déconnecter</Text>
       </Pressable>

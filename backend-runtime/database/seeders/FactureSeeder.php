@@ -2,26 +2,29 @@
 
 namespace Database\Seeders;
 
+use App\Models\Departement;
 use App\Models\Facture;
 use App\Models\Patient;
 use App\Models\Paiement;
 use App\Models\RendezVous;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class FactureSeeder extends Seeder
 {
     public function run(): void
     {
+        $medDept = Departement::where('code', 'MED_GEN')->first();
+
         $caissier = User::updateOrCreate(
             ['email' => 'caissier@amen.cd'],
             [
                 'name' => 'Caissier Demo',
                 'phone' => '+243000000007',
-                'password' => Hash::make('Password@123'),
+                'password' => 'Password@123',
                 'role' => 'caissier',
+                'departement_id' => $medDept?->id,
                 'is_active' => true,
             ]
         );

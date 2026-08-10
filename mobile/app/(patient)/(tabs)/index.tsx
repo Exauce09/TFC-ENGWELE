@@ -177,10 +177,10 @@ export default function PatientHomeScreen() {
               <Text style={styles.sectionTitle}>Services rapides</Text>
               <View style={styles.quickGrid}>
                 {[
-                  { icon: 'document-text' as const, label: 'Dossier', route: '/(patient)/(tabs)/profil' },
-                  { icon: 'medkit' as const, label: 'Ordonnances', route: '/(patient)/(tabs)/profil' },
-                  { icon: 'videocam' as const, label: 'Téléconsult.', route: '/(patient)/(tabs)/rdv' },
-                  { icon: 'notifications' as const, label: 'Alertes', route: '/(patient)/(tabs)/profil' },
+                  { icon: 'document-text' as const, label: 'Dossier', route: '/(patient)/dossier' },
+                  { icon: 'medkit' as const, label: 'Ordonnances', route: '/(patient)/prescriptions' },
+                  { icon: 'videocam' as const, label: 'Téléconsult.', route: '/(patient)/teleconsultation' },
+                  { icon: 'notifications' as const, label: 'Alertes', route: '/(patient)/notifications' },
                 ].map((item) => (
                   <Pressable
                     key={item.label}

@@ -6,7 +6,6 @@ use App\Models\Departement;
 use App\Models\Patient;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
@@ -17,7 +16,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Admin Amen',
                 'phone' => '+243000000001',
-                'password' => Hash::make('Password@123'),
+                'password' => 'Password@123',
                 'role' => 'admin',
                 'is_active' => true,
             ]
@@ -29,7 +28,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Dr Medecin',
                 'phone' => '+243000000002',
-                'password' => Hash::make('Password@123'),
+                'password' => 'Password@123',
                 'role' => 'medecin_generaliste',
                 'departement_id' => $medDept?->id,
                 'is_active' => true,
@@ -41,7 +40,7 @@ class UserSeeder extends Seeder
             [
                 'name' => 'Patient Demo',
                 'phone' => '+243000000003',
-                'password' => Hash::make('Password@123'),
+                'password' => 'Password@123',
                 'role' => 'patient',
                 'is_active' => true,
             ]

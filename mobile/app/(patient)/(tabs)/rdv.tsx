@@ -244,6 +244,24 @@ export default function PatientRdvScreen() {
               )}
             </View>
 
+            <Text style={styles.label}>Type</Text>
+            <View style={styles.slotGrid}>
+              {[
+                { value: 'presentiel', label: 'Sur place' },
+                { value: 'teleconsultation', label: 'Téléconsultation' },
+              ].map((t) => (
+                <Pressable
+                  key={t.value}
+                  onPress={() => setForm((f) => ({ ...f, type: t.value }))}
+                  style={[styles.slot, form.type === t.value && styles.slotOn]}
+                >
+                  <Text style={[styles.slotText, form.type === t.value && styles.slotTextOn]}>
+                    {t.label}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
+
             <Text style={styles.label}>Motif</Text>
             <TextInput
               value={form.motif}

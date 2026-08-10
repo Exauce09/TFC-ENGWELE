@@ -1,8 +1,10 @@
 import { Redirect, Stack } from 'expo-router';
 
 import LoadingScreen from '@/src/components/LoadingScreen';
+import { getHomeRoute } from '@/src/constants/roles';
 import { useAuth } from '@/src/context/AuthContext';
 
+/** Fallback pour rôles non mappés — redirige vers l'espace métier. */
 export default function AppLayout() {
   const { user, loading } = useAuth();
 
@@ -14,8 +16,9 @@ export default function AppLayout() {
     return <Redirect href="/(auth)/login" />;
   }
 
-  if (user.role === 'patient') {
-    return <Redirect href="/(patient)/(tabs)" />;
+  const home = getHomeRoute(user.role);
+  if (home !== '/(app)/home') {
+    return <Redirect href={home as never} />;
   }
 
   return (

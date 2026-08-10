@@ -72,7 +72,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/factures/{id}/paiement', [CaisseController::class, 'payerFacture']);
         });
 
-        Route::middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste')
+        Route::middleware('role:medecin_generaliste,medecin_interne,pediatre,gynecologue,ophtalmologue,urgentiste,chirurgien,anesthesiste,dentiste,sage_femme,kinesitherapeute,echographiste,radiologue')
             ->prefix('medecin')->group(function (): void {
                 Route::get('/dashboard', [MedecinController::class, 'dashboard']);
                 Route::get('/planning', [MedecinController::class, 'planning']);
@@ -143,6 +143,7 @@ Route::prefix('v1')->group(function (): void {
             Route::post('/utilisateurs', [AdminController::class, 'creerUtilisateur']);
             Route::put('/utilisateurs/{id}', [AdminController::class, 'updateUtilisateur']);
             Route::put('/utilisateurs/{id}/toggle', [AdminController::class, 'toggleUtilisateur']);
+            Route::delete('/utilisateurs/{id}', [AdminController::class, 'supprimerUtilisateur']);
             Route::put('/patients/{id}/toggle', [AdminController::class, 'togglePatient']);
             Route::get('/rendez-vous', [RendezVousController::class, 'indexAdmin']);
             Route::put('/rendez-vous/{id}/statut', [RendezVousController::class, 'updateStatut']);

@@ -11,7 +11,6 @@ use App\Models\Prescription;
 use App\Models\SoinInfirmier;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DossierSeeder extends Seeder
 {
@@ -115,8 +114,9 @@ class DossierSeeder extends Seeder
             [
                 'name' => 'Infirmiere Demo',
                 'phone' => '+243000000004',
-                'password' => Hash::make('Password@123'),
+                'password' => 'Password@123',
                 'role' => 'infirmier',
+                'departement_id' => $departement?->id,
                 'is_active' => true,
             ]
         );

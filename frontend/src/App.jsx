@@ -55,12 +55,25 @@ import KinesitherapieDashboard from './pages/kinesitherapie/Dashboard';
 import KinesitherapieSeances from './pages/kinesitherapie/Seances';
 import DentisterieDashboard from './pages/dentisterie/Dashboard';
 import DentisterieSoins from './pages/dentisterie/Soins';
+import PlanningRdv from './pages/shared/PlanningRdv';
 import PrivateRoute from './router/PrivateRoute';
 import { useAuth } from './context/AuthContext';
 
 const MEDECIN_ROLES = [
   'medecin_generaliste', 'medecin_interne', 'pediatre',
   'gynecologue', 'ophtalmologue', 'urgentiste',
+];
+
+/** Cliniciens autorisés à voir le planning RDV (API /medecin/planning). */
+const PLANNING_ROLES = [
+  ...MEDECIN_ROLES,
+  'chirurgien',
+  'anesthesiste',
+  'dentiste',
+  'sage_femme',
+  'kinesitherapeute',
+  'echographiste',
+  'radiologue',
 ];
 
 const ALL_ROLES = [
@@ -78,6 +91,7 @@ const ALL_ROLES = [
   'echographiste',
   'kinesitherapeute',
   'dentiste',
+  'radiologue',
 ];
 
 /** Rôles cliniques du parcours patient (accueil → sortie). */
@@ -147,7 +161,7 @@ export default function App() {
             <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinDashboard /></PrivateRoute>
           } />
           <Route path="/medecin/planning" element={
-            <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinPlanning /></PrivateRoute>
+            <PrivateRoute allowedRoles={PLANNING_ROLES}><MedecinPlanning /></PrivateRoute>
           } />
           <Route path="/medecin/dossiers" element={
             <PrivateRoute allowedRoles={MEDECIN_ROLES}><MedecinDossiers /></PrivateRoute>
@@ -295,11 +309,17 @@ export default function App() {
           <Route path="/maternite/dashboard" element={
             <PrivateRoute allowedRoles={['sage_femme']}><MaterniteDashboard /></PrivateRoute>
           } />
+          <Route path="/maternite/planning" element={
+            <PrivateRoute allowedRoles={['sage_femme']}><PlanningRdv title="Planning RDV — Maternité" /></PrivateRoute>
+          } />
           <Route path="/maternite/suivis" element={
             <PrivateRoute allowedRoles={['sage_femme']}><MaterniteSuivis /></PrivateRoute>
           } />
           <Route path="/chirurgie/dashboard" element={
             <PrivateRoute allowedRoles={['chirurgien', 'anesthesiste']}><ChirurgieDashboard /></PrivateRoute>
+          } />
+          <Route path="/chirurgie/planning" element={
+            <PrivateRoute allowedRoles={['chirurgien', 'anesthesiste']}><PlanningRdv title="Planning RDV — Chirurgie" /></PrivateRoute>
           } />
           <Route path="/chirurgie/operations" element={
             <PrivateRoute allowedRoles={['chirurgien', 'anesthesiste']}><ChirurgieOperations /></PrivateRoute>
@@ -307,17 +327,26 @@ export default function App() {
           <Route path="/echographie/dashboard" element={
             <PrivateRoute allowedRoles={['echographiste']}><EchographieDashboard /></PrivateRoute>
           } />
+          <Route path="/echographie/planning" element={
+            <PrivateRoute allowedRoles={['echographiste']}><PlanningRdv title="Planning RDV — Imagerie" /></PrivateRoute>
+          } />
           <Route path="/echographie/examens" element={
             <PrivateRoute allowedRoles={['echographiste']}><EchographieExamens /></PrivateRoute>
           } />
           <Route path="/kinesitherapie/dashboard" element={
             <PrivateRoute allowedRoles={['kinesitherapeute']}><KinesitherapieDashboard /></PrivateRoute>
           } />
+          <Route path="/kinesitherapie/planning" element={
+            <PrivateRoute allowedRoles={['kinesitherapeute']}><PlanningRdv title="Planning RDV — Kinésithérapie" /></PrivateRoute>
+          } />
           <Route path="/kinesitherapie/seances" element={
             <PrivateRoute allowedRoles={['kinesitherapeute']}><KinesitherapieSeances /></PrivateRoute>
           } />
           <Route path="/dentisterie/dashboard" element={
             <PrivateRoute allowedRoles={['dentiste']}><DentisterieDashboard /></PrivateRoute>
+          } />
+          <Route path="/dentisterie/planning" element={
+            <PrivateRoute allowedRoles={['dentiste']}><PlanningRdv title="Planning RDV — Dentisterie" /></PrivateRoute>
           } />
           <Route path="/dentisterie/soins" element={
             <PrivateRoute allowedRoles={['dentiste']}><DentisterieSoins /></PrivateRoute>

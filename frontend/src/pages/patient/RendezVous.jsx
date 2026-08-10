@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
 import Icon from '../../components/Icon';
 import api from '../../services/api';
+import { unwrapList } from '../../utils/apiList';
 
 const STATUT_COLORS = {
   confirme: 'bg-emerald-100 text-emerald-700',
@@ -67,7 +68,7 @@ export default function PatientRendezVous() {
   useEffect(() => {
     if (!form.departement_id) { setMedecins([]); return; }
     api.get('/medecins', { params: { departement_id: form.departement_id } })
-      .then((res) => setMedecins(res.data.data || []))
+      .then((res) => setMedecins(unwrapList(res)))
       .catch(() => setMedecins([]));
   }, [form.departement_id]);
 

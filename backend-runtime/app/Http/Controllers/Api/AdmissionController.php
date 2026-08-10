@@ -20,6 +20,8 @@ use App\Models\Triage;
 use App\Models\User;
 use App\Services\Parcours\AdmissionStateMachine;
 use App\Services\Parcours\FacturationParcoursService;
+use App\Services\NotificationService;
+use Carbon\Carbon;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -63,6 +65,7 @@ class AdmissionController extends Controller
     public function __construct(
         private readonly AdmissionStateMachine $stateMachine,
         private readonly FacturationParcoursService $facturation,
+        private readonly NotificationService $notifications,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -228,11 +231,65 @@ class AdmissionController extends Controller
                     ];
                 }
 
+                $medecinId = isset($validated['medecin_id']) ? (int) $validated['medecin_id'] : null;
+                $arrivee = isset($validated['arrivee_at'])
+                    ? Carbon::parse($validated['arrivee_at'])
+                    : now();
+                $dateRdv = $arrivee->toDateString();
+                $heureRdv = $arrivee->format('H:i');
+
+                // Faire circuler l'info vers le planning médecin : lier ou créer un RDV du jour.
+                $rdvId = null;
+                if ($medecinId) {
+                    $existingRdv = RendezVous::query()
+                        ->where('patient_id', $patient->id)
+                        ->where('medecin_id', $medecinId)
+                        ->whereDate('date_rdv', $dateRdv)
+                        ->whereIn('statut', ['confirme', 'en_attente', 'en_cours'])
+                        ->orderByDesc('id')
+                        ->first();
+
+                    if ($existingRdv) {
+                        $existingRdv->update([
+                            'statut' => 'en_cours',
+                            'motif' => $validated['motif_arrivee'] ?: $existingRdv->motif,
+                            'departement_id' => $validated['departement_id'],
+                        ]);
+                        $rdvId = $existingRdv->id;
+                    } else {
+                        $rdv = RendezVous::create([
+                            'patient_id' => $patient->id,
+                            'medecin_id' => $medecinId,
+                            'departement_id' => $validated['departement_id'],
+                            'date_rdv' => $dateRdv,
+                            'heure_rdv' => $heureRdv,
+                            'heure_fin' => $arrivee->copy()->addMinutes(30)->format('H:i'),
+                            'motif' => $validated['motif_arrivee'],
+                            'statut' => 'en_cours',
+                            'type' => 'presentiel',
+                            'cree_par' => $request->user()->id,
+                        ]);
+                        $rdvId = $rdv->id;
+
+                        $medecinUser = Medecin::with('user')->find($medecinId)?->user;
+                        if ($medecinUser) {
+                            $this->notifications->notify(
+                                $medecinUser,
+                                'Patient orienté vers vous',
+                                ($patient->user?->name ?? 'Un patient').' — '.$validated['motif_arrivee']." ({$heureRdv})",
+                                'rdv_confirme',
+                                ['rendez_vous_id' => $rdvId, 'patient_id' => $patient->id],
+                            );
+                        }
+                    }
+                }
+
                 $admission = Admission::create([
                     'numero_admission' => Admission::genererNumero(),
                     'patient_id' => $patient->id,
+                    'rdv_id' => $rdvId,
                     'departement_id' => $validated['departement_id'],
-                    'medecin_referent_id' => $validated['medecin_id'] ?? null,
+                    'medecin_referent_id' => $medecinId,
                     'enregistre_par' => $request->user()->id,
                     'statut' => AdmissionStatut::Enregistre->value,
                     'mode_arrivee' => $validated['mode_arrivee'] ?? 'walk_in',
@@ -265,9 +322,9 @@ class AdmissionController extends Controller
                     'numero_dossier' => DossierMedical::genererNumero(),
                     'patient_id' => $patient->id,
                     'ouvert_par' => $request->user()->id,
-                    'medecin_id' => $validated['medecin_id'] ?? null,
+                    'medecin_id' => $medecinId,
                     'departement_id' => $validated['departement_id'],
-                    'date_consultation' => now()->toDateString(),
+                    'date_consultation' => $dateRdv,
                     'motif' => $validated['motif_arrivee'],
                     'statut' => 'ouvert',
                     'ouvert_at' => now(),
@@ -285,7 +342,7 @@ class AdmissionController extends Controller
             'success' => true,
             'message' => $accesPatient
                 ? 'Patient et dossier créés — remettez les identifiants au patient'
-                : 'Admission créée pour patient existant — orienté vers le triage',
+                : 'Admission créée — visible chez le médecin assigné',
             'data' => $admission,
             'acces_patient' => $accesPatient,
         ], 201);

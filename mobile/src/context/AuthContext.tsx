@@ -23,6 +23,7 @@ export type AuthUser = {
   email: string;
   role: string;
   phone?: string;
+  needs_onboarding?: boolean;
 };
 
 type RegisterPayload = {
@@ -43,6 +44,7 @@ type AuthContextValue = {
   login: (email: string, password: string) => Promise<string>;
   register: (data: RegisterPayload) => Promise<string>;
   logout: () => Promise<void>;
+  refreshUser: () => Promise<void>;
   setCurrentUser: (user: AuthUser | null) => void;
   hasRole: (...roles: string[]) => boolean;
 };
@@ -109,6 +111,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token, user: userData, role } = res.data.data;
     await saveAuth(token, userData);
     setUser(userData);
+    if (userData?.needs_onboarding && (role === 'patient' || userData.role === 'patient')) {
+      return '/(patient)/premiere-connexion';
+    }
     return getHomeRoute(role);
   }, []);
 
@@ -130,6 +135,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   }, []);
 
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await api.get('/me');
+      const userData = res.data.data as AuthUser;
+      setUser(userData);
+      const token = await getStoredToken();
+      if (token) {
+        await saveAuth(token, userData);
+      }
+    } catch {
+      // keep current user
+    }
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
@@ -137,10 +156,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      refreshUser,
       setCurrentUser,
       hasRole: (...roles: string[]) => roles.includes(user?.role ?? ''),
     }),
-    [user, loading, login, register, logout, setCurrentUser]
+    [user, loading, login, register, logout, refreshUser, setCurrentUser]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

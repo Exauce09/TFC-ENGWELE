@@ -79,16 +79,16 @@ hopital-amen/
 | # | Tâche | Statut | API |
 |---|--------|--------|-----|
 | 1 | Dashboard patient (résumé RDV, factures, notifications) | ✅ | `GET /patient/dashboard` |
-| 2 | Liste et détail des rendez-vous | ⏳ | `GET /patient/rendez-vous` |
-| 3 | Prise de RDV (département, médecin, créneau) | ⏳ | `GET /departements`, `GET /medecins`, `POST /patient/rendez-vous` |
-| 4 | Annulation RDV | ⏳ | `DELETE /patient/rendez-vous/{id}` |
-| 5 | Mon dossier médical (lecture seule) | ⏳ | `GET /patient/dossier` |
-| 6 | Mes prescriptions | ⏳ | `GET /patient/prescriptions` |
-| 7 | Factures + détail + paiement Mobile Money | ⏳ | `GET /patient/factures`, `POST .../paiement` |
-| 8 | Centre de notifications in-app | ⏳ | `GET /notifications`, `PUT .../lu` |
+| 2 | Liste et détail des rendez-vous | ✅ | `GET /patient/rendez-vous` |
+| 3 | Prise de RDV (département, médecin, créneau) | ✅ | `GET /departements`, `GET /medecins`, `POST /patient/rendez-vous` |
+| 4 | Annulation RDV | ✅ | `DELETE /patient/rendez-vous/{id}` |
+| 5 | Mon dossier médical (lecture seule) | ✅ | `GET /patient/dossier` |
+| 6 | Mes prescriptions | ✅ | `GET /patient/prescriptions` |
+| 7 | Factures + détail + paiement Mobile Money | ✅ | `GET /patient/factures`, `POST .../paiement` |
+| 8 | Centre de notifications in-app | ✅ | `GET /notifications`, `PUT .../lu` |
 | 9 | Push notifications (FCM token) | ⏳ | `POST /integrations/fcm-token` |
-| 10 | Téléconsultation (rejoindre salle Jitsi) | ⏳ | `GET /teleconsultation`, `POST .../rejoindre` |
-| 11 | Page profil (modifier nom, téléphone, mot de passe) | ⏳ | `PUT /profile` |
+| 10 | Téléconsultation (rejoindre salle Jitsi) | ✅ | `GET /teleconsultation`, `POST .../rejoindre` |
+| 11 | Page profil (modifier nom, téléphone, mot de passe) | ✅ | `PUT /profile` |
 
 **Écrans cibles (onglets patient) :**
 
@@ -102,13 +102,13 @@ Accueil | RDV | Factures | Profil
 
 | # | Tâche | Statut | Rôles | API |
 |---|--------|--------|-------|-----|
-| 12 | Dashboard médecin (RDV du jour, stats) | ⏳ | médecins | `GET /medecin/dashboard` |
-| 13 | Planning et liste patients médecin | ⏳ | médecins | `GET /medecin/planning`, `/patients` |
-| 14 | Consultation dossier + prescription rapide | ⏳ | médecins | `GET/POST /medecin/dossiers`, `POST /prescriptions` |
-| 15 | Mise à jour statut RDV (confirmé, terminé) | ⏳ | médecins | `PUT /medecin/rendez-vous/{id}/statut` |
-| 16 | Infirmier : liste patients + saisie constantes | ⏳ | `infirmier` | `GET /infirmier/patients`, `POST /constantes` |
-| 17 | Accueil : demandes RDV + validation | ⏳ | `receptionniste` | `GET /accueil/demandes`, `PUT .../traiter` |
-| 18 | Accueil : file d'attente RDV du jour | ⏳ | `receptionniste` | `GET /accueil/rendez-vous` |
+| 12 | Dashboard médecin (RDV du jour, stats) | ✅ | médecins | `GET /medecin/dashboard` |
+| 13 | Planning et liste patients médecin | ✅ | médecins | `GET /medecin/planning`, `/patients` |
+| 14 | Consultation dossier + prescription rapide | ✅ (dossiers liste ; prescription complète ⏳ web) | médecins | `GET /medecin/dossiers` |
+| 15 | Mise à jour statut RDV (confirmé, terminé) | ✅ | médecins | `PUT /medecin/rendez-vous/{id}/statut` |
+| 16 | Infirmier : liste patients + saisie constantes | ✅ | `infirmier` | `GET /infirmier/patients`, `POST /constantes` + triage |
+| 17 | Accueil : demandes RDV + validation | ✅ | `receptionniste` | `GET /accueil/demandes`, confirmer/refuser |
+| 18 | Accueil : file d'attente RDV du jour | ✅ | `receptionniste` | `GET /accueil/rendez-vous` |
 
 ---
 
@@ -116,13 +116,13 @@ Accueil | RDV | Factures | Profil
 
 | # | Tâche | Statut | Module |
 |---|--------|--------|--------|
-| 19 | Maternité — suivis prénataux | ⏳ | `/maternite/*` |
-| 20 | Laboratoire — analyses et résultats | ⏳ | `/laboratoire/*` |
-| 21 | Pharmacie — stock et ordonnances | ⏳ | `/pharmacie/*` |
-| 22 | Caisse — factures et paiements | ⏳ | `/caisse/*` |
-| 23 | Admin — stats et alertes (lecture seule) | ⏳ | `GET /admin/dashboard/stats` |
+| 19 | Maternité — suivis prénataux | ✅ (dashboard + liste) | `/maternite/*` |
+| 20 | Laboratoire — analyses et résultats | ✅ | `/laboratoire/*` |
+| 21 | Pharmacie — stock et ordonnances | ✅ | `/pharmacie/*` |
+| 22 | Caisse — factures et paiements | ✅ | `/caisse/*` |
+| 23 | Admin — stats et alertes (lecture seule) | ✅ | `GET /admin/dashboard/stats` |
 
-> Les espaces chirurgie, écho, kiné, dentisterie restent **web-first** ; mobile optionnel selon besoin terrain.
+> Chirurgie, écho, kiné, dentisterie : dashboards + listes mobiles via espace `(specialite)`. Création / workflows lourds restent **web-first**.
 
 ---
 
@@ -271,4 +271,4 @@ Liste complète : `README.md` et écran Login web.
 
 ## Prochaine action
 
-**Démarrer la phase 0** : initialiser le dossier `mobile/` avec Expo Router et brancher le login sur `POST /api/v1/login`.
+Phases 2–3 mobiles livrées (espaces métier par rôle). Suite : push FCM (#9), builds EAS (#27–29), et workflows lourds (prescription médecin complète, réception/arrivée avancées) restent web ou itérations mobiles ciblées.

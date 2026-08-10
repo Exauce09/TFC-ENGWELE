@@ -55,6 +55,12 @@ class AuthController extends Controller
         $user->tokens()->delete();
         $token = $user->createToken('auth_token', ['*'], now()->addDay())->plainTextToken;
 
+        try {
+            StaffProfileService::ensureProfil($user);
+        } catch (\InvalidArgumentException) {
+            // Profil médecin sans département : l'admin devra corriger le compte.
+        }
+
         $redirect = $user->needs_onboarding && $user->role === 'patient'
             ? '/patient/premiere-connexion'
             : $this->getRedirectByRole($user->role);
@@ -75,7 +81,11 @@ class AuthController extends Controller
     {
         /** @var User $user */
         $user = $request->user();
-        StaffProfileService::ensureProfil($user);
+        try {
+            StaffProfileService::ensureProfil($user);
+        } catch (\InvalidArgumentException) {
+            // Médecin sans département : profil incomplet jusqu'à correction admin.
+        }
 
         return new JsonResponse([
             'success' => true,

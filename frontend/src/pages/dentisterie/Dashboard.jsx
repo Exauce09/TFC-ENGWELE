@@ -9,7 +9,10 @@ export default function DentisterieDashboard() {
         { key: 'total', label: 'Total soins', icon: 'tooth' },
         { key: 'ce_mois', label: 'Ce mois', icon: 'calendar', color: 'bg-cyan-50' },
       ]}
-      links={[{ to: '/dentisterie/soins', icon: 'clipboard', label: 'Soins dentaires' }]}
+      links={[
+        { to: '/dentisterie/planning', icon: 'calendar', label: 'Planning RDV' },
+        { to: '/dentisterie/soins', icon: 'clipboard', label: 'Soins dentaires' },
+      ]}
     />
   );
 }

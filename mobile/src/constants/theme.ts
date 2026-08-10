@@ -70,5 +70,6 @@ export const statutColors: Record<string, { bg: string; text: string }> = {
   termine: { bg: '#f1f5f9', text: '#475569' },
   annule: { bg: '#fee2e2', text: '#b91c1c' },
   emise: { bg: '#fef3c7', text: '#b45309' },
+  partiellement_payee: { bg: '#ffedd5', text: '#c2410c' },
   payee: { bg: '#d1fae5', text: '#047857' },
 };

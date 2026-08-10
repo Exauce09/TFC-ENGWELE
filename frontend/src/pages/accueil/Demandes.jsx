@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
 import Modal from '../../components/parcours/Modal';
 import api from '../../services/api';
+import { unwrapList } from '../../utils/apiList';
 import { nomMedecin } from '../../utils/format';
 
 const ONGLETS = [
@@ -80,7 +81,7 @@ export default function AccueilDemandes() {
       });
     }
     api.get('/medecins', { params: d.departement_id ? { departement_id: d.departement_id } : {} })
-      .then((r) => setMedecins(r.data.data || []))
+      .then((r) => setMedecins(unwrapList(r)))
       .catch(() => setMedecins([]));
   };
 

@@ -79,14 +79,15 @@ export default function AdminDashboard() {
   const maxDept = Math.max(1, ...depts.map((d) => Number(d.total || 0)));
 
   const CARDS = [
-    { icon: 'users', label: 'Patients', value: stats?.patients_total ?? '—', color: 'border-l-4 border-l-blue-500' },
-    { icon: 'calendar', label: 'RDV du jour', value: stats?.rdv_du_jour ?? '—', color: 'border-l-4 border-l-emerald-500' },
-    { icon: 'doctor', label: 'Utilisateurs', value: stats?.users_total ?? '—', color: 'border-l-4 border-l-violet-500' },
+    { icon: 'users', label: 'Patients', value: stats?.patients_total ?? '—', color: 'border-l-4 border-l-blue-500', to: '/admin/patients' },
+    { icon: 'calendar', label: 'RDV du jour', value: stats?.rdv_du_jour ?? '—', color: 'border-l-4 border-l-emerald-500', to: '/admin/rendez-vous' },
+    { icon: 'doctor', label: 'Utilisateurs', value: stats?.users_total ?? '—', color: 'border-l-4 border-l-violet-500', to: '/admin/utilisateurs' },
     {
       icon: 'banknote',
       label: 'Recettes (FC)',
       value: stats?.montant_paye != null ? Number(stats.montant_paye).toLocaleString('fr-FR') : '—',
       color: 'border-l-4 border-l-amber-500',
+      to: '/admin/facturation',
     },
   ];
 
@@ -102,15 +103,20 @@ export default function AdminDashboard() {
         <>
           <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {CARDS.map((c) => (
-              <div key={c.label} className={`rounded-2xl bg-white p-5 shadow-sm ${c.color}`}>
+              <Link
+                key={c.label}
+                to={c.to}
+                aria-label={`Voir ${c.label}`}
+                className={`group block rounded-2xl bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-medical-primary ${c.color}`}
+              >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-slate-500">{c.label}</p>
+                    <p className="text-sm text-slate-500 group-hover:text-slate-700">{c.label}</p>
                     <p className="mt-1 text-3xl font-bold text-slate-900">{c.value}</p>
                   </div>
-                  <Icon name={c.icon} className="h-7 w-7 text-slate-400" />
+                  <Icon name={c.icon} className="h-7 w-7 text-slate-400 transition group-hover:text-slate-600" />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
 

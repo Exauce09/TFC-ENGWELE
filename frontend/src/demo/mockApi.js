@@ -48,14 +48,17 @@ const DEMO_NOTIFICATIONS = [
 ];
 
 const DEMO_DEPARTEMENTS = [
-  { id: 1, nom: 'Médecine Générale', code: 'MG' },
-  { id: 2, nom: 'Urgences', code: 'URG' },
-  { id: 3, nom: 'Pédiatrie', code: 'PED' },
+  { id: 4, nom: 'Médecine générale', code: 'MED_GEN' },
+  { id: 5, nom: 'Urgences', code: 'URG' },
+  { id: 6, nom: 'Pédiatrie', code: 'PED' },
+  { id: 7, nom: 'Maternité / Gynécologie', code: 'MAT' },
 ];
 
 const DEMO_MEDECINS = [
-  { id: 1, name: 'Jean-Pierre Kabila', specialite: 'Médecine interne', departement_id: 1, departement: 'Médecine Générale' },
-  { id: 2, name: 'Espérance Mbuyi', specialite: 'Gynécologie', departement_id: 3, departement: 'Pédiatrie' },
+  { id: 1, name: 'Jean-Pierre Kabila', specialite: 'Médecine interne', departement_id: 4, departement: 'Médecine générale' },
+  { id: 2, name: 'Espérance Mbuyi', specialite: 'Gynécologie', departement_id: 7, departement: 'Maternité / Gynécologie' },
+  { id: 3, name: 'MEDGEN', specialite: 'Médecine générale', departement_id: 4, departement: 'Médecine générale' },
+  { id: 4, name: 'JAMES', specialite: 'Médecine générale', departement_id: 4, departement: 'Médecine générale' },
 ];
 
 const DEMO_DEMANDES = [
@@ -63,8 +66,8 @@ const DEMO_DEMANDES = [
     id: 1,
     nom: 'Joseph Mbala',
     telephone: '+243 900 111 222',
-    departement_id: 1,
-    departement: { id: 1, nom: 'Médecine Générale' },
+    departement_id: 4,
+    departement: { id: 4, nom: 'Médecine générale' },
     date_souhaitee: new Date().toISOString().slice(0, 10),
     message: 'Contrôle de tension artérielle',
     statut: 'nouvelle',
@@ -73,8 +76,8 @@ const DEMO_DEMANDES = [
     id: 2,
     nom: 'Alice Nzuzi',
     telephone: '+243 900 333 444',
-    departement_id: 3,
-    departement: { id: 3, nom: 'Pédiatrie' },
+    departement_id: 6,
+    departement: { id: 6, nom: 'Pédiatrie' },
     date_souhaitee: new Date().toISOString().slice(0, 10),
     message: 'Vaccination enfant',
     statut: 'nouvelle',
@@ -267,7 +270,11 @@ export function resolveMock(config) {
   }
 
   if (method === 'get' && p === '/medecins') {
-    return ok(DEMO_MEDECINS);
+    const deptId = queryParam(config, 'departement_id');
+    const list = deptId
+      ? DEMO_MEDECINS.filter((m) => String(m.departement_id) === String(deptId))
+      : DEMO_MEDECINS;
+    return ok(list);
   }
 
   // --- Réception (accueil) ---

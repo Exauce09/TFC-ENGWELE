@@ -3,7 +3,8 @@ import { isDemoMode, isDemoToken } from '../demo/demoConfig';
 import { resolveMock } from '../demo/mockApi';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1',
+  // En dev Vite : proxy /api → backend (voir vite.config.js). Sinon URL absolue.
+  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.DEV ? '/api/v1' : 'http://localhost:8000/api/v1'),
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -35,7 +36,15 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && !isDemoMode() && !isDemoToken(localStorage.getItem('amen_token'))) {
+    const url = String(error.config?.url || '');
+    const isAuthAttempt = /\/login\b|\/register\b|\/forgot-password\b/i.test(url);
+    // Ne pas recharger la page sur un échec de connexion (sinon le message d'erreur disparaît)
+    if (
+      error.response?.status === 401 &&
+      !isAuthAttempt &&
+      !isDemoMode() &&
+      !isDemoToken(localStorage.getItem('amen_token'))
+    ) {
       localStorage.removeItem('amen_token');
       localStorage.removeItem('amen_user');
       const base = import.meta.env.BASE_URL || '/';

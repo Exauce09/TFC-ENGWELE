@@ -61,22 +61,27 @@ export const MENUS = {
   ],
   maternite: [
     { label: 'Tableau de bord', icon: 'home', to: '/maternite/dashboard' },
+    { label: 'Planning RDV', icon: 'calendar', to: '/maternite/planning' },
     { label: 'Suivis', icon: 'baby', to: '/maternite/suivis' },
   ],
   chirurgie: [
     { label: 'Tableau de bord', icon: 'home', to: '/chirurgie/dashboard' },
+    { label: 'Planning RDV', icon: 'calendar', to: '/chirurgie/planning' },
     { label: 'Opérations', icon: 'scissors', to: '/chirurgie/operations' },
   ],
   echographie: [
     { label: 'Tableau de bord', icon: 'home', to: '/echographie/dashboard' },
+    { label: 'Planning RDV', icon: 'calendar', to: '/echographie/planning' },
     { label: 'Examens', icon: 'radio', to: '/echographie/examens' },
   ],
   kinesitherapie: [
     { label: 'Tableau de bord', icon: 'home', to: '/kinesitherapie/dashboard' },
+    { label: 'Planning RDV', icon: 'calendar', to: '/kinesitherapie/planning' },
     { label: 'Séances', icon: 'dumbbell', to: '/kinesitherapie/seances' },
   ],
   dentisterie: [
     { label: 'Tableau de bord', icon: 'home', to: '/dentisterie/dashboard' },
+    { label: 'Planning RDV', icon: 'calendar', to: '/dentisterie/planning' },
     { label: 'Soins', icon: 'tooth', to: '/dentisterie/soins' },
   ],
 };
@@ -117,6 +122,10 @@ export const ROLE_LABELS = {
   echographiste: 'Échographiste',
   kinesitherapeute: 'Kinésithérapeute',
   dentiste: 'Dentiste',
+  radiologue: 'Radiologue',
+  directeur_medical: 'Directeur médical',
+  gestionnaire_assurance: 'Gestionnaire assurance',
+  responsable_chambres: 'Responsable chambres',
 };
 
 export function getMenuForRole(role) {

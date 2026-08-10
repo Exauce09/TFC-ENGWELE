@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\Departement;
 use App\Models\Medecin;
+use App\Models\Patient;
 use App\Models\ProfilAdmin;
 use App\Models\ProfilCaissier;
 use App\Models\ProfilDirecteur;
@@ -15,9 +17,28 @@ use App\Models\ProfilReceptionniste;
 use App\Models\ProfilResponsableChambres;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
+use InvalidArgumentException;
 
 class StaffProfileService
 {
+    /**
+     * Rôles rattachés à un service (users.departement_id obligatoire).
+     * Admin / directeur / assurance / chambres / patient : département optionnel (global).
+     *
+     * @var list<string>
+     */
+    public const ROLES_REQUIRING_DEPARTEMENT = [
+        'infirmier',
+        'sage_femme',
+        'receptionniste',
+        'laborantin',
+        'pharmacien',
+        'caissier',
+        'echographiste',
+        'radiologue',
+        'kinesitherapeute',
+    ];
+
     /** @return list<string> */
     public static function relationsForRole(string $role): array
     {
@@ -48,9 +69,153 @@ class StaffProfileService
         ], true);
     }
 
+    public static function requiresDepartement(string $role): bool
+    {
+        return self::isMedecinRole($role)
+            || in_array($role, self::ROLES_REQUIRING_DEPARTEMENT, true);
+    }
+
     public static function loadFull(User $user): User
     {
         return $user->load(self::relationsForRole($user->role));
+    }
+
+    /**
+     * Code département préféré selon le métier (services actifs du seeder).
+     */
+    public static function defaultDepartementCodeForRole(string $role): ?string
+    {
+        return match (true) {
+            $role === 'laborantin', $role === 'echographiste', $role === 'radiologue' => 'LAB',
+            $role === 'pharmacien' => 'PHARM',
+            $role === 'sage_femme', $role === 'gynecologue' => 'MAT',
+            $role === 'pediatre' => 'PED',
+            $role === 'urgentiste', $role === 'chirurgien', $role === 'anesthesiste' => 'URG',
+            self::requiresDepartement($role) => 'MED_GEN',
+            default => null,
+        };
+    }
+
+    /**
+     * Résout un département : préférence explicite → code métier → premier actif.
+     */
+    public static function resolveDepartementId(?int $preferredId = null, ?string $role = null): ?int
+    {
+        // Uniquement les départements actifs (ceux listés à la réception).
+        if ($preferredId) {
+            $exists = Departement::query()
+                ->whereKey($preferredId)
+                ->where('is_active', true)
+                ->exists();
+            if ($exists) {
+                return $preferredId;
+            }
+        }
+
+        if ($role) {
+            $code = self::defaultDepartementCodeForRole($role);
+            if ($code) {
+                $byCode = Departement::query()
+                    ->where('code', $code)
+                    ->where('is_active', true)
+                    ->value('id');
+                if ($byCode) {
+                    return (int) $byCode;
+                }
+            }
+        }
+
+        return Departement::query()->where('is_active', true)->orderBy('id')->value('id')
+            ?? Departement::query()->orderBy('id')->value('id');
+    }
+
+    /**
+     * Assigne users.departement_id si le rôle l'exige et qu'il est manquant.
+     * Synchronise medecins.departement_id pour les médecins.
+     */
+    public static function ensureDepartement(User $user): void
+    {
+        if (! self::requiresDepartement($user->role)) {
+            return;
+        }
+
+        $departementId = self::resolveDepartementId(
+            $user->departement_id ? (int) $user->departement_id : null,
+            $user->role
+        );
+
+        if (! $departementId) {
+            throw new InvalidArgumentException(
+                'Aucun département disponible. Créez un département avant d\'ajouter ce personnel.'
+            );
+        }
+
+        if ((int) $user->departement_id !== (int) $departementId) {
+            $user->forceFill(['departement_id' => $departementId])->save();
+        }
+
+        if (self::isMedecinRole($user->role) && $user->medecin) {
+            if ((int) $user->medecin->departement_id !== (int) $departementId) {
+                $user->medecin->update(['departement_id' => $departementId]);
+            }
+        }
+    }
+
+    /**
+     * Backfill : tous les users dont le rôle exige un département.
+     * Réassigne aussi les rattachements vers un département inactif (invisible à la réception).
+     */
+    public static function backfillMissingDepartements(): int
+    {
+        $count = 0;
+
+        User::query()
+            ->whereNull('departement_id')
+            ->orderBy('id')
+            ->each(function (User $user) use (&$count): void {
+                if (! self::requiresDepartement($user->role)) {
+                    return;
+                }
+                self::ensureDepartement($user);
+                $count++;
+            });
+
+        // Users / médecins sur département inactif → service actif (sinon invisibles à la réception)
+        User::query()
+            ->whereNotNull('departement_id')
+            ->with(['departement', 'medecin'])
+            ->orderBy('id')
+            ->each(function (User $user) use (&$count): void {
+                if (! self::requiresDepartement($user->role)) {
+                    return;
+                }
+                $dept = $user->departement;
+                if ($dept && $dept->is_active) {
+                    return;
+                }
+                $newId = self::resolveDepartementId(null, $user->role);
+                if (! $newId || (int) $user->departement_id === (int) $newId) {
+                    return;
+                }
+                $user->forceFill(['departement_id' => $newId])->save();
+                if ($user->medecin) {
+                    $user->medecin->update(['departement_id' => $newId]);
+                }
+                $count++;
+            });
+
+        // Médecins : aligner medecins.departement_id sur users.departement_id
+        User::query()
+            ->whereNotNull('departement_id')
+            ->whereHas('medecin')
+            ->with('medecin')
+            ->each(function (User $user): void {
+                if ($user->medecin && (int) $user->medecin->departement_id !== (int) $user->departement_id) {
+                    $user->medecin->update(['departement_id' => $user->departement_id]);
+                }
+            });
+
+        return $count;
     }
 
     /**
@@ -58,15 +223,9 @@ class StaffProfileService
      */
     public static function ensureProfil(User $user): ?Model
     {
-        return match (true) {
-            self::isMedecinRole($user->role) => $user->medecin
-                ?? Medecin::firstOrCreate(
-                    ['user_id' => $user->id],
-                    [
-                        'departement_id' => $user->departement_id ?? 1,
-                        'specialite' => str_replace('_', ' ', $user->role),
-                    ]
-                ),
+        $profil = match (true) {
+            self::isMedecinRole($user->role) => self::ensureMedecinProfil($user),
+            $user->role === 'patient' => self::ensurePatientProfil($user),
             $user->role === 'infirmier', $user->role === 'sage_femme' => ProfilInfirmier::firstOrCreate(['user_id' => $user->id]),
             $user->role === 'receptionniste' => ProfilReceptionniste::firstOrCreate(['user_id' => $user->id]),
             $user->role === 'laborantin' => ProfilLaborantin::firstOrCreate(['user_id' => $user->id]),
@@ -79,6 +238,57 @@ class StaffProfileService
             $user->role === 'admin' => ProfilAdmin::firstOrCreate(['user_id' => $user->id]),
             default => null,
         };
+
+        if ($profil && self::requiresDepartement($user->role) && ! self::isMedecinRole($user->role)) {
+            self::ensureDepartement($user->fresh());
+        }
+
+        return $profil;
+    }
+
+    protected static function ensureMedecinProfil(User $user): Medecin
+    {
+        $departementId = self::resolveDepartementId(
+            $user->departement_id ? (int) $user->departement_id : null,
+            $user->role
+        );
+        if (! $departementId) {
+            throw new InvalidArgumentException(
+                'Aucun département disponible. Créez un département avant d\'ajouter un médecin.'
+            );
+        }
+
+        if ((int) $user->departement_id !== (int) $departementId) {
+            $user->forceFill(['departement_id' => $departementId])->save();
+        }
+
+        $medecin = Medecin::firstOrCreate(
+            ['user_id' => $user->id],
+            [
+                'departement_id' => $departementId,
+                'specialite' => str_replace('_', ' ', $user->role),
+            ]
+        );
+
+        if ((int) $medecin->departement_id !== (int) $departementId) {
+            $medecin->update(['departement_id' => $departementId]);
+        }
+
+        return $medecin->fresh();
+    }
+
+    protected static function ensurePatientProfil(User $user): Patient
+    {
+        if ($user->patient) {
+            return $user->patient;
+        }
+
+        $numero = 'PAT-'.str_pad((string) $user->id, 5, '0', STR_PAD_LEFT);
+
+        return Patient::firstOrCreate(
+            ['user_id' => $user->id],
+            ['numero_patient' => $numero]
+        );
     }
 
     /** @param array<string, mixed> $payload */
@@ -125,6 +335,14 @@ class StaffProfileService
 
         $profil->fill($filtered);
         $profil->save();
+
+        // Si le département métier médecin change, garder users.departement_id aligné
+        if ($profil instanceof Medecin && array_key_exists('departement_id', $filtered) && $filtered['departement_id']) {
+            $deptId = (int) $filtered['departement_id'];
+            if ((int) $user->departement_id !== $deptId) {
+                $user->forceFill(['departement_id' => $deptId])->save();
+            }
+        }
     }
 
     public static function syncDisplayName(User $user): void

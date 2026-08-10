@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "cd.amen.mobile",
-      "versionCode": 4,
+      "versionCode": 7,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -43,8 +43,7 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ],
-      "expo-build-properties"
+      ]
     ],
     "experiments": {
       "typedRoutes": true

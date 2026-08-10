@@ -349,8 +349,17 @@ class RendezVousController extends Controller
 
         $medecin = Medecin::where('user_id', $request->user()->id)->first();
         $rdv = RendezVous::with('patient.user')->findOrFail($id);
+        $user = $request->user();
 
-        if ($medecin && $rdv->medecin_id !== $medecin->id && $request->user()->role !== 'admin') {
+        $autorise = $user->role === 'admin'
+            || ($medecin && (int) $rdv->medecin_id === (int) $medecin->id)
+            || (
+                ! $medecin
+                && $user->departement_id
+                && (int) $rdv->departement_id === (int) $user->departement_id
+            );
+
+        if (! $autorise) {
             return response()->json([
                 'success' => false,
                 'message' => 'Accès refusé',

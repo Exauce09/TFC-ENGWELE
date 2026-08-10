@@ -10,7 +10,10 @@ export default function EchographieDashboard() {
         { key: 'en_attente', label: 'En attente', icon: 'clock', color: 'bg-amber-50' },
         { key: 'termines', label: 'Terminés', icon: 'check-circle', color: 'bg-emerald-50' },
       ]}
-      links={[{ to: '/echographie/examens', icon: 'clipboard', label: 'Examens' }]}
+      links={[
+        { to: '/echographie/planning', icon: 'calendar', label: 'Planning RDV' },
+        { to: '/echographie/examens', icon: 'clipboard', label: 'Examens' },
+      ]}
     />
   );
 }

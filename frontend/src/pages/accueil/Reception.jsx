@@ -3,6 +3,7 @@ import Layout from '../../components/layout/Layout';
 import Modal from '../../components/parcours/Modal';
 import { admissionsApi } from '../../services/admissionsApi';
 import api from '../../services/api';
+import { unwrapList } from '../../utils/apiList';
 import { nomMedecin } from '../../utils/format';
 import { compressImage } from '../../utils/image';
 
@@ -126,6 +127,8 @@ function ageFromDate(iso) {
 export default function Reception() {
   const [departements, setDepartements] = useState([]);
   const [medecins, setMedecins] = useState([]);
+  const [medecinsHint, setMedecinsHint] = useState('');
+  const [medecinsLoading, setMedecinsLoading] = useState(false);
   const [form, setForm] = useState(EMPTY);
   const [search, setSearch] = useState('');
   const [resultats, setResultats] = useState([]);
@@ -159,18 +162,68 @@ export default function Reception() {
 
   useEffect(() => {
     api.get('/departements')
-      .then((r) => setDepartements(r.data.data || []))
+      .then((r) => setDepartements(unwrapList(r)))
       .catch(() => setDepartements([]));
   }, []);
 
   useEffect(() => {
     if (!form.departement_id) {
       setMedecins([]);
+      setMedecinsHint('');
+      setMedecinsLoading(false);
       return;
     }
-    api.get('/medecins', { params: { departement_id: form.departement_id } })
-      .then((r) => setMedecins(r.data.data || []))
-      .catch(() => setMedecins([]));
+
+    const deptId = String(form.departement_id);
+    let cancelled = false;
+    setMedecinsLoading(true);
+    setMedecinsHint('');
+
+    const sameDept = (m) => {
+      const mid = m?.departement_id ?? m?.departement?.id;
+      return mid != null && String(mid) === deptId;
+    };
+
+    (async () => {
+      try {
+        const filteredRes = await api.get('/medecins', { params: { departement_id: deptId } });
+        let list = unwrapList(filteredRes).filter((m) => m && (m.id != null));
+
+        // Filet de sécurité : si le filtre API renvoie [] alors que des médecins existent
+        // (désync id/code, nesting JSON, etc.), on recharge tout et on filtre côté client.
+        if (list.length === 0) {
+          const allRes = await api.get('/medecins');
+          const all = unwrapList(allRes);
+          const matched = all.filter(sameDept);
+          if (matched.length > 0) {
+            list = matched;
+          } else if (all.length > 0) {
+            list = all;
+            setMedecinsHint(
+              'Aucun médecin rattaché à ce service — liste complète des médecins actifs affichée.',
+            );
+          }
+        }
+
+        if (!cancelled) {
+          setMedecins(list);
+          if (list.length === 0) {
+            setMedecinsHint(
+              'Aucun médecin actif trouvé. Vérifiez le rattachement dans Admin → Utilisateurs (département + profil médecin).',
+            );
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setMedecins([]);
+          setMedecinsHint('Impossible de charger les médecins (réseau / API). Vérifiez que le backend tourne.');
+        }
+      } finally {
+        if (!cancelled) setMedecinsLoading(false);
+      }
+    })();
+
+    return () => { cancelled = true; };
   }, [form.departement_id]);
 
   const set = (field) => (e) => {
@@ -565,12 +618,21 @@ export default function Reception() {
             </label>
             <label className="block">
               <span className="mb-1 block text-sm font-medium">Médecin demandé / assigné</span>
-              <select value={form.medecin_id} onChange={set('medecin_id')} className="w-full rounded-xl border px-3 py-2.5 text-sm" disabled={!form.departement_id}>
-                <option value="">Non assigné</option>
-                {medecins.map((m) => (
-                  <option key={m.id} value={m.id}>{nomMedecin(m.name)}{m.specialite ? ` — ${m.specialite}` : ''}</option>
-                ))}
+              <select value={form.medecin_id} onChange={set('medecin_id')} className="w-full rounded-xl border px-3 py-2.5 text-sm" disabled={!form.departement_id || medecinsLoading}>
+                <option value="">{medecinsLoading ? 'Chargement…' : 'Non assigné'}</option>
+                {medecins.map((m) => {
+                  const label = nomMedecin(m.name || m.user?.name);
+                  const extra = m.specialite || m.departement || '';
+                  return (
+                    <option key={m.id} value={m.id}>
+                      {label}{extra ? ` — ${extra}` : ''}
+                    </option>
+                  );
+                })}
               </select>
+              {form.departement_id && !medecinsLoading && medecinsHint && (
+                <span className="mt-1 block text-xs text-amber-700">{medecinsHint}</span>
+              )}
             </label>
             <label className="block">
               <span className="mb-1 block text-sm font-medium">Mode d’arrivée</span>

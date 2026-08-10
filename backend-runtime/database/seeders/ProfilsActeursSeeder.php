@@ -153,5 +153,7 @@ class ProfilsActeursSeeder extends Seeder
         User::where('role', '!=', 'patient')->each(function (User $u) {
             StaffProfileService::ensureProfil($u);
         });
+
+        StaffProfileService::backfillMissingDepartements();
     }
 }

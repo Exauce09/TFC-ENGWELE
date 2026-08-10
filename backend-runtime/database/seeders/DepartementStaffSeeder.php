@@ -3,23 +3,27 @@
 namespace Database\Seeders;
 
 use App\Models\AnalyseLaboratoire;
+use App\Models\Departement;
 use App\Models\Patient;
 use App\Models\StockMedicament;
 use App\Models\User;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DepartementStaffSeeder extends Seeder
 {
     public function run(): void
     {
+        $labDept = Departement::where('code', 'LAB')->first();
+        $pharmDept = Departement::where('code', 'PHARM')->first();
+
         $laborantin = User::updateOrCreate(
             ['email' => 'laborantin@amen.cd'],
             [
                 'name' => 'Laborantin Demo',
                 'phone' => '+243000000005',
-                'password' => Hash::make('Password@123'),
+                'password' => 'Password@123',
                 'role' => 'laborantin',
+                'departement_id' => $labDept?->id,
                 'is_active' => true,
             ]
         );
@@ -29,8 +33,9 @@ class DepartementStaffSeeder extends Seeder
             [
                 'name' => 'Pharmacien Demo',
                 'phone' => '+243000000006',
-                'password' => Hash::make('Password@123'),
+                'password' => 'Password@123',
                 'role' => 'pharmacien',
+                'departement_id' => $pharmDept?->id,
                 'is_active' => true,
             ]
         );

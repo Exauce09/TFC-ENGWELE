@@ -10,7 +10,10 @@ export default function KinesitherapieDashboard() {
         { key: 'planifiees', label: 'Planifiées', icon: 'calendar', color: 'bg-blue-50' },
         { key: 'realisees', label: 'Réalisées', icon: 'check-circle', color: 'bg-emerald-50' },
       ]}
-      links={[{ to: '/kinesitherapie/seances', icon: 'dumbbell', label: 'Séances' }]}
+      links={[
+        { to: '/kinesitherapie/planning', icon: 'calendar', label: 'Planning RDV' },
+        { to: '/kinesitherapie/seances', icon: 'dumbbell', label: 'Séances' },
+      ]}
     />
   );
 }

@@ -273,10 +273,21 @@ class AccueilController extends Controller
                 'motif' => $validated['motif'] ?? $rdv->motif,
             ]);
 
+            $fresh = $rdv->fresh(['patient.user', 'medecin.user', 'departement']);
+            if ($fresh->medecin?->user) {
+                $this->notifications->notify(
+                    $fresh->medecin->user,
+                    'Rendez-vous confirmé',
+                    ($fresh->patient?->user?->name ?? 'Patient').' le '.($date ?? '').' à '.$heure,
+                    'rdv_confirme',
+                    ['rendez_vous_id' => $fresh->id],
+                );
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Rendez-vous patient confirmé — visible chez le médecin.',
-                'data' => $rdv->fresh(['patient.user', 'medecin.user', 'departement']),
+                'data' => $fresh,
             ]);
         }
 
@@ -301,7 +312,7 @@ class AccueilController extends Controller
         }
 
         $demande = DemandeRdv::findOrFail($id);
-        $medecin = Medecin::findOrFail($validatedFull['medecin_id']);
+        $medecin = Medecin::with('user')->findOrFail($validatedFull['medecin_id']);
 
         $rdv = RendezVous::create([
             'patient_id' => $validatedFull['patient_id'],
@@ -320,9 +331,20 @@ class AccueilController extends Controller
 
         $demande->update(['statut' => 'traitee']);
 
+        if ($medecin->user) {
+            $patientName = Patient::with('user')->find($validatedFull['patient_id'])?->user?->name ?? 'Patient';
+            $this->notifications->notify(
+                $medecin->user,
+                'Nouveau rendez-vous confirmé',
+                "{$patientName} le {$validatedFull['date_rdv']} à {$heure}",
+                'rdv_confirme',
+                ['rendez_vous_id' => $rdv->id],
+            );
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Rendez-vous confirme. Le patient peut se presenter a la date prevue.',
+            'message' => 'Rendez-vous confirme. Visible dans le planning du medecin.',
             'data' => $rdv->load(['patient.user:id,name,phone', 'medecin.user:id,name', 'departement:id,nom']),
         ]);
     }
@@ -489,8 +511,8 @@ class AccueilController extends Controller
 
             $this->facturation->facturerActe($admission, 'enregistrement');
 
-            // Terminé = patient reçu à l'accueil
-            $rdv->update(['statut' => 'termine']);
+            // Patient présenté : RDV reste visible chez le médecin (en cours).
+            $rdv->update(['statut' => 'en_cours']);
 
             return $admission->fresh([
                 'patient.user',
@@ -499,6 +521,8 @@ class AccueilController extends Controller
                 'rendezVousOrigine',
             ]);
         });
+
+        $rdv->load(['patient.user', 'medecin.user']);
 
         if ($rdv->patient?->user) {
             $this->notifications->notify(
@@ -510,9 +534,19 @@ class AccueilController extends Controller
             );
         }
 
+        if ($rdv->medecin?->user) {
+            $this->notifications->notify(
+                $rdv->medecin->user,
+                'Patient arrivé',
+                ($rdv->patient?->user?->name ?? 'Patient').' est à l\'accueil pour son RDV.',
+                'rdv_confirme',
+                ['rendez_vous_id' => $rdv->id, 'admission_id' => $admission->id],
+            );
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'Patient reçu — RDV converti en admission (terminé)',
+            'message' => 'Patient reçu — admission créée, RDV visible chez le médecin',
             'data' => [
                 'admission' => $admission,
                 'rendez_vous' => $rdv->fresh(['patient.user', 'medecin.user', 'departement']),

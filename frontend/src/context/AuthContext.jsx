@@ -61,8 +61,10 @@ export function AuthProvider({ children }) {
   };
 
   const login = async (email, password) => {
+    const identifiant = String(email || '').trim();
+    const pwd = String(password || '');
     if (isDemoMode()) {
-      const demoUser = findDemoUser(email, password);
+      const demoUser = findDemoUser(identifiant.toLowerCase(), pwd);
       if (!demoUser) {
         throw { response: { data: { message: 'Email ou mot de passe incorrect (démo).' } } };
       }
@@ -73,7 +75,7 @@ export function AuthProvider({ children }) {
       return ROLE_ROUTES[demoUser.role] || '/';
     }
 
-    const res = await api.post('/login', { email, password });
+    const res = await api.post('/login', { email: identifiant, password: pwd });
     const { token, user: userData, role, redirect } = res.data.data;
     localStorage.setItem('amen_token', token);
     localStorage.setItem('amen_user', JSON.stringify(userData));

@@ -11,7 +11,10 @@ export default function MaterniteDashboard() {
         { key: 'accouchements', label: 'Accouchements', icon: 'hospital', color: 'bg-rose-50' },
         { key: 'postnatales', label: 'Postnatales', icon: 'heart', color: 'bg-violet-50' },
       ]}
-      links={[{ to: '/maternite/suivis', icon: 'clipboard', label: 'Suivis maternité' }]}
+      links={[
+        { to: '/maternite/planning', icon: 'calendar', label: 'Planning RDV' },
+        { to: '/maternite/suivis', icon: 'clipboard', label: 'Suivis maternité' },
+      ]}
     />
   );
 }

@@ -111,6 +111,7 @@ export default function MedecinDashboard() {
   }
 
   const planning = data?.planning_du_jour || [];
+  const prochains = data?.prochains_rdv || [];
   const dossiers = data?.dossiers_recents || [];
   const alertes = data?.examens_disponibles || [];
   const enAttente = data?.rdv_en_attente ?? 0;
@@ -249,7 +250,31 @@ export default function MedecinDashboard() {
             <Link to="/medecin/planning" className="text-xs font-semibold text-[#1A7A6D] hover:underline">Planning →</Link>
           </div>
           {planning.length === 0 ? (
-            <p className="p-8 text-center text-sm text-[#7A9A90]">Aucun rendez-vous aujourd&apos;hui.</p>
+            <div className="p-6">
+              <p className="text-center text-sm text-[#7A9A90]">Aucun rendez-vous aujourd&apos;hui.</p>
+              {prochains.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-[#1A7A6D]">À venir</p>
+                  {prochains.slice(0, 5).map((rdv) => (
+                    <Link
+                      key={rdv.id}
+                      to="/medecin/planning"
+                      className="flex items-center justify-between rounded-lg border border-[#C5D9D0]/80 px-3 py-2 hover:bg-[#E8F5F2]/60"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-[#0D3B3A]">{rdv.patient?.user?.name}</p>
+                        <p className="text-xs text-[#5A8A7A]">
+                          {rdv.date_rdv ? new Date(rdv.date_rdv).toLocaleDateString('fr-FR') : '—'}
+                          {' · '}
+                          {String(rdv.heure_rdv || '').slice(0, 5)}
+                        </p>
+                      </div>
+                      <span className="text-xs font-semibold text-[#1A7A6D]">Planning →</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
+            </div>
           ) : (
             <div className="divide-y divide-[#C5D9D0]/80">
               {planning.map((rdv) => {
@@ -264,7 +289,7 @@ export default function MedecinDashboard() {
                       <p className="truncate text-xs text-[#7A9A90]">{rdv.motif || 'Consultation'}</p>
                     </div>
                     <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cfg.bg}`}>{cfg.label}</span>
-                    {['confirme', 'en_attente'].includes(rdv.statut) && (
+                    {['confirme', 'en_attente', 'en_cours'].includes(rdv.statut) && (
                       <>
                         <button type="button" onClick={() => demarrerRdv(rdv.id)} className="text-[10px] font-bold text-[#1A7A6D] hover:underline">
                           Démarrer

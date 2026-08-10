@@ -11,7 +11,10 @@ export default function ChirurgieDashboard() {
         { key: 'en_cours', label: 'En cours', icon: 'stethoscope', color: 'bg-amber-50' },
         { key: 'realisees', label: 'Réalisées', icon: 'check-circle', color: 'bg-emerald-50' },
       ]}
-      links={[{ to: '/chirurgie/operations', icon: 'scissors', label: 'Opérations' }]}
+      links={[
+        { to: '/chirurgie/planning', icon: 'calendar', label: 'Planning RDV' },
+        { to: '/chirurgie/operations', icon: 'scissors', label: 'Opérations' },
+      ]}
     />
   );
 }
