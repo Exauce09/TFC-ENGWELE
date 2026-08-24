@@ -5,6 +5,7 @@ import Icon from '../../components/Icon';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { ROLE_THEMES } from '../../constants/roleThemes';
+import { downloadDocx, downloadPdf, ordonnanceDocxChildren, ordonnancePrintBody, printHtml } from '../../utils/printDoc';
 
 const T = ROLE_THEMES.patient;
 
@@ -21,19 +22,20 @@ const STATUT_COLORS = {
 
 // ── sub-components ────────────────────────────────────────────────────────────
 
-function StatCard({ icon, label, value, sub, color }) {
-  return (
-    <div className={`rounded-2xl border bg-white p-5 shadow-sm ${color ?? ''}`}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-sm text-slate-500">{label}</p>
-          <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
-          {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
-        </div>
-        <Icon name={icon} className="h-7 w-7 text-slate-400" />
+function StatCard({ icon, label, value, sub, color, to }) {
+  const inner = (
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-sm text-slate-500">{label}</p>
+        <p className="mt-1 text-3xl font-bold text-slate-900">{value}</p>
+        {sub && <p className="mt-0.5 text-xs text-slate-400">{sub}</p>}
+        {to && <p className="mt-2 text-xs font-semibold text-medical-primary">Voir →</p>}
       </div>
+      <Icon name={icon} className="h-7 w-7 text-slate-400" />
     </div>
   );
+  const cls = `rounded-2xl border bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md ${color ?? ''}`;
+  return to ? <Link to={to} className={cls}>{inner}</Link> : <div className={cls}>{inner}</div>;
 }
 
 function Badge({ statut }) {
@@ -159,6 +161,16 @@ export default function PatientDashboard() {
             {visite.service ? ` · ${visite.service}` : ''}
           </p>
           {visite.motif && <p className="mt-1 text-sky-800/90">Motif : {visite.motif}</p>}
+          {visite.statut === 'prelevement' && (
+            <p className="mt-2 rounded-lg bg-white/80 px-3 py-2 text-xs font-semibold text-amber-800">
+              Étape actuelle : rendez-vous au prélèvement (infirmier), puis au laboratoire pour vos analyses.
+            </p>
+          )}
+          {visite.statut === 'examens_laboratoire' && (
+            <p className="mt-2 rounded-lg bg-white/80 px-3 py-2 text-xs font-semibold text-amber-800">
+              Étape actuelle : analyses en cours au laboratoire. Présentez-vous au labo si on vous le demande.
+            </p>
+          )}
           {visite.statut === 'diagnostic_prescription' && (
             <p className="mt-2 rounded-lg bg-white/80 px-3 py-2 text-xs font-semibold text-amber-800">
               Étape actuelle : attente de la délivrance des médicaments à la pharmacie.
@@ -204,13 +216,9 @@ export default function PatientDashboard() {
               </li>
             ))}
           </ul>
-          <button
-            type="button"
-            onClick={() => setTab('prescriptions')}
-            className="mt-3 text-xs font-semibold text-amber-900 underline"
-          >
+          <Link to="/patient/dossier" className="mt-3 inline-block text-xs font-semibold text-amber-900 underline">
             Voir le détail des prescriptions →
-          </button>
+          </Link>
         </div>
       )}
 
@@ -235,10 +243,10 @@ export default function PatientDashboard() {
       )}
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard icon="calendar" label="Prochains RDV" value={prochainRdv.length} sub="rendez-vous à venir" />
-        <StatCard icon="pill" label="À retirer" value={prescriptionsActives.length} sub="ordonnance(s) pharmacie" />
-        <StatCard icon="receipt" label="Factures impayées" value={facturesImpayees} sub="en attente de paiement" />
-        <StatCard icon="clipboard" label="Consultations" value={dossiers.length} sub="dans votre dossier" />
+        <StatCard icon="calendar" label="Prochains RDV" value={prochainRdv.length} sub="rendez-vous à venir" to="/patient/rendez-vous" />
+        <StatCard icon="pill" label="À retirer" value={prescriptionsActives.length} sub="ordonnance(s) pharmacie" to="/patient/dossier" />
+        <StatCard icon="receipt" label="Factures impayées" value={facturesImpayees} sub="en attente de paiement" to="/patient/factures" />
+        <StatCard icon="clipboard" label="Consultations" value={dossiers.length} sub="dans votre dossier" to="/patient/dossier" />
       </div>
 
       {/* Prochain RDV */}
@@ -354,13 +362,44 @@ export default function PatientDashboard() {
                       </p>
                       <p className="text-xs text-slate-500">Par {p.medecin?.user?.name || (typeof p.medecin === 'string' ? p.medecin : 'Médecin')}</p>
                     </div>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                      p.statut === 'active' ? 'bg-amber-100 text-amber-800'
-                        : p.statut === 'delivree' ? 'bg-emerald-100 text-emerald-700'
-                          : 'bg-slate-100 text-slate-500'
-                    }`}>
-                      {p.statut_label || (p.statut === 'active' ? 'À retirer à la pharmacie' : p.statut)}
-                    </span>
+                    <div className="flex flex-wrap items-center justify-end gap-2">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                        p.statut === 'active' ? 'bg-amber-100 text-amber-800'
+                          : p.statut === 'delivree' ? 'bg-emerald-100 text-emerald-700'
+                            : 'bg-slate-100 text-slate-500'
+                      }`}>
+                        {p.statut_label || (p.statut === 'active' ? 'À retirer à la pharmacie' : p.statut)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => printHtml(p.numero_ordonnance || 'Ordonnance', ordonnancePrintBody(p))}
+                        className="rounded-lg border px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                      >
+                        Imprimer
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void downloadPdf(
+                          `${p.numero_ordonnance || 'ordonnance'}.pdf`,
+                          p.numero_ordonnance || 'Ordonnance',
+                          ordonnancePrintBody(p),
+                        )}
+                        className="rounded-lg border px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                      >
+                        PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void downloadDocx(`${p.numero_ordonnance || 'ordonnance'}.docx`, () =>
+                            ordonnanceDocxChildren(p),
+                          )
+                        }
+                        className="rounded-lg border px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                      >
+                        Word
+                      </button>
+                    </div>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {(p.medicaments ?? []).map((m, i) => (

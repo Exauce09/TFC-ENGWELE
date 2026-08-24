@@ -15,6 +15,7 @@ use App\Services\CreneauService;
 use App\Services\NotificationService;
 use App\Services\Parcours\AdmissionStateMachine;
 use App\Services\Parcours\FacturationParcoursService;
+use App\Support\PatientCredentials;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -374,7 +375,7 @@ class AccueilController extends Controller
         $q = trim((string) $request->get('q', ''));
 
         $patients = Patient::with([
-            'user:id,name,email,phone',
+            'user:id,name,email,phone,login_identifiant,must_change_password',
             'dossiers.medecin.user:id,name',
             'dossiers.departement:id,nom',
             'admissionActive.departement:id,nom',
@@ -415,6 +416,7 @@ class AccueilController extends Controller
                     'assurance_type' => $patient->assurance_type,
                     'assurance_numero' => $patient->assurance_numero,
                     'user' => $patient->user,
+                    'acces' => PatientCredentials::accesPourStaff($patient->user),
                     'nombre_dossiers' => $patient->dossiers->count(),
                     'dossier' => $dossier ? [
                         'id' => $dossier->id,
@@ -440,6 +442,26 @@ class AccueilController extends Controller
             'success' => true,
             'message' => 'Patients',
             'data' => $patients,
+        ]);
+    }
+
+    public function resetPatientPassword(int $id): JsonResponse
+    {
+        $patient = Patient::with('user')->findOrFail($id);
+        $user = $patient->user;
+        if (! $user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Compte patient introuvable',
+            ], 404);
+        }
+
+        $acces = PatientCredentials::resetPassword($user);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Mot de passe réinitialisé. Remettez ces identifiants au patient.',
+            'data' => ['acces' => $acces],
         ]);
     }
 

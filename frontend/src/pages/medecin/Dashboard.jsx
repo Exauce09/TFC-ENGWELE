@@ -180,17 +180,18 @@ export default function MedecinDashboard() {
       {/* Compteurs jour */}
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-5">
         {[
-          { label: 'En attente', value: enAttente, hint: 'RDV à voir' },
-          { label: 'Vus', value: vus, hint: 'Terminés aujourd\'hui' },
-          { label: 'Restants', value: restants, hint: 'Confirmés / attente' },
+          { label: 'En attente', value: enAttente, hint: 'RDV à voir', to: '/medecin/planning' },
+          { label: 'Vus', value: vus, hint: 'Terminés aujourd\'hui', to: '/medecin/planning' },
+          { label: 'Restants', value: restants, hint: 'Confirmés / attente', to: '/medecin/planning' },
           { label: 'File consultation', value: data?.file_count ?? 0, hint: 'Après triage', to: '/medecin/dossiers' },
-          { label: 'Examens en attente', value: data?.examens_en_attente ?? 0, hint: 'Labo / imagerie' },
+          { label: 'Examens en attente', value: data?.examens_en_attente ?? 0, hint: 'Labo / imagerie', to: '/medecin/dossiers' },
         ].map((s) => {
           const inner = (
             <>
               <p className="text-[10px] font-bold uppercase tracking-wide text-[#7A9A90]">{s.label}</p>
               <p className="mt-1 font-medecin-display text-3xl text-[#0D3B3A]">{s.value}</p>
               <p className="text-xs text-[#5A8A7A]">{s.hint}</p>
+              {s.to && <p className="mt-2 text-xs font-semibold text-[#1A7A6D]">Voir →</p>}
             </>
           );
           return s.to ? (

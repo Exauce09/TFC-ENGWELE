@@ -76,13 +76,14 @@ export default function InfirmierDashboard() {
           { label: 'File triage', value: data?.file_triage_count ?? 0, hint: 'Après accueil', to: '/infirmier/triage' },
           { label: 'Prélèvements', value: data?.file_prelevement_count ?? 0, hint: 'En attente', to: '/infirmier/prelevements' },
           { label: 'Constantes du jour', value: data?.constantes_du_jour ?? 0, hint: 'Toutes saisies', to: '/infirmier/constantes' },
-          { label: 'Mes saisies', value: data?.mes_constantes_du_jour ?? 0, hint: "Aujourd'hui" },
+          { label: 'Mes saisies', value: data?.mes_constantes_du_jour ?? 0, hint: "Aujourd'hui", to: '/infirmier/constantes' },
         ].map((s) => {
           const inner = (
             <>
               <p className="text-[10px] font-bold uppercase tracking-wide text-[#8FA3BE]">{s.label}</p>
               <p className="mt-1 font-infirmier-display text-3xl text-[#152238]">{s.value}</p>
               <p className="text-xs text-[#7A8FA8]">{s.hint}</p>
+              {s.to && <p className="mt-2 text-xs font-semibold text-[#E07A5F]">Voir →</p>}
             </>
           );
           return s.to ? (

@@ -65,12 +65,15 @@ class AuthController extends Controller
             ? '/patient/premiere-connexion'
             : $this->getRedirectByRole($user->role);
 
+        $fresh = $user->fresh();
+        StaffProfileService::hydrateIdentityFromName($fresh);
+
         return new JsonResponse([
             'success' => true,
             'message' => 'Connexion reussie',
             'data' => [
                 'token' => $token,
-                'user' => StaffProfileService::loadFull($user->fresh()),
+                'user' => StaffProfileService::loadFull($fresh->fresh()),
                 'role' => $user->role,
                 'redirect' => $redirect,
             ],
@@ -86,6 +89,8 @@ class AuthController extends Controller
         } catch (\InvalidArgumentException) {
             // Médecin sans département : profil incomplet jusqu'à correction admin.
         }
+
+        StaffProfileService::hydrateIdentityFromName($user->fresh());
 
         return new JsonResponse([
             'success' => true,
@@ -150,11 +155,16 @@ class AuthController extends Controller
         /** @var User $user */
         $user = $request->user();
 
-        $userFields = collect($validated)->only([
-            'name', 'nom', 'post_nom', 'prenom', 'phone', 'avatar', 'sexe',
-            'date_naissance', 'adresse', 'piece_identite_numero', 'departement_id',
-            'date_embauche', 'statut', 'superviseur_id', 'fcm_token',
-        ])->all();
+        // Identité patient (nom, n° PAT) : créée à l'accueil. Le patient ne change que téléphone / photo.
+        $allowed = $user->role === 'patient'
+            ? ['phone', 'avatar', 'fcm_token']
+            : [
+                'name', 'nom', 'post_nom', 'prenom', 'phone', 'avatar', 'sexe',
+                'date_naissance', 'adresse', 'piece_identite_numero', 'departement_id',
+                'date_embauche', 'statut', 'superviseur_id', 'fcm_token',
+            ];
+
+        $userFields = collect($validated)->only($allowed)->all();
 
         $user->fill($userFields);
 

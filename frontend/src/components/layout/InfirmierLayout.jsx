@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Icon from '../Icon';
+import ToastCenter from '../ToastCenter';
 
 const LINKS = [
   { label: 'Tableau de bord', to: '/infirmier/dashboard' },
@@ -25,6 +26,7 @@ export default function InfirmierLayout({ children, title = 'Infirmerie' }) {
 
   return (
     <div className="infirmier-shell flex h-screen overflow-hidden bg-[#101B2D]">
+      <ToastCenter />
       {open && (
         <button type="button" aria-label="Fermer" className="fixed inset-0 z-30 bg-black/50 lg:hidden" onClick={() => setOpen(false)} />
       )}

@@ -23,12 +23,12 @@ class SpecialitesSeeder extends Seeder
         // Emails alignés sur README / demoConfig (mot de passe Password@123)
         // Codes = services actifs (DepartementSeeder::ACTIFS)
         $users = [
-            ['email' => 'receptionniste@amen.cd', 'name' => 'Receptionniste Demo', 'role' => 'receptionniste', 'dept' => 'MED_GEN'],
+            ['email' => 'receptionniste@amen.cd', 'name' => 'Receptionniste Demo', 'role' => 'receptionniste', 'dept' => 'ACC'],
             ['email' => 'sagefemme@amen.cd', 'name' => 'Sage-femme Demo', 'role' => 'sage_femme', 'dept' => 'MAT'],
-            ['email' => 'chirurgien@amen.cd', 'name' => 'Chirurgien Demo', 'role' => 'chirurgien', 'dept' => 'URG'],
-            ['email' => 'echographiste@amen.cd', 'name' => 'Echographiste Demo', 'role' => 'echographiste', 'dept' => 'LAB'],
-            ['email' => 'kine@amen.cd', 'name' => 'Kinesitherapeute Demo', 'role' => 'kinesitherapeute', 'dept' => 'MED_GEN'],
-            ['email' => 'dentiste@amen.cd', 'name' => 'Dentiste Demo', 'role' => 'dentiste', 'dept' => 'MED_GEN'],
+            ['email' => 'chirurgien@amen.cd', 'name' => 'Chirurgien Demo', 'role' => 'chirurgien', 'dept' => 'CHIR'],
+            ['email' => 'echographiste@amen.cd', 'name' => 'Echographiste Demo', 'role' => 'echographiste', 'dept' => 'RADIO'],
+            ['email' => 'kine@amen.cd', 'name' => 'Kinesitherapeute Demo', 'role' => 'kinesitherapeute', 'dept' => 'KINE'],
+            ['email' => 'dentiste@amen.cd', 'name' => 'Dentiste Demo', 'role' => 'dentiste', 'dept' => 'DENT'],
         ];
 
         $created = [];

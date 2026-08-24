@@ -41,7 +41,7 @@ use InvalidArgumentException;
 class AdmissionController extends Controller
 {
     private const WITH = [
-        'patient.user:id,name,email,phone',
+        'patient.user:id,name,email,phone,deleted_at',
         'departement:id,nom,code',
         'enregistreur:id,name',
         'medecinReferent.user:id,name',
@@ -60,6 +60,7 @@ class AdmissionController extends Controller
     private const MEDECINS = [
         'medecin_generaliste', 'medecin_interne', 'pediatre',
         'gynecologue', 'ophtalmologue', 'urgentiste',
+        'dentiste',
     ];
 
     public function __construct(
@@ -71,7 +72,7 @@ class AdmissionController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Admission::with([
-            'patient.user:id,name,phone',
+            'patient.user:id,name,email,phone,deleted_at',
             'departement:id,nom',
             'triage',
             'medecinReferent.user:id,name',
@@ -86,8 +87,29 @@ class AdmissionController extends Controller
         if ($request->boolean('actifs')) {
             $query->whereNotIn('statut', AdmissionStatut::statutsClotures());
         }
+        if ($request->boolean('termines')) {
+            $query->whereIn('statut', AdmissionStatut::statutsClotures());
+        }
+        if ($request->filled('q')) {
+            $q = trim((string) $request->get('q'));
+            $query->where(function ($sub) use ($q) {
+                $sub->where('numero_admission', 'like', "%{$q}%")
+                    ->orWhere('motif_arrivee', 'like', "%{$q}%")
+                    ->orWhereHas('patient', function ($p) use ($q) {
+                        $p->where('numero_patient', 'like', "%{$q}%")
+                            ->orWhereHas('user', function ($u) use ($q) {
+                                $u->withTrashed()->where(function ($inner) use ($q) {
+                                    $inner->where('name', 'like', "%{$q}%")
+                                        ->orWhere('phone', 'like', "%{$q}%")
+                                        ->orWhere('email', 'like', "%{$q}%");
+                                });
+                            });
+                    });
+            });
+        }
 
-        $items = $query->paginate(20);
+        $perPage = min(100, max(10, (int) $request->get('per_page', 20)));
+        $items = $query->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -95,6 +117,9 @@ class AdmissionController extends Controller
             'data' => $items->items(),
             'meta' => [
                 'total' => $items->total(),
+                'per_page' => $items->perPage(),
+                'current_page' => $items->currentPage(),
+                'last_page' => $items->lastPage(),
                 'statuts' => AdmissionStatut::labels(),
             ],
         ]);
@@ -153,7 +178,8 @@ class AdmissionController extends Controller
             // 2. Informations administratives
             'type_visite' => 'nullable|in:consultation,urgence,hospitalisation,suivi',
             'departement_id' => 'required|exists:departements,id',
-            'medecin_id' => 'nullable|exists:medecins,id',
+            // Affectation médecin : obligatoire pour que le patient apparaisse dans sa file
+            'medecin_id' => 'required|exists:medecins,id',
             'mode_paiement' => 'nullable|in:cash,assurance,mutuelle,employeur',
             'assurance_type' => 'nullable|string|max:100',
             'assurance_numero' => 'nullable|string|max:80',
@@ -632,12 +658,22 @@ class AdmissionController extends Controller
                     'termine_at' => $statut === 'termine' ? now() : null,
                 ]);
 
-                if ($admission->statut === AdmissionStatut::ConsultationMedicale->value) {
+                // Nouvelle prescription labo (1re ou 2e visite / contrôle) → file prélèvement + labo
+                $statutsRetourLabo = [
+                    AdmissionStatut::ConsultationMedicale->value,
+                    AdmissionStatut::ExamensLaboratoire->value,
+                    AdmissionStatut::DiagnosticPrescription->value,
+                ];
+                if (
+                    ! $isLabo
+                    && $statut === 'prescrit'
+                    && in_array($admission->statut, $statutsRetourLabo, true)
+                ) {
                     $this->stateMachine->transition(
                         $admission,
                         AdmissionStatut::Prelevement,
                         $request->user(),
-                        'Examen prescrit : '.$validated['type_examen']
+                        'Nouveaux examens prescrits — retour prélèvement / laboratoire : '.$validated['type_examen']
                     );
                     $admission->refresh();
                 }

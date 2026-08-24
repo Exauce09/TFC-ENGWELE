@@ -6,9 +6,9 @@ export default function EchographieDashboard() {
       title="Échographie"
       apiPath="/echographie/dashboard"
       stats={[
-        { key: 'total', label: 'Total examens', icon: 'radio' },
-        { key: 'en_attente', label: 'En attente', icon: 'clock', color: 'bg-amber-50' },
-        { key: 'termines', label: 'Terminés', icon: 'check-circle', color: 'bg-emerald-50' },
+        { key: 'total', label: 'Total examens', icon: 'radio', to: '/echographie/examens' },
+        { key: 'en_attente', label: 'En attente', icon: 'clock', color: 'bg-amber-50', to: '/echographie/examens' },
+        { key: 'termines', label: 'Terminés', icon: 'check-circle', color: 'bg-emerald-50', to: '/echographie/examens' },
       ]}
       links={[
         { to: '/echographie/planning', icon: 'calendar', label: 'Planning RDV' },

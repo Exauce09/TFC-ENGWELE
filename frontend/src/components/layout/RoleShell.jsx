@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { getRoleTheme } from '../../constants/roleThemes';
 import Icon from '../Icon';
 import { getMenuForRole, getRoleLabel } from './roleMenus';
+import ToastCenter from '../ToastCenter';
 
 /**
  * Coque visuelle thématisée par rôle (patient, admin, accueil, labo, pharma, caisse, spécialités).
@@ -25,6 +26,7 @@ export default function RoleShell({ children, title = 'Centre Médical AMEN', th
       className={`${theme.shellClass} flex h-screen overflow-hidden`}
       style={{ background: theme.sidebarTo }}
     >
+      <ToastCenter />
       {open && (
         <button
           type="button"

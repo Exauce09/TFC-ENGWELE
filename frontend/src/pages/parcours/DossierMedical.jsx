@@ -127,6 +127,7 @@ export default function DossierMedical() {
   }
 
   const patient = admission.patient;
+  const patientName = patient?.user?.name || patient?.numero_patient || `Patient #${patient?.id || '—'}`;
   const idx = stepIndex(admission.statut);
   const triage = admission.triage;
   const consultations = admission.consultations || [];
@@ -147,12 +148,12 @@ export default function DossierMedical() {
             />
           ) : (
             <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-dashed bg-slate-50 text-xl font-bold text-slate-400">
-              {(patient?.user?.name || '?').charAt(0).toUpperCase()}
+              {patientName.charAt(0).toUpperCase()}
             </div>
           )}
           <div>
             <Link to={backTo} className="text-xs font-semibold text-medical-primary">{backLabel}</Link>
-            <h2 className="mt-1 text-2xl font-bold text-slate-900">{patient?.user?.name}</h2>
+            <h2 className="mt-1 text-2xl font-bold text-slate-900">{patientName}</h2>
             <p className="text-sm text-slate-500">
               {admission.numero_admission} · {patient?.numero_patient}
               {' · '}{admission.motif_arrivee}
@@ -250,7 +251,14 @@ export default function DossierMedical() {
           onAction={() => setModal('prelevement')}
         >
           {admission.statut === 'prelevement' ? (
-            <Empty text="En attente du prélèvement infirmier." />
+            <div className="space-y-2">
+              <Empty text="En attente du prélèvement infirmier." />
+              {examens.some((ex) => ['prescrit', 'en_cours'].includes(ex.statut)) ? (
+                <p className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                  Nouveaux examens prescrits — le patient doit repasser au prélèvement / laboratoire.
+                </p>
+              ) : null}
+            </div>
           ) : ['examens_laboratoire', 'diagnostic_prescription', 'delivrance_medicaments', 'initiation_traitement', 'suivi'].includes(admission.statut) && examens.length >= 0 ? (
             <p className="text-sm text-slate-600">Étape franchie ou non requise.</p>
           ) : (
@@ -264,7 +272,7 @@ export default function DossierMedical() {
           actionLabel={
             (role === 'laborantin' && admission.statut === 'examens_laboratoire')
               ? '+ Saisir résultats'
-              : (isMedecin && admission.statut === 'consultation_medicale')
+              : (isMedecin && ['consultation_medicale', 'examens_laboratoire', 'diagnostic_prescription'].includes(admission.statut))
                 ? '+ Prescrire un examen'
                 : null
           }
@@ -461,7 +469,12 @@ export default function DossierMedical() {
       <PrelevementModal open={modal === 'prelevement'} busy={busy} onClose={() => setModal(null)}
         onSubmit={(p) => run(() => admissionsApi.prelevement(admission.id, p), 'Prélèvement transmis au labo')} />
       <ExamenModal open={modal === 'examens'} busy={busy} role={role} onClose={() => setModal(null)}
-        onSubmit={(p) => run(() => admissionsApi.examens(admission.id, p), 'Examen enregistré')} />
+        onSubmit={(p) => run(
+          () => admissionsApi.examens(admission.id, p),
+          role === 'laborantin'
+            ? 'Résultats enregistrés'
+            : 'Examen prescrit — le patient retourne au prélèvement / laboratoire',
+        )} />
       <DiagnosticModal open={modal === 'diagnostic'} busy={busy} onClose={() => setModal(null)}
         onSubmit={(p) => run(() => admissionsApi.diagnostic(admission.id, p), 'Diagnostic & prescription')} />
       <PrescriptionModal

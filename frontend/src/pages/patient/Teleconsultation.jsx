@@ -7,6 +7,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 
 const STATUT = {
+  en_attente: 'bg-amber-100 text-amber-800',
   confirme: 'bg-emerald-100 text-emerald-700',
   en_cours: 'bg-blue-100 text-blue-700',
 };
@@ -48,10 +49,15 @@ export default function PatientTeleconsultation() {
     }
   };
 
+  const peutRejoindre = (r) => r.peut_rejoindre || (['confirme', 'en_cours'].includes(r.statut) && r.paiement_statut === 'paye');
+
   return (
     <Layout title="Téléconsultation">
       <div className="mb-6">
         <h2 className="text-2xl font-bold text-slate-900">Téléconsultation</h2>
+        <p className="mt-1 text-sm text-slate-500">
+          Réservez un RDV de type téléconsultation, payez, puis rejoignez la salle une fois confirmée par le médecin.
+        </p>
       </div>
 
       {error && (
@@ -86,12 +92,15 @@ export default function PatientTeleconsultation() {
         <div className="rounded-2xl border border-dashed bg-white p-12 text-center">
           <Icon name="video" className="mx-auto h-10 w-10 text-slate-300" />
           <p className="mt-3 font-medium text-slate-700">Aucune téléconsultation</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Créez un rendez-vous en choisissant le type « Téléconsultation », puis réglez le paiement.
+          </p>
           <button
             type="button"
             onClick={() => navigate('/patient/rendez-vous')}
             className="mt-4 rounded-xl bg-medical-primary px-5 py-2 text-sm font-semibold text-white"
           >
-            Mes rendez-vous
+            Prendre un rendez-vous
           </button>
         </div>
       ) : (
@@ -106,6 +115,11 @@ export default function PatientTeleconsultation() {
                   <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUT[r.statut] ?? 'bg-slate-100'}`}>
                     {r.statut?.replace(/_/g, ' ')}
                   </span>
+                  {r.paiement_statut !== 'paye' && (
+                    <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
+                      Paiement requis
+                    </span>
+                  )}
                   {r.room_name && (
                     <span className="rounded-full bg-cyan-50 px-2 py-0.5 font-mono text-[10px] text-cyan-800">
                       {r.room_name}
@@ -116,6 +130,9 @@ export default function PatientTeleconsultation() {
                   {r.medecin?.user?.name || 'Médecin'}
                   {r.departement?.nom ? ` — ${r.departement.nom}` : ''}
                 </p>
+                {r.statut === 'en_attente' && (
+                  <p className="mt-1 text-xs text-amber-700">En attente de confirmation du médecin.</p>
+                )}
               </div>
               <div className="flex gap-2">
                 {r.paiement_statut !== 'paye' && (
@@ -130,7 +147,7 @@ export default function PatientTeleconsultation() {
                 <button
                   type="button"
                   onClick={() => rejoindre(r)}
-                  disabled={joining || r.paiement_statut !== 'paye'}
+                  disabled={joining || !peutRejoindre(r)}
                   className="rounded-xl bg-medical-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   {joining ? 'Connexion…' : 'Rejoindre'}

@@ -46,8 +46,9 @@ enum AdmissionStatut: string
             // Examens optionnels : passage direct au diagnostic possible
             self::ConsultationMedicale => [self::Prelevement, self::DiagnosticPrescription],
             self::Prelevement => [self::ExamensLaboratoire],
-            self::ExamensLaboratoire => [self::DiagnosticPrescription],
-            self::DiagnosticPrescription => [self::DelivranceMedicaments],
+            // Nouvelle demande d'analyses possible (contrôle / complément) → retour prélèvement
+            self::ExamensLaboratoire => [self::DiagnosticPrescription, self::Prelevement],
+            self::DiagnosticPrescription => [self::DelivranceMedicaments, self::Prelevement],
             self::DelivranceMedicaments => [self::InitiationTraitement],
             self::InitiationTraitement => [self::Suivi],
             self::Suivi => [],

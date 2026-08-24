@@ -50,13 +50,13 @@ class IntegrationSeeder extends Seeder
         $rdvJour = [
             ['heure' => '08:00', 'motif' => 'Consultation generale', 'statut' => 'termine'],
             ['heure' => '08:30', 'motif' => 'Suivi diabete type 2', 'statut' => 'en_cours'],
-            ['heure' => '09:00', 'motif' => 'Douleurs abdominales', 'statut' => 'confirme', 'type' => 'teleconsultation'],
+            ['heure' => '09:00', 'motif' => 'Douleurs abdominales', 'statut' => 'confirme', 'type' => 'teleconsultation', 'paiement_statut' => 'paye', 'montant' => 15000],
             ['heure' => '09:30', 'motif' => 'Bilan de sante annuel', 'statut' => 'confirme'],
             ['heure' => '10:00', 'motif' => 'Fievre persistante', 'statut' => 'en_attente'],
         ];
 
         foreach ($rdvJour as $slot) {
-            RendezVous::updateOrCreate(
+            $created = RendezVous::updateOrCreate(
                 [
                     'patient_id' => $patient->id,
                     'medecin_id' => $medecin->id,
@@ -68,9 +68,14 @@ class IntegrationSeeder extends Seeder
                     'motif' => $slot['motif'],
                     'statut' => $slot['statut'],
                     'type' => $slot['type'] ?? 'presentiel',
+                    'montant' => $slot['montant'] ?? null,
+                    'paiement_statut' => $slot['paiement_statut'] ?? 'non_paye',
                     'cree_par' => $patientUser?->id,
                 ]
             );
+            if (($slot['type'] ?? null) === 'teleconsultation') {
+                $created->update(['lien_video' => $jitsi->embedUrl($created->id)]);
+            }
         }
 
         if ($patientUser) {

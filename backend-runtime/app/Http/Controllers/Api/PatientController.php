@@ -35,23 +35,23 @@ class PatientController extends Controller
                 ->where('statut', 'delivree')
                 ->latest('delivree_at')
                 ->limit(5)
-                ->get(['id', 'numero_ordonnance', 'statut', 'delivree_at', 'updated_at']);
+                ->get(['id', 'numero_ordonnance', 'statut', 'delivree_at']);
 
             $dossiers = Prescription::query()
                 ->where('patient_id', $patient->id)
                 ->where('statut', 'delivree')
-                ->latest('updated_at')
+                ->latest('delivree_at')
                 ->limit(5)
-                ->get(['id', 'numero_ordonnance', 'statut', 'updated_at']);
+                ->get(['id', 'numero_ordonnance', 'statut', 'delivree_at', 'created_at']);
 
             $delivrees = $parcours->concat($dossiers)
-                ->sortByDesc(fn ($p) => $p->delivree_at ?? $p->updated_at)
+                ->sortByDesc(fn ($p) => $p->delivree_at ?? $p->created_at)
                 ->take(5)
                 ->values()
                 ->map(fn ($p) => [
                     'id' => $p->id,
                     'numero_ordonnance' => $p->numero_ordonnance,
-                    'delivree_at' => optional($p->delivree_at ?? $p->updated_at)?->toIso8601String(),
+                    'delivree_at' => optional($p->delivree_at ?? $p->created_at)?->toIso8601String(),
                 ])
                 ->all();
         }

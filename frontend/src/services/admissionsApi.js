@@ -31,15 +31,16 @@ export function stepIndex(statut) {
   return i >= 0 ? i : 0;
 }
 
-/** Masque prélèvement/labo si le médecin a sauté les examens. */
+/** Masque prélèvement/labo si le médecin a sauté les examens (sauf retour labo). */
 export function stepsForAdmission(admission) {
   const hasExamens = (admission?.examens_labo || admission?.examensLabo || []).length > 0;
+  const enLabo = ['prelevement', 'examens_laboratoire'].includes(admission?.statut);
   const skippedLab = [
     'diagnostic_prescription',
     'delivrance_medicaments',
     'initiation_traitement',
     'suivi',
-  ].includes(admission?.statut) && !hasExamens && admission?.statut !== 'prelevement';
+  ].includes(admission?.statut) && !hasExamens && !enLabo;
 
   return STATUT_STEPS.filter((s) => {
     if (skippedLab && ['prelevement', 'examens_laboratoire'].includes(s.key)) return false;

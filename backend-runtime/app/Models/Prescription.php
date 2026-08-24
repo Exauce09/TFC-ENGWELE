@@ -23,6 +23,7 @@ class Prescription extends Model
         'instructions_generales',
         'renouvellement',
         'statut',
+        'delivree_at',
     ];
 
     protected $casts = [
@@ -32,6 +33,8 @@ class Prescription extends Model
         'renouvellement' => 'boolean',
         'validite_jours' => 'integer',
         'poids_kg' => 'decimal:2',
+        'delivree_at' => 'datetime',
+        'created_at' => 'datetime',
     ];
 
     protected $appends = ['statut_label'];

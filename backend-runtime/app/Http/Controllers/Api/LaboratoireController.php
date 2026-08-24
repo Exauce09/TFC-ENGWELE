@@ -26,6 +26,14 @@ class LaboratoireController extends Controller
     public function dashboard(Request $request): JsonResponse
     {
         $uid = $request->user()->id;
+        $fileAdmissions = Admission::whereIn('statut', [
+            AdmissionStatut::Prelevement->value,
+            AdmissionStatut::ExamensLaboratoire->value,
+        ])->count();
+
+        $patientsAvecExamens = ExamenLabo::whereIn('statut', ['prescrit', 'en_cours'])
+            ->distinct()
+            ->count('admission_id');
 
         return response()->json([
             'success' => true,
@@ -35,10 +43,9 @@ class LaboratoireController extends Controller
                 'en_cours' => ExamenLabo::where('statut', 'en_cours')->count(),
                 'disponibles' => ExamenLabo::where('statut', 'termine')->whereDate('termine_at', today())->count(),
                 'mes_analyses' => ExamenLabo::where('laborantin_id', $uid)->count(),
-                'file_admissions' => Admission::whereIn('statut', [
-                    AdmissionStatut::Prelevement->value,
-                    AdmissionStatut::ExamensLaboratoire->value,
-                ])->count(),
+                'file_admissions' => $fileAdmissions,
+                // Alias front (Dashboard.jsx utilise patients_parcours)
+                'patients_parcours' => max($fileAdmissions, $patientsAvecExamens),
                 'urgents' => ExamenLabo::whereIn('statut', ['prescrit', 'en_cours'])
                     ->where(fn ($q) => $q->where('urgent', true)->orWhereIn('priorite', ['urgent', 'stat']))
                     ->count(),
@@ -83,26 +90,39 @@ class LaboratoireController extends Controller
                         ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%")
                             ->orWhere('phone', 'like', "%{$q}%"));
                 })
+                ->where(function ($query) {
+                    $query->whereHas('admissions.examensLabo', fn ($e) => $e->whereIn('statut', ['prescrit', 'en_cours']))
+                        ->orWhereHas('admissions', fn ($a) => $a->whereIn('statut', [
+                            AdmissionStatut::Prelevement->value,
+                            AdmissionStatut::ExamensLaboratoire->value,
+                        ]));
+                })
                 ->limit(30)
                 ->get();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Patients trouvés',
+                'message' => 'Patients trouvés (examens / file labo)',
                 'data' => $patients,
             ]);
         }
 
+        // File : admissions en prélèvement / labo OU patients avec examens encore ouverts
         $admissions = Admission::with([
             'patient.user:id,name,phone',
             'departement:id,nom',
             'examensLabo',
             'triage',
         ])
-            ->whereIn('statut', [
-                AdmissionStatut::Prelevement->value,
-                AdmissionStatut::ExamensLaboratoire->value,
-            ])
+            ->where(function ($query) {
+                $query->whereIn('statut', [
+                    AdmissionStatut::Prelevement->value,
+                    AdmissionStatut::ExamensLaboratoire->value,
+                ])->orWhereHas(
+                    'examensLabo',
+                    fn ($e) => $e->whereIn('statut', ['prescrit', 'en_cours'])
+                );
+            })
             ->orderByRaw("CASE WHEN EXISTS (
                 SELECT 1 FROM examens_labo el
                 WHERE el.admission_id = admissions.id AND (el.urgent = 1 OR el.priorite IN ('urgent','stat'))
@@ -117,6 +137,8 @@ class LaboratoireController extends Controller
                 return null;
             }
 
+            $examensOuverts = $a->examensLabo->whereIn('statut', ['prescrit', 'en_cours'])->values();
+
             return [
                 'id' => $patient->id,
                 'numero_patient' => $patient->numero_patient,
@@ -128,14 +150,14 @@ class LaboratoireController extends Controller
                 'motif_arrivee' => $a->motif_arrivee,
                 'niveau_urgence' => $a->triage?->niveau_urgence ?? $a->niveau_urgence_accueil,
                 'departement' => $a->departement?->nom,
-                'examens' => $a->examensLabo,
+                'examens' => $examensOuverts->isNotEmpty() ? $examensOuverts : $a->examensLabo,
                 'priorite_examens' => true,
             ];
         })->filter()->values();
 
         return response()->json([
             'success' => true,
-            'message' => 'Patients en file laboratoire (admissions)',
+            'message' => 'Patients en file laboratoire (examens en attente)',
             'data' => $data,
         ]);
     }

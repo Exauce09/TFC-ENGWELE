@@ -1,0 +1,61 @@
+name: amen_mobile
+description: Centre Médical AMEN — application Flutter Patient + Médecin (offline + sync)
+publish_to: 'none'
+version: 1.2.10+13
+
+environment:
+  sdk: '>=3.5.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  dio: ^5.7.0
+  flutter_secure_storage: ^9.2.4
+  provider: ^6.1.2
+  go_router: ^14.6.2
+  intl: ^0.19.0
+  drift: ^2.22.1
+  sqlite3_flutter_libs: ^0.5.28
+  path_provider: ^2.1.5
+  path: ^1.9.0
+  connectivity_plus: ^6.1.1
+  uuid: ^4.5.1
+  url_launcher: ^6.3.1
+  webview_flutter: ^4.10.0
+  google_fonts: ^6.2.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  drift_dev: ^2.22.1
+  build_runner: ^2.4.13
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/login-hospital.jpg
+    - assets/images/amen-app-icon.png
+  fonts:
+    - family: Fraunces
+      fonts:
+        - asset: assets/fonts/Fraunces-SemiBold.ttf
+          weight: 600
+    - family: Outfit
+      fonts:
+        - asset: assets/fonts/Outfit-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Outfit-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Outfit-Bold.ttf
+          weight: 700
+
+flutter_launcher_icons:
+  android: true
+  ios: false
+  image_path: assets/images/amen-app-icon.png
+  adaptive_icon_background: "#0D6E6E"
+  adaptive_icon_foreground: assets/images/amen-app-icon.png
+  min_sdk_android: 21

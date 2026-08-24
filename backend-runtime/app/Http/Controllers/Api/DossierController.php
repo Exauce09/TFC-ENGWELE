@@ -158,29 +158,39 @@ class DossierController extends Controller
     public function index(Request $request): JsonResponse
     {
         $medecin = Medecin::where('user_id', $request->user()->id)->first();
-        // Dossiers ouverts à la réception (à compléter) + ceux du médecin
+        if (! $medecin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Profil médecin introuvable',
+                'data' => [],
+                'meta' => ['total' => 0],
+            ], 422);
+        }
+
+        // Isolation : uniquement les dossiers affectés à CE médecin
         $query = DossierMedical::with(['patient.user', 'departement', 'diagnostics', 'ouvertPar:id,name', 'episode'])
-            ->where(function ($q) use ($medecin) {
-                $q->whereIn('statut', ['ouvert', 'en_consultation']);
-                if ($medecin) {
-                    $q->orWhere('medecin_id', $medecin->id);
-                }
-            });
+            ->where('medecin_id', $medecin->id)
+            ->whereIn('statut', ['ouvert', 'en_consultation', 'clos']);
 
         if ($request->filled('patient_id')) {
             $query->where('patient_id', $request->patient_id);
+        }
+
+        if ($request->boolean('actifs', true)) {
+            $query->whereIn('statut', ['ouvert', 'en_consultation']);
         }
 
         $dossiers = $query->latest('date_consultation')->paginate(15);
 
         return response()->json([
             'success' => true,
-            'message' => 'Liste des dossiers (ouverts à la réception)',
+            'message' => 'Liste des dossiers du médecin',
             'data' => $dossiers->items(),
             'meta' => [
                 'total' => $dossiers->total(),
                 'per_page' => $dossiers->perPage(),
                 'current_page' => $dossiers->currentPage(),
+                'filtre' => 'medecin_assigne',
             ],
         ]);
     }
@@ -323,6 +333,15 @@ class DossierController extends Controller
 
     public function patients(Request $request): JsonResponse
     {
+        $medecin = Medecin::where('user_id', $request->user()->id)->first();
+        if (! $medecin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Profil médecin introuvable',
+                'data' => [],
+            ], 422);
+        }
+
         $q = trim((string) $request->get('q', ''));
 
         $patients = Patient::with([
@@ -332,6 +351,11 @@ class DossierController extends Controller
             'admissionActive.departement:id,nom',
             'admissionActive.medecinReferent.user:id,name',
         ])
+            ->where(function ($query) use ($medecin) {
+                $query->whereHas('dossiers', fn ($d) => $d->where('medecin_id', $medecin->id))
+                    ->orWhereHas('admissions', fn ($a) => $a->where('medecin_referent_id', $medecin->id))
+                    ->orWhereHas('rendezVous', fn ($r) => $r->where('medecin_id', $medecin->id));
+            })
             ->when($q !== '', fn ($query) => $query->where(
                 fn ($sub) => $sub->where('numero_patient', 'like', "%{$q}%")
                     ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%")
@@ -377,7 +401,7 @@ class DossierController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'Patients',
+            'message' => 'Patients affectés au médecin',
             'data' => $patients,
         ]);
     }

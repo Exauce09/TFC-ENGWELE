@@ -6,10 +6,10 @@ export default function ChirurgieDashboard() {
       title="Chirurgie"
       apiPath="/chirurgie/dashboard"
       stats={[
-        { key: 'total', label: 'Total opérations', icon: 'hospital' },
-        { key: 'planifiees', label: 'Planifiées', icon: 'calendar', color: 'bg-blue-50' },
-        { key: 'en_cours', label: 'En cours', icon: 'stethoscope', color: 'bg-amber-50' },
-        { key: 'realisees', label: 'Réalisées', icon: 'check-circle', color: 'bg-emerald-50' },
+        { key: 'total', label: 'Total opérations', icon: 'hospital', to: '/chirurgie/operations' },
+        { key: 'planifiees', label: 'Planifiées', icon: 'calendar', color: 'bg-blue-50', to: '/chirurgie/operations' },
+        { key: 'en_cours', label: 'En cours', icon: 'stethoscope', color: 'bg-amber-50', to: '/chirurgie/operations' },
+        { key: 'realisees', label: 'Réalisées', icon: 'check-circle', color: 'bg-emerald-50', to: '/chirurgie/operations' },
       ]}
       links={[
         { to: '/chirurgie/planning', icon: 'calendar', label: 'Planning RDV' },

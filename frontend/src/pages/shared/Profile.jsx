@@ -3,6 +3,7 @@ import Layout from '../../components/layout/Layout';
 import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 import { MEDECIN_ROLES } from '../../constants/roleThemes';
+import { compressImage } from '../../utils/image';
 
 const PROFILE_MEDECIN_ROLES = [
   ...MEDECIN_ROLES,
@@ -77,10 +78,20 @@ export default function ProfilePage() {
         ? user[metierKey]
         : null;
 
+    let prenom = user.prenom || '';
+    let nom = user.nom || '';
+    // Comptes seed (ex. admin) n'ont souvent que `name` — hydrater pour éviter un profil « vide ».
+    if ((!prenom || !nom) && user.name) {
+      const parts = String(user.name).trim().split(/\s+/);
+      if (!prenom && parts[0]) prenom = parts[0];
+      if (!nom && parts.length > 1) nom = parts.slice(1).join(' ');
+      else if (!nom) nom = parts[0] || '';
+    }
+
     setForm({
-      nom: user.nom || '',
+      nom,
       post_nom: user.post_nom || '',
-      prenom: user.prenom || '',
+      prenom,
       phone: user.phone || '',
       avatar: user.avatar || '',
       sexe: user.sexe || '',
@@ -98,6 +109,20 @@ export default function ProfilePage() {
     ...f,
     metier: { ...f.metier, [key]: value },
   }));
+
+  const onAvatarFile = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError('');
+    try {
+      const dataUrl = await compressImage(file);
+      set('avatar', dataUrl);
+    } catch {
+      setError('Impossible de charger la photo. Essayez une autre image.');
+    } finally {
+      e.target.value = '';
+    }
+  };
 
   const save = async (e) => {
     e.preventDefault();
@@ -480,8 +505,27 @@ export default function ProfilePage() {
             <Field label="Adresse" labelCls={labelCls}>
               <textarea rows={2} className={inputCls} value={form.adresse} onChange={(e) => set('adresse', e.target.value)} />
             </Field>
-            <Field label="Photo de profil (URL ou data URI)" labelCls={labelCls}>
-              <input className={inputCls} value={form.avatar} onChange={(e) => set('avatar', e.target.value)} placeholder="https://… ou data:image/…" />
+            <Field label="Photo de profil" labelCls={labelCls}>
+              <div className="flex flex-wrap items-center gap-3">
+                {form.avatar ? (
+                  <img src={form.avatar} alt="" className="h-16 w-16 rounded-xl border object-cover" />
+                ) : (
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl border border-dashed bg-slate-50 text-lg font-bold text-slate-400">
+                    {(form.prenom || form.nom || user?.name || '?').charAt(0).toUpperCase()}
+                  </div>
+                )}
+                <div className="space-y-1">
+                  <label className="inline-block cursor-pointer rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">
+                    Choisir une image
+                    <input type="file" accept="image/*" className="hidden" onChange={onAvatarFile} />
+                  </label>
+                  {form.avatar && (
+                    <button type="button" onClick={() => set('avatar', '')} className="block text-xs text-red-600 underline">
+                      Retirer la photo
+                    </button>
+                  )}
+                </div>
+              </div>
             </Field>
             <div className={infoCls}>
               <p><span className="font-semibold">Email :</span> {user?.email}</p>

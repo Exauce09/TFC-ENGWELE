@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Admission;
 use App\Models\DemandeRdv;
 use App\Models\Departement;
 use App\Models\Facture;
@@ -12,6 +13,7 @@ use App\Models\RendezVous;
 use App\Models\Notification;
 use App\Models\User;
 use App\Services\StaffProfileService;
+use App\Support\PatientCredentials;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -133,19 +135,51 @@ class AdminController extends Controller
 
     public function patients(Request $request): JsonResponse
     {
-        $q = $request->get('q', '');
-        $items = Patient::with('user:id,name,email,phone,is_active')
-            ->when($q, fn ($query) => $query->where('numero_patient', 'like', "%{$q}%")
-                ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%")
-                    ->orWhere('email', 'like', "%{$q}%")))
-            ->latest()
-            ->paginate(15);
+        $q = trim((string) $request->get('q', ''));
+        $statut = (string) $request->get('statut', 'tous'); // tous|actifs|inactifs|supprimes
+        $perPage = min(100, max(15, (int) $request->get('per_page', 50)));
+
+        $items = Patient::query()
+            ->with(['user' => fn ($u) => $u->withTrashed()->select('id', 'name', 'email', 'phone', 'login_identifiant', 'is_active', 'statut', 'deleted_at')])
+            ->when($q !== '', function ($query) use ($q) {
+                $query->where(function ($sub) use ($q) {
+                    $sub->where('numero_patient', 'like', "%{$q}%")
+                        ->orWhere('commune', 'like', "%{$q}%")
+                        ->orWhereHas('user', function ($u) use ($q) {
+                            $u->withTrashed()->where(function ($inner) use ($q) {
+                                $inner->where('name', 'like', "%{$q}%")
+                                    ->orWhere('email', 'like', "%{$q}%")
+                                    ->orWhere('phone', 'like', "%{$q}%")
+                                    ->orWhere('login_identifiant', 'like', "%{$q}%");
+                            });
+                        });
+                });
+            })
+            ->when($statut === 'actifs', fn ($query) => $query->whereHas(
+                'user',
+                fn ($u) => $u->where('is_active', true)->whereNull('deleted_at')
+            ))
+            ->when($statut === 'inactifs', fn ($query) => $query->whereHas(
+                'user',
+                fn ($u) => $u->where('is_active', false)->whereNull('deleted_at')
+            ))
+            ->when($statut === 'supprimes', fn ($query) => $query->whereHas(
+                'user',
+                fn ($u) => $u->withTrashed()->whereNotNull('deleted_at')
+            ))
+            ->latest('id')
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
             'message' => 'Liste patients',
             'data' => $items->items(),
-            'meta' => ['total' => $items->total(), 'per_page' => $items->perPage(), 'current_page' => $items->currentPage()],
+            'meta' => [
+                'total' => $items->total(),
+                'per_page' => $items->perPage(),
+                'current_page' => $items->currentPage(),
+                'last_page' => $items->lastPage(),
+            ],
         ]);
     }
 
@@ -216,11 +250,11 @@ class AdminController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function utilisateurRules(bool $creating): array
+    private function utilisateurRules(bool $creating, ?int $ignoreUserId = null): array
     {
         $email = $creating
             ? 'required|email|unique:users,email'
-            : 'sometimes|email|unique:users,email,'.$this->route('id');
+            : 'sometimes|email|unique:users,email,'.($ignoreUserId ?: 'NULL');
 
         return [
             'name' => ($creating ? 'nullable' : 'sometimes').'|string|max:100',
@@ -305,6 +339,9 @@ class AdminController extends Controller
     public function creerUtilisateur(Request $request): JsonResponse
     {
         $validated = $request->validate($this->utilisateurRules(true));
+        if (isset($validated['statut'])) {
+            $validated['is_active'] = in_array($validated['statut'], ['actif', 'en_conge'], true);
+        }
         $this->applyDepartementRule($validated, $validated['role']);
 
         $metierPayload = $request->only([
@@ -369,7 +406,10 @@ class AdminController extends Controller
     {
         $user = User::findOrFail($id);
 
-        $validated = $request->validate($this->utilisateurRules(false));
+        $validated = $request->validate($this->utilisateurRules(false, $id));
+        if (array_key_exists('statut', $validated) && $validated['statut'] !== null) {
+            $validated['is_active'] = in_array($validated['statut'], ['actif', 'en_conge'], true);
+        }
         $role = $validated['role'] ?? $user->role;
 
         if (array_key_exists('departement_id', $validated) || isset($validated['role'])) {
@@ -430,15 +470,22 @@ class AdminController extends Controller
         if ($user->role === 'admin' && $user->is_active) {
             $actifs = User::where('role', 'admin')->where('is_active', true)->count();
             if ($actifs <= 1) {
-                return response()->json(['success' => false, 'message' => 'Impossible de desactiver le dernier admin', 'errors' => []], 422);
+                return response()->json(['success' => false, 'message' => 'Impossible de désactiver le dernier administrateur', 'errors' => []], 422);
             }
         }
-        $user->update(['is_active' => !$user->is_active]);
+
+        $active = ! $user->is_active;
+        $user->update([
+            'is_active' => $active,
+            'statut' => $active
+                ? (($user->statut && $user->statut !== 'inactif') ? $user->statut : 'actif')
+                : 'inactif',
+        ]);
 
         return response()->json([
             'success' => true,
-            'message' => $user->is_active ? 'Utilisateur active' : 'Utilisateur desactive',
-            'data' => $user,
+            'message' => $user->is_active ? 'Utilisateur activé' : 'Utilisateur désactivé',
+            'data' => $user->fresh(['departement:id,nom,code']),
         ]);
     }
 
@@ -450,6 +497,15 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Vous ne pouvez pas supprimer votre propre compte',
+                'errors' => [],
+            ], 422);
+        }
+
+        // Les patients médicaux doivent rester listés : désactiver plutôt que supprimer.
+        if ($user->role === 'patient') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible de supprimer un compte patient. Désactivez-le depuis Admin → Patients pour conserver le dossier médical.',
                 'errors' => [],
             ], 422);
         }
@@ -485,20 +541,166 @@ class AdminController extends Controller
         ]);
     }
 
-    public function togglePatient(int $id): JsonResponse
+    /**
+     * Fiche patient admin : identité, photo, compte (y compris soft-supprimé), parcours.
+     */
+    public function showPatient(int $id): JsonResponse
     {
-        $patient = Patient::with('user')->findOrFail($id);
-        $user = $patient->user;
-        if (!$user) {
-            return response()->json(['success' => false, 'message' => 'Utilisateur patient introuvable', 'errors' => []], 404);
-        }
+        $patient = Patient::with([
+            'user' => fn ($u) => $u->withTrashed()->select(
+                'id', 'name', 'email', 'phone', 'login_identifiant',
+                'is_active', 'statut', 'deleted_at', 'avatar', 'sexe',
+                'date_naissance', 'adresse', 'prenom', 'nom', 'post_nom',
+                'must_change_password'
+            ),
+            'admissionActive.departement:id,nom',
+            'admissionActive.medecinReferent.user:id,name',
+        ])->findOrFail($id);
 
-        $user->update(['is_active' => !$user->is_active]);
+        $admissions = Admission::with([
+            'departement:id,nom',
+            'medecinReferent.user:id,name',
+            'triage',
+        ])
+            ->where('patient_id', $patient->id)
+            ->latest('arrivee_at')
+            ->limit(30)
+            ->get();
 
         return response()->json([
             'success' => true,
-            'message' => $user->is_active ? 'Patient active' : 'Patient desactive',
-            'data' => $patient->load('user:id,name,email,phone,is_active'),
+            'message' => 'Fiche patient',
+            'data' => [
+                'patient' => $patient,
+                'admissions' => $admissions,
+                'admission_active' => $patient->admissionActive,
+                'acces' => PatientCredentials::accesPourStaff($patient->user),
+            ],
+        ]);
+    }
+
+    /** Mise à jour admin : photo + coordonnées patient / compte. */
+    public function updatePatient(Request $request, int $id): JsonResponse
+    {
+        $patient = Patient::with(['user' => fn ($u) => $u->withTrashed()])->findOrFail($id);
+
+        $validated = $request->validate([
+            'photo' => 'sometimes|nullable|string|max:900000',
+            'sexe' => 'sometimes|nullable|in:M,F',
+            'date_naissance' => 'sometimes|nullable|date|before:today',
+            'adresse' => 'sometimes|nullable|string|max:255',
+            'quartier' => 'sometimes|nullable|string|max:100',
+            'commune' => 'sometimes|nullable|string|max:100',
+            'ville' => 'sometimes|nullable|string|max:80',
+            'piece_identite_type' => 'sometimes|nullable|string|max:40',
+            'piece_identite_numero' => 'sometimes|nullable|string|max:60',
+            'contact_urgence_nom' => 'sometimes|nullable|string|max:100',
+            'contact_urgence_tel' => 'sometimes|nullable|string|max:25',
+            'contact_urgence_lien' => 'sometimes|nullable|string|max:80',
+            'allergies' => 'sometimes|nullable|string|max:500',
+            'antecedents_medicaux' => 'sometimes|nullable|string|max:1000',
+            'phone' => 'sometimes|nullable|string|max:25',
+            'name' => 'sometimes|nullable|string|max:100',
+        ]);
+
+        $patientFields = collect($validated)->only([
+            'photo', 'sexe', 'date_naissance', 'adresse', 'quartier', 'commune', 'ville',
+            'piece_identite_type', 'piece_identite_numero',
+            'contact_urgence_nom', 'contact_urgence_tel', 'contact_urgence_lien',
+            'allergies', 'antecedents_medicaux',
+        ])->all();
+
+        if ($patientFields !== []) {
+            $patient->update($patientFields);
+        }
+
+        $user = $patient->user;
+        if ($user) {
+            $userUpdates = [];
+            if (array_key_exists('phone', $validated)) {
+                $userUpdates['phone'] = $validated['phone'];
+            }
+            if (! empty($validated['name'])) {
+                $userUpdates['name'] = $validated['name'];
+            }
+            if ($userUpdates !== []) {
+                $user->update($userUpdates);
+            }
+        }
+
+        $patient->load([
+            'user' => fn ($u) => $u->withTrashed()->select(
+                'id', 'name', 'email', 'phone', 'login_identifiant',
+                'is_active', 'statut', 'deleted_at', 'avatar', 'must_change_password'
+            ),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Fiche patient mise à jour',
+            'data' => $patient,
+            'acces' => PatientCredentials::accesPourStaff($patient->user),
+        ]);
+    }
+
+    public function resetPatientPassword(int $id): JsonResponse
+    {
+        $patient = Patient::with(['user' => fn ($u) => $u->withTrashed()])->findOrFail($id);
+        $user = $patient->user;
+        if (! $user || $user->trashed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Compte patient introuvable ou supprimé',
+                'errors' => [],
+            ], 404);
+        }
+
+        $acces = PatientCredentials::resetPassword($user);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Mot de passe réinitialisé. Remettez ces identifiants au patient.',
+            'data' => ['acces' => $acces],
+        ]);
+    }
+
+    public function togglePatient(int $id): JsonResponse
+    {
+        $patient = Patient::with(['user' => fn ($u) => $u->withTrashed()])->findOrFail($id);
+        $user = $patient->user;
+        if (! $user) {
+            return response()->json(['success' => false, 'message' => 'Utilisateur patient introuvable', 'errors' => []], 404);
+        }
+
+        // Compte soft-supprimé : restauration + activation.
+        if ($user->trashed()) {
+            $user->restore();
+            $user->update([
+                'is_active' => true,
+                'statut' => 'actif',
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Compte patient restauré et activé',
+                'data' => $patient->fresh()->load([
+                    'user' => fn ($u) => $u->withTrashed()->select('id', 'name', 'email', 'phone', 'login_identifiant', 'is_active', 'statut', 'deleted_at'),
+                ]),
+            ]);
+        }
+
+        $active = ! $user->is_active;
+        $user->update([
+            'is_active' => $active,
+            'statut' => $active ? 'actif' : 'inactif',
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => $user->is_active ? 'Patient activé' : 'Patient désactivé',
+            'data' => $patient->fresh()->load([
+                'user' => fn ($u) => $u->withTrashed()->select('id', 'name', 'email', 'phone', 'login_identifiant', 'is_active', 'statut', 'deleted_at'),
+            ]),
         ]);
     }
 

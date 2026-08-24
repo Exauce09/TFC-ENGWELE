@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import Icon from '../Icon';
 import api from '../../services/api';
-import { buildOrdonnanceHtml, downloadHtml, printHtml } from '../../utils/printDownload';
+import { buildOrdonnanceHtml, downloadPdf, printHtml } from '../../utils/printDownload';
+import { downloadDocx, ordonnanceDocxChildren } from '../../utils/printDoc';
 
 const FORMES = [
   'Comprimé',
@@ -315,7 +316,9 @@ export function OrdonnanceCard({ prescription, patient, dossier, onAnnuler, onDu
   const bodyHtml = () => buildOrdonnanceHtml({ prescription, patient, dossier });
 
   const handlePrint = () => printHtml(title, bodyHtml());
-  const handleDownload = () => downloadHtml(`${title}.html`, title, bodyHtml());
+  const handleDownloadPdf = () => void downloadPdf(`${title}.pdf`, title, bodyHtml());
+  const handleDownloadWord = () =>
+    void downloadDocx(`${title}.docx`, () => ordonnanceDocxChildren(prescription));
 
   if (compact) {
     return (
@@ -338,7 +341,8 @@ export function OrdonnanceCard({ prescription, patient, dossier, onAnnuler, onDu
               {label}
             </span>
             <button type="button" onClick={handlePrint} className="text-[10px] font-semibold text-[#1A7A6D] hover:underline">Imprimer</button>
-            <button type="button" onClick={handleDownload} className="text-[10px] font-semibold text-[#1A7A6D] hover:underline">Télécharger</button>
+            <button type="button" onClick={handleDownloadPdf} className="text-[10px] font-semibold text-[#1A7A6D] hover:underline">PDF</button>
+            <button type="button" onClick={handleDownloadWord} className="text-[10px] font-semibold text-[#1A7A6D] hover:underline">Word</button>
           </div>
         </div>
       </li>
@@ -369,8 +373,11 @@ export function OrdonnanceCard({ prescription, patient, dossier, onAnnuler, onDu
           <button type="button" onClick={handlePrint} className="text-xs font-semibold text-[#1A7A6D] hover:underline">
             Imprimer
           </button>
-          <button type="button" onClick={handleDownload} className="text-xs font-semibold text-[#1A7A6D] hover:underline">
-            Télécharger
+          <button type="button" onClick={handleDownloadPdf} className="text-xs font-semibold text-[#1A7A6D] hover:underline">
+            PDF
+          </button>
+          <button type="button" onClick={handleDownloadWord} className="text-xs font-semibold text-[#1A7A6D] hover:underline">
+            Word
           </button>
           {onDupliquer && (
             <button type="button" onClick={() => onDupliquer(prescription)} className="text-xs font-semibold text-[#1A7A6D] hover:underline">

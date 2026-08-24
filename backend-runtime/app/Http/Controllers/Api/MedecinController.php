@@ -12,11 +12,19 @@ use App\Models\ParcoursPrescription;
 use App\Models\Prescription;
 use App\Models\RendezVous;
 use App\Services\StaffProfileService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class MedecinController extends Controller
 {
+    /** Statuts visibles dans la file médecin (triage orienté + après triage). */
+    private const STATUTS_FILE = [
+        AdmissionStatut::Triage->value,
+        AdmissionStatut::ConsultationMedicale->value,
+    ];
+
     /**
      * Profil médecin si le rôle en a un ; sinon null (ex. sage-femme / kiné → filtre par département).
      */
@@ -40,8 +48,84 @@ class MedecinController extends Controller
             return $query->where('departement_id', $deptId);
         }
 
-        // Aucun rattachement : rien à afficher
         return $query->whereRaw('1 = 0');
+    }
+
+    /**
+     * File de consultation : UNIQUEMENT les patients affectés à CE médecin.
+     * Sources d'affectation (OR) :
+     *  - admissions.medecin_referent_id
+     *  - RDV d'origine (rendez_vous.medecin_id)
+     *  - dossier médical ouvert du même patient (dossiers_medicaux.medecin_id)
+     *
+     * Un confrère ne voit jamais un patient déjà affecté à un autre médecin.
+     */
+    private function scopeAdmissionsAssigneesAuMedecin(Builder $query, Medecin $medecin): Builder
+    {
+        return $query->where(function (Builder $q) use ($medecin) {
+            $q->where('medecin_referent_id', $medecin->id)
+                ->orWhereHas(
+                    'rendezVousOrigine',
+                    fn (Builder $r) => $r->where('medecin_id', $medecin->id)
+                )
+                ->orWhereExists(function ($sub) use ($medecin) {
+                    $sub->selectRaw('1')
+                        ->from('dossiers_medicaux')
+                        ->whereColumn('dossiers_medicaux.patient_id', 'admissions.patient_id')
+                        ->where('dossiers_medicaux.medecin_id', $medecin->id)
+                        ->whereIn('dossiers_medicaux.statut', ['ouvert', 'en_consultation']);
+                });
+        });
+    }
+
+    /**
+     * Répare medecin_referent_id manquant si le RDV / dossier pointe déjà vers ce médecin.
+     */
+    private function reparerAffectationsManquantes(Medecin $medecin): int
+    {
+        return Admission::query()
+            ->whereNull('medecin_referent_id')
+            ->whereIn('statut', self::STATUTS_FILE)
+            ->where(function (Builder $q) use ($medecin) {
+                $q->whereHas(
+                    'rendezVousOrigine',
+                    fn (Builder $r) => $r->where('medecin_id', $medecin->id)
+                )->orWhereExists(function ($sub) use ($medecin) {
+                    $sub->selectRaw('1')
+                        ->from('dossiers_medicaux')
+                        ->whereColumn('dossiers_medicaux.patient_id', 'admissions.patient_id')
+                        ->where('dossiers_medicaux.medecin_id', $medecin->id)
+                        ->whereIn('dossiers_medicaux.statut', ['ouvert', 'en_consultation']);
+                });
+            })
+            ->update(['medecin_referent_id' => $medecin->id]);
+    }
+
+    /** @return Collection<int, Admission> */
+    private function fileConsultationPourMedecin(Medecin $medecin): Collection
+    {
+        $this->reparerAffectationsManquantes($medecin);
+
+        return Admission::with([
+            'patient.user:id,name,phone',
+            'departement:id,nom',
+            'triage',
+            'medecinReferent.user:id,name',
+            'rendezVousOrigine',
+        ])
+            ->whereIn('statut', self::STATUTS_FILE)
+            ->where(function (Builder $q) use ($medecin) {
+                $this->scopeAdmissionsAssigneesAuMedecin($q, $medecin);
+            })
+            ->orderByRaw("CASE niveau_urgence_accueil
+                WHEN 'critique' THEN 1
+                WHEN 'urgent' THEN 2
+                WHEN 'modere' THEN 3
+                WHEN 'leger' THEN 4
+                ELSE 5 END")
+            ->orderBy('arrivee_at')
+            ->limit(40)
+            ->get();
     }
 
     public function dashboard(Request $request): JsonResponse
@@ -55,33 +139,10 @@ class MedecinController extends Controller
         $this->scopeRendezVousPourClinicien($rdvTodayQuery, $request, $medecin);
         $rdvToday = $rdvTodayQuery->orderBy('heure_rdv')->get();
 
-        $fileConsultation = Admission::with([
-            'patient.user:id,name,phone',
-            'departement:id,nom',
-            'triage',
-            'medecinReferent.user:id,name',
-            'rendezVousOrigine',
-        ])
-            ->whereIn('statut', [
-                AdmissionStatut::Triage->value,
-                AdmissionStatut::ConsultationMedicale->value,
-            ])
-            ->where(function ($q) use ($medecin, $request) {
-                if ($medecin) {
-                    $q->where('medecin_referent_id', $medecin->id)
-                        ->orWhere(function ($sub) use ($medecin) {
-                            $sub->whereNull('medecin_referent_id')
-                                ->where('departement_id', $medecin->departement_id);
-                        });
-                } elseif ($request->user()->departement_id) {
-                    $q->where('departement_id', $request->user()->departement_id);
-                } else {
-                    $q->whereRaw('1 = 0');
-                }
-            })
-            ->latest('arrivee_at')
-            ->limit(20)
-            ->get();
+        // File : uniquement le médecin affecté (pas de partage départemental).
+        $fileConsultation = $medecin
+            ? $this->fileConsultationPourMedecin($medecin)
+            : collect();
 
         $examensEnAttente = 0;
         $ordonnancesActives = 0;
@@ -91,10 +152,10 @@ class MedecinController extends Controller
         $dossiersMois = 0;
 
         if ($medecin) {
-            $examensEnAttente = ExamenLabo::whereHas('admission', function ($q) use ($medecin) {
-                $q->where('medecin_referent_id', $medecin->id)
-                    ->orWhere('departement_id', $medecin->departement_id);
-            })
+            $examensEnAttente = ExamenLabo::whereHas(
+                'admission',
+                fn ($q) => $q->where('medecin_referent_id', $medecin->id)
+            )
                 ->whereIn('statut', ['prescrit', 'en_cours'])
                 ->count();
 
@@ -115,10 +176,10 @@ class MedecinController extends Controller
                 'admission.patient.user:id,name',
                 'admission:id,patient_id,numero_admission',
             ])
-                ->whereHas('admission', function ($q) use ($medecin) {
-                    $q->where('medecin_referent_id', $medecin->id)
-                        ->orWhere('departement_id', $medecin->departement_id);
-                })
+                ->whereHas(
+                    'admission',
+                    fn ($q) => $q->where('medecin_referent_id', $medecin->id)
+                )
                 ->where('statut', 'termine')
                 ->latest('termine_at')
                 ->limit(8)
@@ -154,14 +215,50 @@ class MedecinController extends Controller
                 'prochains_rdv' => $prochainsRdv,
                 'prochain_rdv' => $prochainRdv ?? $prochainsRdv->first(),
                 'prochain_file' => $prochainFile,
-                'file_consultation' => $fileConsultation,
+                'file_consultation' => $fileConsultation->values(),
                 'file_count' => $fileConsultation->count(),
+                'medecin_id' => $medecin?->id,
                 'examens_en_attente' => $examensEnAttente,
                 'examens_disponibles' => $examensDisponibles,
                 'ordonnances_actives' => $ordonnancesActives,
                 'dossiers_recents' => $dossiersRecents,
                 'dossiers_semaine' => $dossiersSemaine,
                 'dossiers_mois' => $dossiersMois,
+            ],
+        ]);
+    }
+
+    /**
+     * File de consultation (admissions affectées au médecin connecté).
+     * Remplace l'ancien endpoint EpisodeSoin non filtré.
+     */
+    public function fileConsultation(Request $request): JsonResponse
+    {
+        $medecin = $this->resolveMedecin($request);
+
+        if (! $medecin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Profil médecin introuvable. Vérifiez le rattachement utilisateur → profil médecin (Admin).',
+                'data' => [],
+                'meta' => [
+                    'file_count' => 0,
+                    'medecin_id' => null,
+                ],
+            ], 422);
+        }
+
+        $file = $this->fileConsultationPourMedecin($medecin);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'File de consultation',
+            'data' => $file->values(),
+            'meta' => [
+                'file_count' => $file->count(),
+                'medecin_id' => $medecin->id,
+                'filtre' => 'medecin_assigne',
+                'statuts' => self::STATUTS_FILE,
             ],
         ]);
     }

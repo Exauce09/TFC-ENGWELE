@@ -1,6 +1,19 @@
 import { useEffect, useState } from 'react';
 import Layout from '../../components/layout/Layout';
 import api from '../../services/api';
+import {
+  consultationDocxChildren,
+  consultationPrintBody,
+  dossierDocxChildren,
+  dossierPrintBody,
+  downloadDocx,
+  downloadPdf,
+  ordonnanceDocxChildren,
+  ordonnancePrintBody,
+  printHtml,
+  resultatDocxChildren,
+  resultatPrintBody,
+} from '../../utils/printDoc';
 
 export default function PatientDossier() {
   const [data, setData] = useState({
@@ -52,11 +65,48 @@ export default function PatientDossier() {
 
   return (
     <Layout title="Mon Dossier Médical">
-      <div className="mb-6">
-        <h2 className="text-2xl font-bold text-slate-900">Mon dossier médical</h2>
-        <p className="text-sm text-slate-500">
-          Historique de vos visites, consultations, résultats et ordonnances.
-        </p>
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Mon dossier médical</h2>
+          <p className="text-sm text-slate-500">
+            Historique de vos visites, consultations, résultats et ordonnances.
+          </p>
+        </div>
+        {!loading && p && (
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => printHtml('Dossier médical', dossierPrintBody(data, prescriptions))}
+              className="rounded-xl border px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+            >
+              Imprimer le dossier
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                void downloadPdf(
+                  `${p.numero_patient || 'dossier'}.pdf`,
+                  'Dossier médical',
+                  dossierPrintBody(data, prescriptions),
+                )
+              }
+              className="rounded-xl border px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+            >
+              PDF
+            </button>
+            <button
+              type="button"
+              onClick={() =>
+                void downloadDocx(`${p.numero_patient || 'dossier'}.docx`, () =>
+                  dossierDocxChildren(data, prescriptions),
+                )
+              }
+              className="rounded-xl border px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+            >
+              Word
+            </button>
+          </div>
+        )}
       </div>
 
       {p && (
@@ -150,10 +200,49 @@ export default function PatientDossier() {
           <div className="rounded-2xl border bg-white p-5 shadow-sm text-slate-900">
             {selected ? (
               <>
-                <h3 className="text-lg font-bold text-slate-900">{selected.motif || 'Consultation'}</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  {selected.medecin?.user?.name || 'Médecin'} — {selected.departement?.nom || '—'}
-                </p>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div>
+                    <h3 className="text-lg font-bold text-slate-900">{selected.motif || 'Consultation'}</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {selected.medecin?.user?.name || 'Médecin'} — {selected.departement?.nom || '—'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        printHtml(selected.motif || 'Consultation', consultationPrintBody(selected))
+                      }
+                      className="rounded-lg border px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Imprimer
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void downloadPdf(
+                          `consultation-${selected.id}.pdf`,
+                          selected.motif || 'Consultation',
+                          consultationPrintBody(selected),
+                        )
+                      }
+                      className="rounded-lg border px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      PDF
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        void downloadDocx(`consultation-${selected.id}.docx`, () =>
+                          consultationDocxChildren(selected),
+                        )
+                      }
+                      className="rounded-lg border px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Word
+                    </button>
+                  </div>
+                </div>
                 {selected.numero_admission && (
                   <p className="mt-1 font-mono text-xs text-slate-500">{selected.numero_admission}</p>
                 )}
@@ -231,9 +320,42 @@ export default function PatientDossier() {
                       : ''}
                   </p>
                 </div>
-                <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
-                  {ex.statut === 'termine' ? 'Résultat' : (ex.statut_label || ex.statut)}
-                </span>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                    {ex.statut === 'termine' ? 'Résultat' : (ex.statut_label || ex.statut)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      printHtml(ex.type_examen || ex.type_analyse || 'Résultat', resultatPrintBody(ex))
+                    }
+                    className="rounded-lg border px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Imprimer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void downloadPdf(
+                        `resultat-${ex.id}.pdf`,
+                        ex.type_examen || ex.type_analyse || 'Résultat',
+                        resultatPrintBody(ex),
+                      )
+                    }
+                    className="rounded-lg border px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void downloadDocx(`resultat-${ex.id}.docx`, () => resultatDocxChildren(ex))
+                    }
+                    className="rounded-lg border px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Word
+                  </button>
+                </div>
               </div>
               {(ex.resultats || []).length > 0 && (
                 <table className="mt-3 w-full text-left text-sm">
@@ -269,20 +391,51 @@ export default function PatientDossier() {
             <p className="rounded-xl border bg-white p-8 text-center text-slate-500">Aucune prescription.</p>
           ) : prescriptions.map((pr) => (
             <article key={`${pr.source || 'd'}-${pr.id}`} className="rounded-2xl border bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="font-semibold text-slate-900">
                   {pr.numero_ordonnance || 'Prescription'}
                   {pr.date_prescription
                     ? ` · ${new Date(pr.date_prescription).toLocaleDateString('fr-FR')}`
                     : ''}
                 </p>
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                  pr.statut === 'active' ? 'bg-amber-100 text-amber-800'
-                    : pr.statut === 'delivree' ? 'bg-emerald-100 text-emerald-700'
-                      : 'bg-slate-100 text-slate-500'
-                }`}>
-                  {pr.statut_label || (pr.statut === 'active' ? 'À retirer à la pharmacie' : pr.statut)}
-                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    pr.statut === 'active' ? 'bg-amber-100 text-amber-800'
+                      : pr.statut === 'delivree' ? 'bg-emerald-100 text-emerald-700'
+                        : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {pr.statut_label || (pr.statut === 'active' ? 'À retirer à la pharmacie' : pr.statut)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => printHtml(pr.numero_ordonnance || 'Ordonnance', ordonnancePrintBody(pr))}
+                    className="rounded-lg border px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Imprimer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void downloadPdf(
+                      `${pr.numero_ordonnance || 'ordonnance'}.pdf`,
+                      pr.numero_ordonnance || 'Ordonnance',
+                      ordonnancePrintBody(pr),
+                    )}
+                    className="rounded-lg border px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      void downloadDocx(`${pr.numero_ordonnance || 'ordonnance'}.docx`, () =>
+                        ordonnanceDocxChildren(pr),
+                      )
+                    }
+                    className="rounded-lg border px-3 py-1 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Word
+                  </button>
+                </div>
               </div>
               <p className="mt-1 text-xs text-slate-500">
                 Par {pr.medecin?.user?.name || 'Médecin'}

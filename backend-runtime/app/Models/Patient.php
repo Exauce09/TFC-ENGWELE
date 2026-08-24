@@ -50,7 +50,8 @@ class Patient extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        // Dossier médical : conserver l'identité même si le compte user est soft-supprimé.
+        return $this->belongsTo(User::class)->withTrashed();
     }
 
     public function medecinTraitant(): BelongsTo
@@ -83,5 +84,10 @@ class Patient extends Model
     public function rendezVous(): HasMany
     {
         return $this->hasMany(RendezVous::class);
+    }
+
+    public function prescriptions(): HasMany
+    {
+        return $this->hasMany(Prescription::class);
     }
 }

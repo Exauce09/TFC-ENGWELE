@@ -26,21 +26,113 @@ class PharmacieController extends Controller
 
     public function dashboard(): JsonResponse
     {
-        $stockBas = StockMedicament::whereColumn('quantite_stock', '<=', 'seuil_alerte')->count();
+        try {
+            $stockBas = StockMedicament::query()
+                ->whereNotNull('seuil_alerte')
+                ->whereColumn('quantite_stock', '<=', 'seuil_alerte')
+                ->count();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Dashboard pharmacie',
-            'data' => [
-                'medicaments_total' => StockMedicament::count(),
-                'stock_bas' => $stockBas,
-                'ordonnances_actives' => ParcoursPrescription::where('statut', 'active')->count()
-                    + Prescription::where('statut', 'active')->count(),
-                'ordonnances_delivrees' => ParcoursPrescription::where('statut', 'delivree')->whereDate('delivree_at', today())->count()
-                    + Prescription::where('statut', 'delivree')->whereDate('updated_at', today())->count(),
-                'file_admissions' => \App\Models\Admission::where('statut', AdmissionStatut::DiagnosticPrescription->value)->count(),
-            ],
-        ]);
+            // prescriptions n'a pas updated_at — utiliser delivree_at (ou created_at en secours).
+            $delivreesLegacy = Prescription::where('statut', 'delivree')
+                ->where(function ($q) {
+                    $q->whereDate('delivree_at', today())
+                        ->orWhere(function ($q2) {
+                            $q2->whereNull('delivree_at')->whereDate('created_at', today());
+                        });
+                })
+                ->count();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Dashboard pharmacie',
+                'data' => [
+                    'medicaments_total' => StockMedicament::count(),
+                    'stock_bas' => $stockBas,
+                    'ordonnances_actives' => ParcoursPrescription::where('statut', 'active')->count()
+                        + Prescription::where('statut', 'active')->count(),
+                    'ordonnances_delivrees' => ParcoursPrescription::where('statut', 'delivree')->whereDate('delivree_at', today())->count()
+                        + $delivreesLegacy,
+                    'file_admissions' => \App\Models\Admission::where('statut', AdmissionStatut::DiagnosticPrescription->value)->count(),
+                    'patients_en_attente' => $this->patientsEnAttenteQuery()->count(),
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur dashboard pharmacie : '.$e->getMessage(),
+                'data' => [
+                    'medicaments_total' => 0,
+                    'stock_bas' => 0,
+                    'ordonnances_actives' => 0,
+                    'ordonnances_delivrees' => 0,
+                    'file_admissions' => 0,
+                    'patients_en_attente' => 0,
+                ],
+            ], 500);
+        }
+    }
+
+    /**
+     * Patients ayant au moins une ordonnance active (parcours ou dossier) — pas tous les dossiers.
+     */
+    public function patients(Request $request): JsonResponse
+    {
+        $q = trim((string) $request->get('q', ''));
+
+        try {
+            $items = $this->patientsEnAttenteQuery()
+                ->when($q !== '', function ($query) use ($q) {
+                    $query->where(function ($sub) use ($q) {
+                        $sub->where('numero_patient', 'like', "%{$q}%")
+                            ->orWhereHas('user', fn ($u) => $u->where('name', 'like', "%{$q}%")
+                                ->orWhere('phone', 'like', "%{$q}%"));
+                    });
+                })
+                ->with([
+                    'user:id,name,phone',
+                    'admissionActive.departement:id,nom',
+                ])
+                ->orderByDesc('id')
+                ->limit(40)
+                ->get()
+                ->map(function ($patient) {
+                    $admission = $patient->admissionActive;
+
+                    return [
+                        'id' => $patient->id,
+                        'numero_patient' => $patient->numero_patient,
+                        'user' => $patient->user,
+                        'allergies' => $patient->allergies,
+                        'admission_id' => $admission?->id,
+                        'numero_admission' => $admission?->numero_admission,
+                        'statut' => $admission?->statut,
+                        'statut_label' => $admission?->statut_label,
+                        'departement' => $admission?->departement?->nom,
+                        'motif' => 'Ordonnance en attente de délivrance',
+                    ];
+                });
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Patients avec ordonnances à délivrer',
+                'data' => $items,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible de charger les patients pharmacie : '.$e->getMessage(),
+                'data' => [],
+            ], 500);
+        }
+    }
+
+    private function patientsEnAttenteQuery()
+    {
+        return \App\Models\Patient::query()
+            ->where(function ($q) {
+                $q->whereHas('prescriptions', fn ($p) => $p->where('statut', 'active'))
+                    ->orWhereHas('admissions.prescriptions', fn ($p) => $p->where('statut', 'active'));
+            });
     }
 
     public function stock(Request $request): JsonResponse
@@ -113,81 +205,108 @@ class PharmacieController extends Controller
         ]);
     }
 
-    public function ordonnances(): JsonResponse
+    public function ordonnances(Request $request): JsonResponse
     {
-        $parcours = ParcoursPrescription::with([
-            'admission.patient.user:id,name,phone',
-            'admission.patient',
-            'admission.departement:id,nom',
-            'medecin.user:id,name',
-            'pharmacien:id,name',
-        ])
-            ->whereIn('statut', ['active', 'delivree'])
-            ->latest('date_prescription')
-            ->limit(50)
-            ->get()
-            ->map(function (ParcoursPrescription $p) {
-                return [
-                    'id' => $p->id,
-                    'source' => 'parcours',
-                    'admission_id' => $p->admission_id,
-                    'numero_ordonnance' => $p->numero_ordonnance ?: 'ORD-P-'.$p->id,
-                    'date_prescription' => $p->date_prescription,
-                    'medicaments' => $p->medicaments,
-                    'lignes_delivrance' => $p->lignes_delivrance,
-                    'posologie_generale' => $p->posologie_generale,
-                    'diagnostic_motif' => $p->diagnostic_motif,
-                    'statut' => $p->statut,
-                    'statut_label' => $p->statut_label,
-                    'notes_pharmacien' => $p->notes_pharmacien,
-                    'allergies_signalees' => $p->allergies_signalees ?: $p->admission?->patient?->allergies,
-                    'patient' => $p->admission?->patient,
-                    'medecin' => $p->medecin,
-                    'numero_admission' => $p->admission?->numero_admission,
-                    'departement' => $p->admission?->departement?->nom,
-                    'delivree_at' => $p->delivree_at,
-                ];
-            });
+        try {
+            $statutFiltre = $request->get('statut'); // active | delivree | null = les deux
+            $statuts = in_array($statutFiltre, ['active', 'delivree'], true)
+                ? [$statutFiltre]
+                : ['active', 'delivree'];
 
-        $legacy = Prescription::with(['patient.user', 'medecin.user', 'medecin.departement', 'dossier:id,numero_dossier,motif'])
-            ->whereIn('statut', ['active', 'delivree'])
-            ->latest('date_prescription')
-            ->limit(30)
-            ->get()
-            ->map(function (Prescription $p) {
-                return [
-                    'id' => $p->id,
-                    'source' => 'dossier',
-                    'admission_id' => null,
-                    'numero_ordonnance' => $p->numero_ordonnance ?: 'ORD-'.$p->id,
-                    'date_prescription' => $p->date_prescription,
-                    'medicaments' => $p->medicaments,
-                    'lignes_delivrance' => null,
-                    'posologie_generale' => null,
-                    'diagnostic_motif' => $p->diagnostic_motif ?? $p->dossier?->motif,
-                    'statut' => $p->statut,
-                    'statut_label' => $p->statut === 'active' ? 'En attente de délivrance' : 'Délivrée',
-                    'notes_pharmacien' => null,
-                    'allergies_signalees' => $p->patient?->allergies,
-                    'patient' => $p->patient,
-                    'medecin' => $p->medecin,
-                    'numero_admission' => $p->dossier?->numero_dossier,
-                    'departement' => $p->medecin?->departement?->nom,
-                    'delivree_at' => $p->statut === 'delivree' ? $p->updated_at : null,
-                    'poids_kg' => $p->poids_kg ?? null,
-                ];
-            });
+            $parcours = ParcoursPrescription::with([
+                'admission.patient.user:id,name,phone',
+                'admission.patient',
+                'admission.departement:id,nom',
+                'medecin.user:id,name',
+                'pharmacien:id,name',
+            ])
+                ->whereIn('statut', $statuts)
+                ->latest('date_prescription')
+                ->limit(50)
+                ->get()
+                ->map(function (ParcoursPrescription $p) {
+                    return [
+                        'id' => $p->id,
+                        'source' => 'parcours',
+                        'admission_id' => $p->admission_id,
+                        'numero_ordonnance' => $p->numero_ordonnance ?: 'ORD-P-'.$p->id,
+                        'date_prescription' => $p->date_prescription,
+                        'medicaments' => $p->medicaments,
+                        'lignes_delivrance' => $p->lignes_delivrance,
+                        'posologie_generale' => $p->posologie_generale,
+                        'diagnostic_motif' => $p->diagnostic_motif,
+                        'statut' => $p->statut,
+                        'statut_label' => $p->statut_label,
+                        'notes_pharmacien' => $p->notes_pharmacien,
+                        'allergies_signalees' => $p->allergies_signalees ?: $p->admission?->patient?->allergies,
+                        'patient' => $p->admission?->patient,
+                        'medecin' => $p->medecin,
+                        'numero_admission' => $p->admission?->numero_admission,
+                        'departement' => $p->admission?->departement?->nom,
+                        'delivree_at' => $p->delivree_at,
+                    ];
+                });
 
-        $items = $parcours->concat($legacy)
-            ->sortByDesc(fn ($i) => (string) ($i['date_prescription'] ?? ''))
-            ->values()
-            ->take(40);
+            // Numéros déjà présents en parcours → éviter doublons avec le dossier
+            $numerosParcours = $parcours->pluck('numero_ordonnance')->filter()->all();
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Ordonnances (parcours + dossiers)',
-            'data' => $items,
-        ]);
+            $legacy = Prescription::with([
+                'patient.user',
+                'medecin.user',
+                'medecin.departement',
+                'dossier:id,numero_dossier,motif,departement_id',
+                'dossier.departement:id,nom',
+            ])
+                ->whereIn('statut', $statuts)
+                ->when($numerosParcours !== [], fn ($q) => $q->where(function ($sub) use ($numerosParcours) {
+                    $sub->whereNull('numero_ordonnance')
+                        ->orWhereNotIn('numero_ordonnance', $numerosParcours);
+                }))
+                ->latest('date_prescription')
+                ->limit(40)
+                ->get()
+                ->map(function (Prescription $p) {
+                    return [
+                        'id' => $p->id,
+                        'source' => 'dossier',
+                        'admission_id' => null,
+                        'numero_ordonnance' => $p->numero_ordonnance ?: 'ORD-'.$p->id,
+                        'date_prescription' => $p->date_prescription,
+                        'medicaments' => $p->medicaments,
+                        'lignes_delivrance' => null,
+                        'posologie_generale' => $p->instructions_generales,
+                        'diagnostic_motif' => $p->diagnostic_motif ?? $p->dossier?->motif,
+                        'statut' => $p->statut,
+                        'statut_label' => $p->statut === 'active' ? 'En attente de délivrance' : 'Délivrée',
+                        'notes_pharmacien' => null,
+                        'allergies_signalees' => $p->patient?->allergies,
+                        'patient' => $p->patient,
+                        'medecin' => $p->medecin,
+                        'numero_admission' => $p->dossier?->numero_dossier,
+                        'departement' => $p->medecin?->departement?->nom
+                            ?? $p->dossier?->departement?->nom,
+                        'delivree_at' => $p->delivree_at,
+                        'poids_kg' => $p->poids_kg ?? null,
+                    ];
+                });
+
+            $items = $parcours->concat($legacy)
+                ->sortBy(fn ($i) => ($i['statut'] === 'active' ? '0' : '1').(string) ($i['date_prescription'] ?? ''))
+                ->values()
+                ->take(50);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ordonnances (parcours + dossiers)',
+                'data' => $items,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Impossible de charger les ordonnances : '.$e->getMessage(),
+                'data' => [],
+            ], 500);
+        }
     }
 
     public function delivrer(Request $request, int $id): JsonResponse
@@ -295,7 +414,10 @@ class PharmacieController extends Controller
     private function delivrerLegacy(int $id): JsonResponse
     {
         $prescription = Prescription::where('statut', 'active')->findOrFail($id);
-        $prescription->update(['statut' => 'delivree']);
+        $prescription->update([
+            'statut' => 'delivree',
+            'delivree_at' => now(),
+        ]);
 
         foreach ($prescription->medicaments ?? [] as $med) {
             $nom = $med['nom_dci'] ?? $med['nom'] ?? '';

@@ -56,15 +56,22 @@ export default function MedecinDossiers() {
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
-      const [dashRes, dRes] = await Promise.all([
-        api.get('/medecin/dashboard'),
+      const [fileRes, dRes] = await Promise.all([
+        api.get('/medecin/file-consultation'),
         api.get('/medecin/dossiers'),
       ]);
-      setFile(dashRes.data.data?.file_consultation || []);
+      const fileData = fileRes.data.data;
+      setFile(Array.isArray(fileData) ? fileData : (fileData?.data || []));
       setDossiers(dRes.data.data || []);
-    } catch {
-      setError('Impossible de charger les consultations.');
+    } catch (err) {
+      setFile([]);
+      setDossiers([]);
+      setError(
+        err.response?.data?.message
+          || 'Impossible de charger la file de consultation. Vérifiez votre connexion ou le profil médecin.',
+      );
     } finally {
       setLoading(false);
     }
@@ -109,6 +116,24 @@ export default function MedecinDossiers() {
 
       const admissionId = selected.admission_active?.id;
       const admissionStatut = selected.admission_active?.statut;
+
+      // Demande d'analyses sur une admission déjà en diagnostic / labo (2e passage labo / contrôle)
+      if (
+        admissionId
+        && form.decision === 'examen'
+        && ['examens_laboratoire', 'diagnostic_prescription'].includes(admissionStatut)
+      ) {
+        await admissionsApi.examens(admissionId, {
+          type_examen: form.diagnostic?.libelle || form.motif || 'Bilan de contrôle',
+          categorie: 'biologie',
+          priorite: 'routine',
+          indication: observations || 'Contrôle / nouvel examen demandé',
+        });
+        setSuccess('Nouveaux examens prescrits — le patient retourne au prélèvement / laboratoire.');
+        setEditing(false);
+        void load();
+        return;
+      }
 
       if (admissionId && admissionStatut === 'consultation_medicale') {
         const consultPayload = {
@@ -243,7 +268,7 @@ export default function MedecinDossiers() {
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#1A7A6D]">Aujourd&apos;hui</p>
             <h3 className="font-medecin-display text-xl text-[#0D3B3A]">File de consultation</h3>
             <p className="text-xs text-[#5A8A7A]">
-              Patients après triage. Cliquez sur une carte pour ouvrir le dossier (les autres restent en attente).
+              Patients qui vous sont affectés (après triage ou encore en triage). Les autres médecins ne les voient pas.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -266,9 +291,13 @@ export default function MedecinDossiers() {
         {loading ? (
           <p className="text-sm text-[#5A8A7A]">Chargement…</p>
         ) : fileFiltree.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[#B8D4C8] bg-[#F4FAF8] px-4 py-8 text-center text-sm text-[#5A8A7A]">
-            Aucun patient en file pour le moment.
-          </p>
+          <div className="rounded-xl border border-dashed border-[#B8D4C8] bg-[#F4FAF8] px-4 py-8 text-center text-sm text-[#5A8A7A]">
+            <p className="font-medium text-[#0D3B3A]">Aucun patient en file pour le moment.</p>
+            <p className="mt-2 text-xs">
+              Seuls les patients assignés à vous à l&apos;accueil (statut triage ou consultation médicale) apparaissent ici.
+              Vérifiez l&apos;affectation à l&apos;accueil et le passage au triage infirmier.
+            </p>
+          </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {fileFiltree.map((a, i) => (

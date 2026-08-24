@@ -22,6 +22,23 @@ body {
 .medecin-shell main,
 .infirmier-shell main {
   color: #0f172a !important;
+  overflow-x: hidden;
+}
+
+/* Grilles / cartes patients : le contenu long (email, nom) ne déborde plus sur le voisin */
+[class*='-shell'] main .grid > *,
+.medecin-shell main .grid > *,
+.infirmier-shell main .grid > * {
+  min-width: 0;
+}
+
+[class*='-shell'] main p,
+[class*='-shell'] main dd,
+[class*='-shell'] main h2,
+[class*='-shell'] main h3,
+.medecin-shell main p,
+.infirmier-shell main p {
+  overflow-wrap: anywhere;
 }
 
 [class*='-shell'] main input:not([type='checkbox']):not([type='radio']):not([type='submit']):not([type='button']),

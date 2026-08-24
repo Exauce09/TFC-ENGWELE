@@ -174,22 +174,25 @@ class PrescriptionController extends Controller
             'statut' => 'active',
         ]);
 
-        // En phase labo / diagnostic → aussi visible pharmacie (parcours)
-        if ($admission && in_array($admission->statut, [
-            AdmissionStatut::ExamensLaboratoire->value,
-            AdmissionStatut::DiagnosticPrescription->value,
-        ], true)) {
-            ParcoursPrescription::create([
-                'admission_id' => $admission->id,
-                'numero_ordonnance' => $numero,
-                'medecin_id' => $medecin->id,
-                'date_prescription' => $validated['date_prescription'],
-                'medicaments' => $medicaments,
-                'posologie_generale' => $validated['instructions_generales'] ?? null,
-                'diagnostic_motif' => $validated['diagnostic_motif'] ?? $dossier->motif,
-                'statut' => 'active',
-                'allergies_signalees' => $admission->patient?->allergies,
-            ]);
+        // Miroir pharmacie : toute admission ouverte (pas seulement labo / diagnostic)
+        if ($admission && ! in_array($admission->statut, AdmissionStatut::statutsClotures(), true)) {
+            $deja = ParcoursPrescription::where('admission_id', $admission->id)
+                ->where('numero_ordonnance', $numero)
+                ->exists();
+
+            if (! $deja) {
+                ParcoursPrescription::create([
+                    'admission_id' => $admission->id,
+                    'numero_ordonnance' => $numero,
+                    'medecin_id' => $medecin->id,
+                    'date_prescription' => $validated['date_prescription'],
+                    'medicaments' => $medicaments,
+                    'posologie_generale' => $validated['instructions_generales'] ?? null,
+                    'diagnostic_motif' => $validated['diagnostic_motif'] ?? $dossier->motif,
+                    'statut' => 'active',
+                    'allergies_signalees' => $admission->patient?->allergies,
+                ]);
+            }
         }
 
         if (! $dossier->medecin_id) {

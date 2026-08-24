@@ -326,6 +326,10 @@ export default function Reception() {
       setError('Sélectionnez le département / service demandé.');
       return;
     }
+    if (!form.medecin_id) {
+      setError('Assignez un médecin : le patient n’apparaîtra que dans la file de ce médecin.');
+      return;
+    }
     if (!patientConnu && !form.name.trim()) {
       setError('Indiquez le nom et prénom du patient.');
       return;
@@ -617,9 +621,9 @@ export default function Reception() {
               </select>
             </label>
             <label className="block">
-              <span className="mb-1 block text-sm font-medium">Médecin demandé / assigné</span>
-              <select value={form.medecin_id} onChange={set('medecin_id')} className="w-full rounded-xl border px-3 py-2.5 text-sm" disabled={!form.departement_id || medecinsLoading}>
-                <option value="">{medecinsLoading ? 'Chargement…' : 'Non assigné'}</option>
+              <span className="mb-1 block text-sm font-medium">Médecin demandé / assigné *</span>
+              <select required value={form.medecin_id} onChange={set('medecin_id')} className="w-full rounded-xl border px-3 py-2.5 text-sm" disabled={!form.departement_id || medecinsLoading}>
+                <option value="">{medecinsLoading ? 'Chargement…' : 'Choisir le médecin…'}</option>
                 {medecins.map((m) => {
                   const label = nomMedecin(m.name || m.user?.name);
                   const extra = m.specialite || m.departement || '';

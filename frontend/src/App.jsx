@@ -28,9 +28,11 @@ import AdmissionsList from './pages/parcours/AdmissionsList';
 import DossierMedical from './pages/parcours/DossierMedical';
 import LaboratoireDashboard from './pages/laboratoire/Dashboard';
 import LaboratoireAnalyses from './pages/laboratoire/Analyses';
+import LaboratoirePatients from './pages/laboratoire/Patients';
 import PharmacieDashboard from './pages/pharmacie/Dashboard';
 import PharmacieStock from './pages/pharmacie/Stock';
 import PharmacieOrdonnances from './pages/pharmacie/Ordonnances';
+import PharmaciePatients from './pages/pharmacie/Patients';
 import CaisseDashboard from './pages/caisse/Dashboard';
 import CaisseFactures from './pages/caisse/Factures';
 import CaissePaiements from './pages/caisse/Paiements';
@@ -55,6 +57,7 @@ import KinesitherapieDashboard from './pages/kinesitherapie/Dashboard';
 import KinesitherapieSeances from './pages/kinesitherapie/Seances';
 import DentisterieDashboard from './pages/dentisterie/Dashboard';
 import DentisterieSoins from './pages/dentisterie/Soins';
+import DentisteriePatients from './pages/dentisterie/Patients';
 import PlanningRdv from './pages/shared/PlanningRdv';
 import PrivateRoute from './router/PrivateRoute';
 import { useAuth } from './context/AuthContext';
@@ -102,6 +105,7 @@ const PARCOURS_ROLES = [
   'laborantin',
   'pharmacien',
   'caissier',
+  'dentiste',
   ...MEDECIN_ROLES,
 ];
 
@@ -148,7 +152,7 @@ export default function App() {
             <PrivateRoute allowedRoles={['patient']}><PatientFactures /></PrivateRoute>
           } />
           <Route path="/patient/prescriptions" element={
-            <PrivateRoute allowedRoles={['patient']}><PatientDossier /></PrivateRoute>
+            <PrivateRoute allowedRoles={['patient']}><Navigate to="/patient/dossier" replace /></PrivateRoute>
           } />
           <Route path="/patient/*" element={
             <PrivateRoute allowedRoles={['patient']}>
@@ -222,6 +226,9 @@ export default function App() {
           <Route path="/laboratoire/dashboard" element={
             <PrivateRoute allowedRoles={['laborantin']}><LaboratoireDashboard /></PrivateRoute>
           } />
+          <Route path="/laboratoire/patients" element={
+            <PrivateRoute allowedRoles={['laborantin']}><LaboratoirePatients /></PrivateRoute>
+          } />
           <Route path="/laboratoire/analyses" element={
             <PrivateRoute allowedRoles={['laborantin']}><LaboratoireAnalyses /></PrivateRoute>
           } />
@@ -232,6 +239,9 @@ export default function App() {
           } />
           <Route path="/pharmacie/dashboard" element={
             <PrivateRoute allowedRoles={['pharmacien']}><PharmacieDashboard /></PrivateRoute>
+          } />
+          <Route path="/pharmacie/patients" element={
+            <PrivateRoute allowedRoles={['pharmacien']}><PharmaciePatients /></PrivateRoute>
           } />
           <Route path="/pharmacie/stock" element={
             <PrivateRoute allowedRoles={['pharmacien']}><PharmacieStock /></PrivateRoute>
@@ -344,6 +354,9 @@ export default function App() {
           } />
           <Route path="/dentisterie/dashboard" element={
             <PrivateRoute allowedRoles={['dentiste']}><DentisterieDashboard /></PrivateRoute>
+          } />
+          <Route path="/dentisterie/patients" element={
+            <PrivateRoute allowedRoles={['dentiste']}><DentisteriePatients /></PrivateRoute>
           } />
           <Route path="/dentisterie/planning" element={
             <PrivateRoute allowedRoles={['dentiste']}><PlanningRdv title="Planning RDV — Dentisterie" /></PrivateRoute>

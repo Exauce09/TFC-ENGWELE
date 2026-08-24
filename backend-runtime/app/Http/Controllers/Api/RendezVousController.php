@@ -93,6 +93,8 @@ class RendezVousController extends Controller
 
     public function prendre(Request $request): JsonResponse
     {
+        $this->normalizeRdvDateFields($request);
+
         $validated = $request->validate([
             'patient_id' => 'nullable|exists:patients,id',
             'medecin_id' => 'required|exists:medecins,id',
@@ -293,6 +295,8 @@ class RendezVousController extends Controller
             ], 422);
         }
 
+        $this->normalizeRdvDateFields($request);
+
         $validated = $request->validate([
             'date_rdv' => 'required|date|after_or_equal:today',
             'heure_rdv' => 'required|date_format:H:i',
@@ -339,6 +343,89 @@ class RendezVousController extends Controller
             'message' => 'Rendez-vous reporté — ancien créneau libéré',
             'data' => $rdv->fresh(['medecin.user', 'departement']),
         ]);
+    }
+
+    /** Création d'un RDV (téléconsultation ou présentiel) par le médecin pour un patient. */
+    public function creerParMedecin(Request $request): JsonResponse
+    {
+        $medecin = Medecin::where('user_id', $request->user()->id)->first();
+        if (! $medecin) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Profil médecin introuvable',
+                'errors' => [],
+            ], 422);
+        }
+
+        $validated = $request->validate([
+            'patient_id' => 'required|exists:patients,id',
+            'date_rdv' => 'required|date|after_or_equal:today',
+            'heure_rdv' => 'required|date_format:H:i',
+            'motif' => 'nullable|string|max:500',
+            'type' => 'nullable|in:presentiel,teleconsultation',
+            'priorite' => 'nullable|in:normal,urgent,tres_urgent',
+            'confirmer' => 'nullable|boolean',
+            'departement_id' => 'nullable|exists:departements,id',
+        ]);
+
+        $type = $validated['type'] ?? 'teleconsultation';
+        $heure = Carbon::createFromFormat('H:i', $validated['heure_rdv'])->format('H:i');
+        $heureFin = Carbon::createFromFormat('H:i', $heure)
+            ->addMinutes(CreneauService::DUREE_MINUTES)
+            ->format('H:i');
+        $confirmer = array_key_exists('confirmer', $validated)
+            ? (bool) $validated['confirmer']
+            : true;
+
+        $rdv = RendezVous::create([
+            'patient_id' => $validated['patient_id'],
+            'medecin_id' => $medecin->id,
+            'departement_id' => $validated['departement_id'] ?? $medecin->departement_id,
+            'date_rdv' => $validated['date_rdv'],
+            'heure_rdv' => $heure,
+            'heure_fin' => $heureFin,
+            'motif' => $validated['motif'] ?? null,
+            'type' => $type,
+            'priorite' => $validated['priorite'] ?? 'normal',
+            'statut' => $confirmer ? 'confirme' : 'en_attente',
+            'cree_par' => $request->user()->id,
+            'montant' => $type === 'teleconsultation' ? 15000 : null,
+            'lien_video' => null,
+        ]);
+
+        if ($type === 'teleconsultation') {
+            $this->jitsi->ensureDedicatedRoom($rdv);
+        }
+
+        $rdv = $rdv->load(['medecin.user', 'patient.user', 'departement']);
+        $patient = $rdv->patient;
+
+        if ($patient?->user) {
+            $msg = $confirmer
+                ? "Votre RDV du {$validated['date_rdv']} à {$heure} est confirmé."
+                : "Une demande de RDV a été créée pour le {$validated['date_rdv']} à {$heure}.";
+            if ($type === 'teleconsultation') {
+                $msg .= $confirmer
+                    ? ' Réglez le paiement puis rejoignez la salle Téléconsultation.'
+                    : '';
+            }
+            $this->notifications->notify(
+                $patient->user,
+                $confirmer ? 'Rendez-vous confirmé' : 'Nouveau rendez-vous',
+                $msg,
+                'rdv_confirme',
+                ['rendez_vous_id' => $rdv->id],
+                sendSms: true,
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $type === 'teleconsultation'
+                ? 'Téléconsultation créée'
+                : 'Rendez-vous créé',
+            'data' => $rdv,
+        ], 201);
     }
 
     public function updateStatut(Request $request, int $id): JsonResponse
@@ -389,5 +476,28 @@ class RendezVousController extends Controller
             'message' => 'Statut mis à jour',
             'data' => $rdv->load(['patient.user', 'departement']),
         ]);
+    }
+
+    /** Accepte date_heure (app mobile) ou date_rdv + heure_rdv (site). */
+    private function normalizeRdvDateFields(Request $request): void
+    {
+        if ($request->filled('date_heure') && ! $request->filled('date_rdv')) {
+            try {
+                $dt = Carbon::parse((string) $request->input('date_heure'));
+                $request->merge([
+                    'date_rdv' => $dt->toDateString(),
+                    'heure_rdv' => $request->filled('heure_rdv')
+                        ? $request->input('heure_rdv')
+                        : $dt->format('H:i'),
+                ]);
+            } catch (\Throwable) {
+                // la validation Laravel signalera l'erreur
+            }
+        }
+
+        if ($request->filled('heure_rdv')) {
+            $heure = substr((string) $request->input('heure_rdv'), 0, 5);
+            $request->merge(['heure_rdv' => $heure]);
+        }
     }
 }

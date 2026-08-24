@@ -2,8 +2,6 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  Linking,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -138,12 +136,10 @@ export default function PatientTeleconsultationScreen() {
                   label={joining === s.id ? 'Ouverture…' : 'Rejoindre la salle'}
                   onPress={() => void rejoindre(s)}
                   loading={joining === s.id}
-                  disabled={joining !== null}
+                  disabled={joining !== null || (s.paiement_statut !== undefined && s.paiement_statut !== 'paye') || !['confirme', 'en_cours'].includes(s.statut)}
                 />
-                {s.salle_url ? (
-                  <Pressable onPress={() => Linking.openURL(s.salle_url!)}>
-                    <Text style={styles.openExt}>Ouvrir le lien</Text>
-                  </Pressable>
+                {s.paiement_statut && s.paiement_statut !== 'paye' ? (
+                  <Text style={styles.openExt}>Réglez d&apos;abord le paiement depuis Rendez-vous.</Text>
                 ) : null}
               </MedicalCard>
             </Animated.View>

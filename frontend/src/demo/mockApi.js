@@ -1,3 +1,5 @@
+import { DEMO_USERS } from './demoConfig';
+
 const ok = (data, message = 'OK') => ({ success: true, message, data });
 
 const DEMO_RDV = [
@@ -147,10 +149,12 @@ let DEMO_ADMISSIONS = [
     numero_admission: 'ADM-DEMO-0001',
     statut: 'triage',
     statut_label: STATUT_LABELS.triage,
+    medecin_referent_id: 1,
     motif_arrivee: 'Fièvre et céphalées',
     mode_arrivee: 'walk_in',
     observations: null,
     created_at: '2026-07-25T08:00:00.000000Z',
+    arrivee_at: '2026-07-25T08:00:00.000000Z',
     patient: {
       id: 3,
       numero_patient: 'PAT-00003',
@@ -159,7 +163,8 @@ let DEMO_ADMISSIONS = [
       commune: 'Matete',
       user: { id: 3, name: 'Marie Kalala', phone: '+243 900 000 003', email: 'marie@demo.cd' },
     },
-    departement: { id: 1, nom: 'Médecine Générale', code: 'MG' },
+    departement: { id: 4, nom: 'Médecine générale', code: 'MED_GEN' },
+    medecin_referent: { id: 1, user: { id: 2, name: 'Dr. Jean-Pierre Kabila' } },
     triage: null,
     consultations: [],
     examens_labo: [],
@@ -173,6 +178,27 @@ let DEMO_ADMISSIONS = [
     ],
   },
 ];
+
+function demoMedecinId() {
+  try {
+    const u = JSON.parse(localStorage.getItem('amen_user') || 'null');
+    if (!u) return null;
+    // Compte démo médecin généraliste → profil medecins.id = 1
+    if (u.email === 'medecin@amen.cd' || u.role === 'medecin_generaliste') return 1;
+    const byName = DEMO_MEDECINS.find((m) => m.name && u.name && u.name.includes(m.name.split(' ').pop()));
+    return byName?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+function fileConsultationDemo() {
+  const mid = demoMedecinId();
+  return DEMO_ADMISSIONS.filter(
+    (a) => ['triage', 'consultation_medicale'].includes(a.statut)
+      && (mid == null || Number(a.medecin_referent_id) === Number(mid)),
+  );
+}
 
 function cloneAdmission(a) {
   return JSON.parse(JSON.stringify(a));
@@ -340,10 +366,24 @@ export function resolveMock(config) {
 
   // --- Parcours patient / admissions ---
   if (method === 'get' && p === '/admissions') {
-    const actifs = String(config.url || '').includes('actifs=1') || String(config.url || '').includes('actifs=true');
-    const list = DEMO_ADMISSIONS
-      .filter((a) => !actifs || !CLOTURES.includes(a.statut))
+    const url = String(config.url || '');
+    const actifs = url.includes('actifs=1') || url.includes('actifs=true');
+    const termines = url.includes('termines=1') || url.includes('termines=true');
+    const q = (queryParam(config, 'q') || '').toLowerCase();
+    let list = DEMO_ADMISSIONS
+      .filter((a) => {
+        if (actifs && CLOTURES.includes(a.statut)) return false;
+        if (termines && !CLOTURES.includes(a.statut)) return false;
+        return true;
+      })
       .map((a) => cloneAdmission(a));
+    if (q) {
+      list = list.filter((a) =>
+        [a.numero_admission, a.motif_arrivee, a.patient?.numero_patient, a.patient?.user?.name]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q))
+      );
+    }
     return { ...ok(list, 'Liste des admissions'), meta: { total: list.length, statuts: STATUT_LABELS } };
   }
 
@@ -470,15 +510,19 @@ export function resolveMock(config) {
   if (method === 'post' && p === '/admissions') {
     const id = demoAdmissionSeq++;
     const patientId = body.patient_id || demoPatientSeq++;
+    const medecinId = body.medecin_id ? Number(body.medecin_id) : null;
+    const medecin = DEMO_MEDECINS.find((m) => Number(m.id) === medecinId);
     const admission = {
       id,
       numero_admission: `ADM-DEMO-${String(id).padStart(4, '0')}`,
       statut: 'triage',
       statut_label: STATUT_LABELS.triage,
+      medecin_referent_id: medecinId,
       motif_arrivee: body.motif_arrivee || 'Consultation',
       mode_arrivee: body.mode_arrivee || 'walk_in',
         observations: body.observations || null,
       created_at: new Date().toISOString(),
+      arrivee_at: new Date().toISOString(),
       patient: {
         id: patientId,
         numero_patient: `PAT-${String(patientId).padStart(5, '0')}`,
@@ -493,6 +537,9 @@ export function resolveMock(config) {
         },
       },
       departement: DEMO_DEPARTEMENTS.find((d) => String(d.id) === String(body.departement_id)) || DEMO_DEPARTEMENTS[0],
+      medecin_referent: medecin
+        ? { id: medecin.id, user: { id: medecin.id, name: medecin.name } }
+        : null,
       triage: null,
       consultations: [],
       examens_labo: [],
@@ -561,19 +608,28 @@ export function resolveMock(config) {
   }
 
   if (method === 'get' && p === '/medecin/dashboard') {
+    const file = fileConsultationDemo();
     return ok({
       rdv_du_jour: DEMO_RDV.length,
       rdv_en_attente: 1,
       rdv_termines: 0,
       rdv_en_cours: null,
       planning_du_jour: DEMO_RDV,
-      file_consultation: DEMO_ADMISSIONS.filter((a) => ['triage', 'consultation_medicale'].includes(a.statut)),
-      file_count: DEMO_ADMISSIONS.filter((a) => ['triage', 'consultation_medicale'].includes(a.statut)).length,
+      file_consultation: file,
+      file_count: file.length,
+      medecin_id: demoMedecinId(),
       examens_en_attente: 1,
       ordonnances_actives: 2,
       dossiers_recents: [],
       dossiers_semaine: 3,
     });
+  }
+  if (method === 'get' && p === '/medecin/file-consultation') {
+    const file = fileConsultationDemo();
+    return {
+      ...ok(file, 'File de consultation'),
+      meta: { file_count: file.length, medecin_id: demoMedecinId(), filtre: 'medecin_assigne' },
+    };
   }
   if (method === 'get' && p === '/medecin/patients') {
     return ok(DEMO_PATIENTS_ACCUEIL);
@@ -670,13 +726,19 @@ export function resolveMock(config) {
   }
 
   if (method === 'get' && p === '/pharmacie/dashboard') {
-    return ok({ medicaments_total: 42, stock_bas: 3, ordonnances_actives: 4, ordonnances_delivrees: 18 });
+    return ok({
+      medicaments_total: 42,
+      stock_bas: 3,
+      ordonnances_actives: 4,
+      ordonnances_delivrees: 18,
+      file_admissions: 2,
+    });
   }
   if (method === 'get' && p === '/pharmacie/stock') {
     return ok([
-      { id: 1, nom: 'Paracétamol 500 mg', dci: 'Paracétamol', quantite: 240, seuil_alerte: 50, date_expiration: '2027-06-01' },
-      { id: 2, nom: 'Amoxicilline 500 mg', dci: 'Amoxicilline', quantite: 18, seuil_alerte: 30, date_expiration: '2026-12-01' },
-      { id: 3, nom: 'Artemether-Lumefantrine', dci: 'AL', quantite: 8, seuil_alerte: 20, date_expiration: '2026-09-15' },
+      { id: 1, nom: 'Paracétamol 500 mg', dci: 'Paracétamol', quantite_stock: 240, seuil_alerte: 50, date_expiration: '2027-06-01' },
+      { id: 2, nom: 'Amoxicilline 500 mg', dci: 'Amoxicilline', quantite_stock: 18, seuil_alerte: 30, date_expiration: '2026-12-01' },
+      { id: 3, nom: 'Artemether-Lumefantrine', dci: 'AL', quantite_stock: 8, seuil_alerte: 20, date_expiration: '2026-09-15' },
     ]);
   }
   if (method === 'get' && p === '/pharmacie/ordonnances') {
@@ -688,6 +750,7 @@ export function resolveMock(config) {
         statut: 'active',
         statut_label: 'En attente',
         date_prescription: new Date().toISOString().slice(0, 10),
+        departement: 'Médecine générale',
         patient: { user: { name: 'Marie Kalala' }, allergies: 'Pénicilline' },
         medicaments: [{ nom: 'Paracétamol', dosage: '500 mg', frequence: '3×/j', duree: '5 j' }],
       },
@@ -698,6 +761,7 @@ export function resolveMock(config) {
         statut: 'active',
         statut_label: 'En attente',
         date_prescription: new Date().toISOString().slice(0, 10),
+        departement: 'Pédiatrie',
         patient: { user: { name: 'Joseph Mbala' } },
         medicaments: [{ nom: 'Amoxicilline', dosage: '500 mg', frequence: '2×/j', duree: '7 j' }],
       },
@@ -897,6 +961,84 @@ export function resolveMock(config) {
     return ok(null, 'Téléconsultation clôturée');
   }
 
+  if (method === 'get' && p === '/admin/patients') {
+    const q = (queryParam(config, 'q') || '').toLowerCase();
+    const statut = queryParam(config, 'statut') || 'tous';
+    let list = DEMO_PATIENTS_ACCUEIL.map((pt) => ({
+      ...pt,
+      user: {
+        ...(pt.user || {}),
+        is_active: pt.user?.is_active !== false,
+        deleted_at: pt.user?.deleted_at || null,
+      },
+    }));
+    if (q) {
+      list = list.filter((pt) =>
+        [pt.numero_patient, pt.user?.name, pt.user?.email, pt.user?.phone, pt.commune]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q))
+      );
+    }
+    if (statut === 'actifs') list = list.filter((pt) => pt.user?.is_active && !pt.user?.deleted_at);
+    if (statut === 'inactifs') list = list.filter((pt) => !pt.user?.is_active && !pt.user?.deleted_at);
+    if (statut === 'supprimes') list = list.filter((pt) => !!pt.user?.deleted_at);
+    return { ...ok(list), meta: { total: list.length, per_page: 50, current_page: 1, last_page: 1 } };
+  }
+
+  const adminPatientMatch = p.match(/^\/admin\/patients\/(\d+)$/);
+  if (adminPatientMatch) {
+    const id = Number(adminPatientMatch[1]);
+    const pt = DEMO_PATIENTS_ACCUEIL.find((x) => x.id === id);
+    if (!pt) return { success: false, message: 'Patient introuvable (démo)', data: null };
+    if (method === 'get') {
+      const admissions = DEMO_ADMISSIONS
+        .filter((a) => a.patient_id === id || a.patient?.id === id)
+        .map((a) => cloneAdmission(a));
+      return ok({
+        patient: { ...pt, photo: pt.photo || null },
+        admissions,
+        admission_active: admissions.find((a) => !CLOTURES.includes(a.statut)) || null,
+      }, 'Fiche patient');
+    }
+    if (method === 'put') {
+      Object.assign(pt, body);
+      if (Object.prototype.hasOwnProperty.call(body, 'photo')) pt.photo = body.photo;
+      return ok({ ...pt }, 'Fiche patient mise à jour');
+    }
+  }
+
+  if (method === 'get' && p === '/admin/medecins') {
+    const list = DEMO_MEDECINS.map((m) => ({
+      id: m.id,
+      specialite: m.specialite,
+      numero_ordre: `ORD-${m.id}`,
+      tarif_consultation: 25000,
+      user: { id: m.id, name: m.name, email: `${String(m.name).toLowerCase().replace(/\s+/g, '.')}@amen.cd`, is_active: true },
+      departement: typeof m.departement === 'string' ? { nom: m.departement } : m.departement,
+    }));
+    return { ...ok(list), meta: { total: list.length, per_page: 50, current_page: 1 } };
+  }
+
+  if (method === 'get' && p === '/admin/utilisateurs') {
+    const role = queryParam(config, 'role');
+    let list = Object.values(DEMO_USERS).map((u) => ({
+      ...u,
+      is_active: true,
+      statut: 'actif',
+      departement: DEMO_DEPARTEMENTS[0] ? { id: DEMO_DEPARTEMENTS[0].id, nom: DEMO_DEPARTEMENTS[0].nom } : null,
+    }));
+    if (role) list = list.filter((u) => u.role === role || (role === 'medecin_generaliste' && String(u.role).startsWith('medecin')));
+    return ok(list);
+  }
+
+  if (method === 'get' && p === '/admin/departements') {
+    return ok(DEMO_DEPARTEMENTS.map((d) => ({ ...d, is_active: true, medecins_count: 2, users_count: 3 })));
+  }
+
+  if (method === 'put' && /\/admin\/patients\/\d+\/toggle/.test(p)) {
+    return ok(null, 'Statut patient mis à jour (démo)');
+  }
+
   if (method === 'get' && p.startsWith('/admin/')) {
     return ok([]);
   }
@@ -905,7 +1047,7 @@ export function resolveMock(config) {
     return ok({ total: 12, en_attente: 3, termines: 9 });
   }
 
-  if (method === 'get' && (p.includes('/file-triage') || p.includes('/file-consultation') || p.includes('/episodes'))) {
+  if (method === 'get' && (p.includes('/file-triage') || p.includes('/episodes'))) {
     return ok([]);
   }
 

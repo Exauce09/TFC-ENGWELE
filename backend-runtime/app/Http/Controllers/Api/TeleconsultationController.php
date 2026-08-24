@@ -15,6 +15,8 @@ class TeleconsultationController extends Controller
     private const MEDECIN_ROLES = [
         'medecin_generaliste', 'medecin_interne', 'pediatre',
         'gynecologue', 'ophtalmologue', 'urgentiste',
+        'chirurgien', 'anesthesiste', 'dentiste', 'sage_femme',
+        'kinesitherapeute', 'echographiste', 'radiologue',
     ];
 
     public function __construct(private JitsiService $jitsi) {}
@@ -24,7 +26,7 @@ class TeleconsultationController extends Controller
         $user = $request->user();
         $query = RendezVous::with(['medecin.user', 'patient.user', 'departement'])
             ->where('type', 'teleconsultation')
-            ->whereIn('statut', ['confirme', 'en_cours'])
+            ->whereIn('statut', ['en_attente', 'confirme', 'en_cours'])
             ->whereDate('date_rdv', '>=', now()->toDateString());
 
         if ($user->role === 'patient') {
@@ -40,13 +42,24 @@ class TeleconsultationController extends Controller
         $isMedecin = in_array($user->role, self::MEDECIN_ROLES, true);
 
         $rdvs = $query->orderBy('date_rdv')->orderBy('heure_rdv')->get()->map(function ($r) use ($user, $isMedecin) {
-            $room = $this->jitsi->ensureDedicatedRoom($r);
+            $peutRejoindre = in_array($r->statut, ['confirme', 'en_cours'], true);
+            $patientPaye = $r->paiement_statut === 'paye';
+            // Ne pas exposer l'URL de salle au patient non payé (évite le contournement)
+            $exposerSalle = $peutRejoindre && ($isMedecin || $patientPaye);
+
+            $room = null;
+            if ($exposerSalle || $isMedecin) {
+                $room = $this->jitsi->ensureDedicatedRoom($r);
+            }
 
             return [
                 ...$r->fresh(['medecin.user', 'patient.user', 'departement'])->toArray(),
-                'salle_url' => $this->jitsi->embedUrl($r->id, $user->name, $isMedecin),
-                'room_name' => $room['room_name'],
-                'salle_dediee' => true,
+                'salle_url' => $exposerSalle
+                    ? $this->jitsi->embedUrl($r->id, $user->name, $isMedecin)
+                    : null,
+                'room_name' => $exposerSalle ? ($room['room_name'] ?? null) : null,
+                'salle_dediee' => (bool) $exposerSalle,
+                'peut_rejoindre' => $exposerSalle,
             ];
         });
 
@@ -73,6 +86,14 @@ class TeleconsultationController extends Controller
 
         $isPatient = $user->role === 'patient';
         $isMedecin = in_array($user->role, self::MEDECIN_ROLES, true);
+
+        if (! in_array($rdv->statut, ['confirme', 'en_cours'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'La téléconsultation doit être confirmée avant d\'entrer dans la salle.',
+                'errors' => [],
+            ], 422);
+        }
 
         if ($isPatient && $rdv->paiement_statut !== 'paye') {
             return response()->json([

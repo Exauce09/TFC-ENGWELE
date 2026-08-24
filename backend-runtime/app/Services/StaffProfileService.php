@@ -90,7 +90,11 @@ class StaffProfileService
             $role === 'pharmacien' => 'PHARM',
             $role === 'sage_femme', $role === 'gynecologue' => 'MAT',
             $role === 'pediatre' => 'PED',
-            $role === 'urgentiste', $role === 'chirurgien', $role === 'anesthesiste' => 'URG',
+            $role === 'urgentiste' => 'URG',
+            $role === 'chirurgien', $role === 'anesthesiste' => 'CHIR',
+            $role === 'dentiste' => 'DENT',
+            $role === 'ophtalmologue' => 'OPHT',
+            $role === 'kinesitherapeute' => 'KINE',
             self::requiresDepartement($role) => 'MED_GEN',
             default => null,
         };
@@ -351,5 +355,29 @@ class StaffProfileService
         if ($parts !== []) {
             $user->name = implode(' ', $parts);
         }
+    }
+
+    /**
+     * Remplit prenom/nom depuis `name` si absents (comptes seed / imports).
+     */
+    public static function hydrateIdentityFromName(User $user): bool
+    {
+        if (($user->prenom && $user->nom) || ! $user->name) {
+            return false;
+        }
+
+        $parts = preg_split('/\s+/', trim((string) $user->name), 2) ?: [];
+        $prenom = $parts[0] ?? '';
+        $nom = $parts[1] ?? ($parts[0] ?? '');
+        if ($prenom === '' && $nom === '') {
+            return false;
+        }
+
+        $user->forceFill([
+            'prenom' => $user->prenom ?: $prenom,
+            'nom' => $user->nom ?: $nom,
+        ])->save();
+
+        return true;
     }
 }

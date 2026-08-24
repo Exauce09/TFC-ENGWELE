@@ -93,8 +93,22 @@ export default function AdminDashboard() {
 
   return (
     <Layout title="Administration">
-      <div className="mb-6">
-        <h2 className="font-admin-display text-3xl" style={{ color: T.titleColor }}>Tableau de bord</h2>
+      <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-admin-display text-3xl" style={{ color: T.titleColor }}>Tableau de bord</h2>
+          <p className="mt-1 text-sm text-slate-500">Vue d&apos;ensemble, parcours et administration.</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/parcours" className="rounded-xl px-5 py-2.5 text-sm font-bold text-white" style={{ background: T.accent }}>
+            Parcours patient
+          </Link>
+          <Link to="/admin/utilisateurs" className="rounded-xl border-2 bg-white px-5 py-2.5 text-sm font-bold" style={{ borderColor: T.accent, color: T.accent }}>
+            Utilisateurs
+          </Link>
+          <Link to="/admin/statistiques" className="rounded-xl border bg-white px-5 py-2.5 text-sm font-bold text-slate-700">
+            Statistiques
+          </Link>
+        </div>
       </div>
 
       {loading ? (
@@ -113,6 +127,7 @@ export default function AdminDashboard() {
                   <div>
                     <p className="text-sm text-slate-500 group-hover:text-slate-700">{c.label}</p>
                     <p className="mt-1 text-3xl font-bold text-slate-900">{c.value}</p>
+                    <p className="mt-2 text-xs font-semibold" style={{ color: T.accent }}>Voir →</p>
                   </div>
                   <Icon name={c.icon} className="h-7 w-7 text-slate-400 transition group-hover:text-slate-600" />
                 </div>

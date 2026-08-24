@@ -44,3 +44,8 @@ Thumbs.db
 # Word lock files
 ~$*.docx
 
+
+.api-public-url
+.tunnel-log.txt
+releases/captures/node_modules/
+

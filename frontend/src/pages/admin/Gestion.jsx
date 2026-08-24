@@ -1,16 +1,18 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import Layout from '../../components/layout/Layout';
 import { getRoleLabel, ROLE_LABELS } from '../../components/layout/roleMenus';
 import api from '../../services/api';
+import { compressImage } from '../../utils/image';
 
-function SearchBar({ value, onChange, placeholder }) {
+function SearchBar({ value, onChange, placeholder, className = '' }) {
   return (
     <input
       type="search"
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
-      className="mb-4 w-full max-w-md rounded-xl border px-4 py-2 text-sm"
+      className={`w-full min-w-0 max-w-md rounded-xl border px-4 py-2 text-sm ${className}`}
     />
   );
 }
@@ -33,52 +35,473 @@ const sectionCls = 'rounded-xl border border-slate-100 bg-slate-50/60 p-4';
 export function AdminPatients() {
   const [items, setItems] = useState([]);
   const [q, setQ] = useState('');
+  const [statut, setStatut] = useState('tous');
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [meta, setMeta] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState('');
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [saveMsg, setSaveMsg] = useState('');
+  const [editName, setEditName] = useState('');
+  const [editPhone, setEditPhone] = useState('');
+  const [identiteBusy, setIdentiteBusy] = useState(false);
 
   const load = () => {
     setLoading(true);
-    api.get('/admin/patients', { params: q ? { q } : {} })
-      .then((r) => setItems(r.data.data || []))
-      .catch(() => setItems([]))
+    setError('');
+    const params = { per_page: 50 };
+    if (q.trim()) params.q = q.trim();
+    if (statut && statut !== 'tous') params.statut = statut;
+    api.get('/admin/patients', { params })
+      .then((r) => {
+        setItems(Array.isArray(r.data?.data) ? r.data.data : []);
+        setMeta(r.data?.meta || null);
+      })
+      .catch((err) => {
+        setItems([]);
+        setMeta(null);
+        setError(err.response?.data?.message || 'Impossible de charger la liste des patients.');
+      })
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { void load(); }, [q]);
+  useEffect(() => { void load(); }, [q, statut]);
+
+  const openDetail = async (id) => {
+    setSelectedId(id);
+    setDetail(null);
+    setDetailError('');
+    setSaveMsg('');
+    setDetailLoading(true);
+    try {
+      const res = await api.get(`/admin/patients/${id}`);
+      const payload = res.data?.data || null;
+      setDetail(payload);
+      setEditName(payload?.patient?.user?.name || '');
+      setEditPhone(payload?.patient?.user?.phone || '');
+    } catch (err) {
+      setDetail(null);
+      setDetailError(err.response?.data?.message || 'Impossible de charger la fiche patient.');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const closeDetail = () => {
+    setSelectedId(null);
+    setDetail(null);
+    setDetailError('');
+    setSaveMsg('');
+  };
+
+  const onPhoto = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedId) return;
+    setPhotoBusy(true);
+    setDetailError('');
+    setSaveMsg('');
+    try {
+      const dataUrl = await compressImage(file);
+      const res = await api.put(`/admin/patients/${selectedId}`, { photo: dataUrl });
+      const updated = res.data?.data;
+      setDetail((d) => (d ? { ...d, patient: updated || { ...d.patient, photo: dataUrl } } : d));
+      setItems((list) => list.map((p) => (p.id === selectedId ? { ...p, photo: dataUrl } : p)));
+      setSaveMsg('Photo enregistrée.');
+    } catch (err) {
+      setDetailError(err.response?.data?.message || 'Impossible d’enregistrer la photo.');
+    } finally {
+      setPhotoBusy(false);
+      e.target.value = '';
+    }
+  };
+
+  const removePhoto = async () => {
+    if (!selectedId) return;
+    setPhotoBusy(true);
+    setDetailError('');
+    try {
+      const res = await api.put(`/admin/patients/${selectedId}`, { photo: null });
+      const updated = res.data?.data;
+      setDetail((d) => (d ? { ...d, patient: updated || { ...d.patient, photo: null } } : d));
+      setItems((list) => list.map((p) => (p.id === selectedId ? { ...p, photo: null } : p)));
+      setSaveMsg('Photo retirée.');
+    } catch (err) {
+      setDetailError(err.response?.data?.message || 'Impossible de retirer la photo.');
+    } finally {
+      setPhotoBusy(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!selectedId) return;
+    setIdentiteBusy(true);
+    setDetailError('');
+    try {
+      const res = await api.put(`/admin/patients/${selectedId}/reset-password`);
+      const acces = res.data?.data?.acces;
+      setDetail((d) => (d ? { ...d, acces } : d));
+      setSaveMsg('Mot de passe réinitialisé. Remettez login + Amen2026 au patient.');
+    } catch (err) {
+      setDetailError(err.response?.data?.message || 'Impossible de réinitialiser le mot de passe.');
+    } finally {
+      setIdentiteBusy(false);
+    }
+  };
+
+  const saveIdentite = async () => {
+    if (!selectedId) return;
+    setIdentiteBusy(true);
+    setDetailError('');
+    setSaveMsg('');
+    try {
+      const res = await api.put(`/admin/patients/${selectedId}`, {
+        name: editName.trim(),
+        phone: editPhone.trim(),
+      });
+      const updated = res.data?.data;
+      setDetail((d) => (d ? { ...d, patient: updated || d.patient, acces: res.data?.acces || d.acces } : d));
+      setItems((list) => list.map((p) => (
+        p.id === selectedId
+          ? { ...p, user: updated?.user ? { ...p.user, ...updated.user } : p.user }
+          : p
+      )));
+      setSaveMsg('Identité enregistrée.');
+    } catch (err) {
+      setDetailError(err.response?.data?.message || 'Impossible d’enregistrer l’identité.');
+    } finally {
+      setIdentiteBusy(false);
+    }
+  };
+
+  const copyText = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setSaveMsg('Copié dans le presse-papiers.');
+    } catch {
+      setSaveMsg('');
+    }
+  };
 
   const toggle = async (id) => {
-    await api.put(`/admin/patients/${id}/toggle`);
-    load();
+    try {
+      await api.put(`/admin/patients/${id}/toggle`);
+      load();
+      if (selectedId === id) void openDetail(id);
+    } catch (err) {
+      window.alert(err.response?.data?.message || 'Impossible de modifier le statut du patient');
+    }
   };
+
+  const labelStatut = (user) => {
+    if (!user) return { text: 'Sans compte', cls: 'bg-amber-100 text-amber-800' };
+    if (user.deleted_at) return { text: 'Compte supprimé', cls: 'bg-slate-200 text-slate-700' };
+    if (user.is_active) return { text: 'Actif', cls: 'bg-emerald-100 text-emerald-700' };
+    return { text: 'Inactif', cls: 'bg-red-100 text-red-700' };
+  };
+
+  const patient = detail?.patient;
+  const admissions = detail?.admissions || [];
+  const acces = detail?.acces;
 
   return (
     <Layout title="Gestion des Patients">
-      <h2 className="mb-4 text-2xl font-bold text-slate-900">Gestion des Patients</h2>
-      <SearchBar value={q} onChange={setQ} placeholder="Rechercher par nom, email ou n° patient..." />
+      <h2 className="mb-1 text-2xl font-bold text-slate-900">Gestion des Patients</h2>
+      <p className="mb-4 text-sm text-slate-500">
+        Patients enregistrés à l&apos;accueil. Identité et mot de passe : accueil + admin uniquement.
+      </p>
 
-      {loading ? <p className="text-slate-500">Chargement...</p> : items.length === 0 ? (
-        <p className="rounded-xl border bg-white p-8 text-center text-slate-500">Aucun patient.</p>
-      ) : (
-        <div className="space-y-3">
-          {items.map((p) => (
-            <article key={p.id} className="flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
-              <div>
-                <p className="font-semibold">{p.user?.name}</p>
-                <p className="text-sm text-slate-500">{p.numero_patient} · {p.user?.email}</p>
-                <p className="text-xs text-slate-400">{p.commune || '—'} · {p.sexe === 'F' ? 'Féminin' : 'Masculin'}</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${p.user?.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                  {p.user?.is_active ? 'Actif' : 'Inactif'}
-                </span>
-                <button
-                  onClick={() => toggle(p.id)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-bold ${p.user?.is_active ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}
-                >
-                  {p.user?.is_active ? 'Désactiver' : 'Activer'}
-                </button>
-              </div>
-            </article>
-          ))}
+      <div className="mb-4 flex flex-wrap gap-3">
+        <SearchBar value={q} onChange={setQ} placeholder="Rechercher par nom, email, téléphone ou n° patient..." />
+        <select
+          value={statut}
+          onChange={(e) => setStatut(e.target.value)}
+          className="rounded-xl border px-3 py-2 text-sm"
+        >
+          <option value="tous">Tous les statuts</option>
+          <option value="actifs">Actifs</option>
+          <option value="inactifs">Inactifs</option>
+          <option value="supprimes">Comptes supprimés</option>
+        </select>
+      </div>
+
+      {error && (
+        <p className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>
+      )}
+
+      <div>
+        {loading ? (
+          <p className="text-slate-500">Chargement...</p>
+        ) : items.length === 0 ? (
+          <p className="rounded-xl border bg-white p-8 text-center text-slate-500">
+            {error
+              ? 'La liste n’a pas pu être chargée.'
+              : q || statut !== 'tous'
+                ? 'Aucun patient ne correspond à cette recherche.'
+                : 'Aucun patient enregistré. Les patients sont créés à l’accueil lors d’une admission.'}
+          </p>
+        ) : (
+          <>
+            {meta?.total != null && (
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                {meta.total} patient{meta.total > 1 ? 's' : ''}
+              </p>
+            )}
+            <div className="space-y-3">
+              {items.map((p) => {
+                const badge = labelStatut(p.user);
+                const displayName = p.user?.name || p.numero_patient || `Patient #${p.id}`;
+                const deleted = !!p.user?.deleted_at;
+                const active = selectedId === p.id;
+                return (
+                  <article
+                    key={p.id}
+                    className={`flex flex-col gap-3 rounded-xl border bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between ${
+                      active ? 'border-medical-primary ring-1 ring-medical-primary/30' : ''
+                    }`}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => openDetail(p.id)}
+                      className="flex min-w-0 flex-1 items-start gap-3 text-left"
+                    >
+                      {p.photo ? (
+                        <img src={p.photo} alt="" className="h-12 w-12 shrink-0 rounded-xl border object-cover" />
+                      ) : (
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-dashed bg-slate-50 text-sm font-bold text-slate-400">
+                          {displayName.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <p className="truncate font-semibold text-slate-900">{displayName}</p>
+                        <p className="truncate text-sm text-slate-500">
+                          {p.numero_patient}
+                          {p.user?.phone ? ` · ${p.user.phone}` : ''}
+                        </p>
+                        {p.user?.email && (
+                          <p className="truncate text-xs text-slate-400">{p.user.email}</p>
+                        )}
+                        <p className="truncate text-xs text-slate-400">
+                          {p.commune || '—'} · {p.sexe === 'F' ? 'Féminin' : p.sexe === 'M' ? 'Masculin' : '—'}
+                        </p>
+                      </div>
+                    </button>
+                    <div className="flex shrink-0 flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge.cls}`}>
+                        {badge.text}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => toggle(p.id)}
+                        disabled={!p.user}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40 ${
+                          deleted || !p.user?.is_active
+                            ? 'bg-emerald-50 text-emerald-600'
+                            : 'bg-red-50 text-red-600'
+                        }`}
+                      >
+                        {deleted ? 'Restaurer' : p.user?.is_active ? 'Désactiver' : 'Activer'}
+                      </button>
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+
+      {selectedId && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <button
+            type="button"
+            aria-label="Fermer la fiche"
+            className="absolute inset-0 bg-slate-900/40"
+            onClick={closeDetail}
+          />
+          <aside className="relative z-10 flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b px-5 py-4">
+              <h3 className="min-w-0 truncate text-lg font-bold text-slate-900">Fiche patient</h3>
+              <button
+                type="button"
+                onClick={closeDetail}
+                className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+              >
+                Fermer
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto p-5">
+              {detailLoading ? (
+                <p className="text-sm text-slate-500">Chargement de la fiche…</p>
+              ) : detailError && !patient ? (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{detailError}</p>
+              ) : patient ? (
+                <div className="space-y-5">
+                  <div className="flex flex-col items-center text-center">
+                    {patient.photo ? (
+                      <img src={patient.photo} alt="" className="h-24 w-24 rounded-2xl border object-cover" />
+                    ) : (
+                      <div className="flex h-24 w-24 items-center justify-center rounded-2xl border border-dashed bg-slate-50 text-3xl font-bold text-slate-400">
+                        {(patient.user?.name || '?').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <p className="mt-3 w-full break-words text-lg font-bold text-slate-900">
+                      {patient.user?.name || patient.numero_patient}
+                    </p>
+                    <p className="font-mono text-sm text-slate-500">{patient.numero_patient}</p>
+                    <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
+                      <label className="cursor-pointer rounded-lg bg-medical-primary px-3 py-1.5 text-xs font-bold text-white">
+                        {photoBusy ? 'Envoi…' : 'Ajouter / changer photo'}
+                        <input type="file" accept="image/*" className="hidden" onChange={onPhoto} disabled={photoBusy} />
+                      </label>
+                      {patient.photo && (
+                        <button type="button" onClick={removePhoto} disabled={photoBusy} className="text-xs text-red-600 underline">
+                          Retirer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {detailError && (
+                    <p className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{detailError}</p>
+                  )}
+                  {saveMsg && (
+                    <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{saveMsg}</p>
+                  )}
+
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-left text-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-emerald-800">Identifiants de connexion</p>
+                    <p className="mt-1 text-xs text-emerald-900/80">
+                      Seuls l&apos;accueil et l&apos;admin peuvent voir / réinitialiser le mot de passe. Le patient le change à la 1re connexion.
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      <p>
+                        <span className="text-slate-500">Identifiant :</span>{' '}
+                        <strong className="break-all font-mono">{acces?.login || patient.user?.login_identifiant || '—'}</strong>
+                        {(acces?.login || patient.user?.login_identifiant) && (
+                          <button type="button" className="ml-2 text-xs text-emerald-800 underline" onClick={() => copyText(acces?.login || patient.user.login_identifiant)}>
+                            Copier
+                          </button>
+                        )}
+                      </p>
+                      <p>
+                        <span className="text-slate-500">Mot de passe :</span>{' '}
+                        {acces?.password ? (
+                          <>
+                            <strong className="font-mono text-lg tracking-wide">{acces.password}</strong>
+                            <button type="button" className="ml-2 text-xs text-emerald-800 underline" onClick={() => copyText(acces.password)}>
+                              Copier
+                            </button>
+                          </>
+                        ) : (
+                          <span className="text-slate-600">déjà changé par le patient</span>
+                        )}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={identiteBusy}
+                      onClick={resetPassword}
+                      className="mt-3 w-full rounded-lg border border-emerald-300 bg-white px-3 py-2 text-xs font-bold text-emerald-800 disabled:opacity-50"
+                    >
+                      {identiteBusy ? '…' : 'Réinitialiser le mot de passe (Amen2026)'}
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 rounded-2xl border p-4 text-left">
+                    <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">Modifier l’identité</p>
+                    <label className="block text-sm">
+                      <span className="mb-1 block text-xs font-semibold text-slate-500">Nom complet</span>
+                      <input
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="w-full rounded-xl border px-3 py-2 text-sm"
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="mb-1 block text-xs font-semibold text-slate-500">Téléphone</span>
+                      <input
+                        value={editPhone}
+                        onChange={(e) => setEditPhone(e.target.value)}
+                        className="w-full rounded-xl border px-3 py-2 text-sm"
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      disabled={identiteBusy}
+                      onClick={saveIdentite}
+                      className="w-full rounded-lg bg-slate-900 px-3 py-2 text-xs font-bold text-white disabled:opacity-50"
+                    >
+                      Enregistrer l’identité
+                    </button>
+                  </div>
+
+                  <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                    <div className="min-w-0">
+                      <dt className="text-[10px] font-bold uppercase text-slate-400">Email</dt>
+                      <dd className="break-all">{patient.user?.email || '—'}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-[10px] font-bold uppercase text-slate-400">Téléphone</dt>
+                      <dd>{patient.user?.phone || '—'}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-[10px] font-bold uppercase text-slate-400">Login</dt>
+                      <dd className="break-all">{patient.user?.login_identifiant || '—'}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-[10px] font-bold uppercase text-slate-400">Sexe</dt>
+                      <dd>{patient.sexe === 'F' ? 'Féminin' : patient.sexe === 'M' ? 'Masculin' : '—'}</dd>
+                    </div>
+                    <div className="min-w-0 sm:col-span-2">
+                      <dt className="text-[10px] font-bold uppercase text-slate-400">Adresse</dt>
+                      <dd>{[patient.adresse, patient.quartier, patient.commune, patient.ville].filter(Boolean).join(', ') || '—'}</dd>
+                    </div>
+                    <div className="min-w-0 sm:col-span-2">
+                      <dt className="text-[10px] font-bold uppercase text-slate-400">Allergies</dt>
+                      <dd className={patient.allergies ? 'font-semibold text-red-700' : ''}>{patient.allergies || '—'}</dd>
+                    </div>
+                    <div className="min-w-0 sm:col-span-2">
+                      <dt className="text-[10px] font-bold uppercase text-slate-400">Contact urgence</dt>
+                      <dd>
+                        {patient.contact_urgence_nom
+                          ? `${patient.contact_urgence_nom}${patient.contact_urgence_tel ? ` · ${patient.contact_urgence_tel}` : ''}`
+                          : '—'}
+                      </dd>
+                    </div>
+                  </dl>
+
+                  <div>
+                    <h4 className="mb-2 text-sm font-bold text-slate-800">Parcours / admissions</h4>
+                    {admissions.length === 0 ? (
+                      <p className="text-sm text-slate-400">Aucune admission pour ce patient.</p>
+                    ) : (
+                      <ul className="space-y-2">
+                        {admissions.map((a) => (
+                          <li key={a.id}>
+                            <Link
+                              to={`/parcours/${a.id}`}
+                              className="block rounded-xl border px-3 py-2 text-sm hover:border-medical-primary"
+                            >
+                              <p className="font-semibold text-slate-900">{a.numero_admission}</p>
+                              <p className="text-xs text-slate-500">
+                                {a.statut_label || a.statut}
+                                {a.departement?.nom ? ` · ${a.departement.nom}` : ''}
+                                {a.motif_arrivee ? ` · ${a.motif_arrivee}` : ''}
+                              </p>
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          </aside>
         </div>
       )}
     </Layout>
@@ -98,29 +521,48 @@ export function AdminMedecins() {
       .finally(() => setLoading(false));
   }, [q]);
 
+  const byDept = useMemo(() => {
+    const map = {};
+    (items || []).forEach((m) => {
+      const key = m.departement?.nom || 'Sans département';
+      if (!map[key]) map[key] = [];
+      map[key].push(m);
+    });
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+  }, [items]);
+
   return (
     <Layout title="Gestion des Médecins">
       <h2 className="mb-4 text-2xl font-bold text-slate-900">Gestion des Médecins</h2>
-      <SearchBar value={q} onChange={setQ} placeholder="Rechercher par nom, spécialité ou n° ordre..." />
+      <SearchBar className="mb-4" value={q} onChange={setQ} placeholder="Rechercher par nom, spécialité ou n° ordre..." />
 
       {loading ? <p className="text-slate-500">Chargement...</p> : items.length === 0 ? (
         <p className="rounded-xl border bg-white p-8 text-center text-slate-500">Aucun médecin.</p>
       ) : (
-        <div className="space-y-3">
-          {items.map((m) => (
-            <article key={m.id} className="flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
-              <div>
-                <p className="font-semibold">{m.user?.name}</p>
-                <p className="text-sm text-medical-primary">{m.specialite}</p>
-                <p className="text-xs text-slate-400">{m.departement?.nom} · {m.numero_ordre}</p>
+        <div className="space-y-6">
+          {byDept.map(([dept, list]) => (
+            <section key={dept}>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                {dept} · {list.length}
+              </p>
+              <div className="space-y-3">
+                {list.map((m) => (
+                  <article key={m.id} className="flex items-center justify-between rounded-xl border bg-white p-4 shadow-sm">
+                    <div>
+                      <p className="font-semibold">{m.user?.name}</p>
+                      <p className="text-sm text-medical-primary">{m.specialite}</p>
+                      <p className="text-xs text-slate-400">{m.numero_ordre || '—'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium text-slate-600">{Number(m.tarif_consultation).toLocaleString()} FC</p>
+                      <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs ${m.user?.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+                        {m.user?.is_active ? 'Actif' : 'Inactif'}
+                      </span>
+                    </div>
+                  </article>
+                ))}
               </div>
-              <div className="text-right">
-                <p className="text-sm font-medium text-slate-600">{Number(m.tarif_consultation).toLocaleString()} FC</p>
-                <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs ${m.user?.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
-                  {m.user?.is_active ? 'Actif' : 'Inactif'}
-                </span>
-              </div>
-            </article>
+            </section>
           ))}
         </div>
       )}
@@ -160,6 +602,9 @@ export function AdminDepartements() {
     setForm({ nom: d.nom, code: d.code, description: d.description || '' });
     setShowForm(true);
     setError('');
+    window.requestAnimationFrame(() => {
+      document.getElementById('admin-dept-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const save = async (e) => {
@@ -179,8 +624,12 @@ export function AdminDepartements() {
   };
 
   const toggleActive = async (d) => {
-    await api.put(`/admin/departements/${d.id}`, { is_active: !d.is_active });
-    load();
+    try {
+      await api.put(`/admin/departements/${d.id}`, { is_active: !d.is_active });
+      load();
+    } catch (err) {
+      window.alert(err.response?.data?.message || 'Impossible de modifier le statut du département');
+    }
   };
 
   return (
@@ -192,13 +641,13 @@ export function AdminDepartements() {
             Services déjà disponibles pour l&apos;affectation du personnel. Vous pouvez en ajouter d&apos;autres ci-dessous.
           </p>
         </div>
-        <button onClick={openCreate} className="rounded-xl bg-medical-primary px-5 py-2.5 text-sm font-bold text-white">
+        <button type="button" onClick={openCreate} className="rounded-xl bg-medical-primary px-5 py-2.5 text-sm font-bold text-white">
           + Ajouter un département
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={save} className="mb-6 grid gap-3 rounded-2xl border bg-white p-6 sm:grid-cols-2">
+        <form id="admin-dept-form" onSubmit={save} className="mb-6 grid gap-3 rounded-2xl border bg-white p-6 sm:grid-cols-2">
           <p className="sm:col-span-2 text-sm font-semibold text-slate-700">
             {editing ? 'Modifier le département' : 'Nouveau département'}
           </p>
@@ -236,8 +685,8 @@ export function AdminDepartements() {
                 <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${d.is_active ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
                   {d.is_active ? 'Actif' : 'Inactif'}
                 </span>
-                <button onClick={() => openEdit(d)} className="rounded-lg border px-3 py-1 text-xs hover:bg-slate-50">Modifier</button>
-                <button onClick={() => toggleActive(d)} className="rounded-lg border px-3 py-1 text-xs hover:bg-slate-50">
+                <button type="button" onClick={() => openEdit(d)} className="rounded-lg border px-3 py-1 text-xs hover:bg-slate-50">Modifier</button>
+                <button type="button" onClick={() => toggleActive(d)} className="rounded-lg border px-3 py-1 text-xs hover:bg-slate-50">
                   {d.is_active ? 'Désactiver' : 'Activer'}
                 </button>
               </div>
@@ -389,9 +838,18 @@ function buildFormFromUser(u) {
   const profilCaisse = u.profil_caissier || u.profilCaissier || {};
   const profilRadio = u.profil_radiologue || u.profilRadiologue || {};
 
+  let prenom = u.prenom || '';
+  let nom = u.nom || '';
+  if ((!prenom || !nom) && u.name) {
+    const parts = String(u.name).trim().split(/\s+/);
+    if (!prenom && parts[0]) prenom = parts[0];
+    if (!nom && parts.length > 1) nom = parts.slice(1).join(' ');
+    else if (!nom) nom = parts[0] || '';
+  }
+
   return {
-    prenom: u.prenom || '',
-    nom: u.nom || '',
+    prenom,
+    nom,
     post_nom: u.post_nom || '',
     sexe: u.sexe || '',
     date_naissance: u.date_naissance ? String(u.date_naissance).slice(0, 10) : '',
@@ -404,7 +862,7 @@ function buildFormFromUser(u) {
     role: u.role,
     departement_id: u.departement_id ? String(u.departement_id) : '',
     date_embauche: u.date_embauche ? String(u.date_embauche).slice(0, 10) : '',
-    statut: u.statut || (u.is_active ? 'actif' : 'inactif'),
+    statut: u.is_active === false ? 'inactif' : (u.statut || 'actif'),
     superviseur_id: u.superviseur_id ? String(u.superviseur_id) : '',
     medecin: {
       ...EMPTY_MEDECIN,
@@ -488,6 +946,9 @@ export function AdminUtilisateurs() {
     });
     setError('');
     setShowForm(true);
+    window.requestAnimationFrame(() => {
+      document.getElementById('admin-user-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const openEdit = (u) => {
@@ -495,6 +956,9 @@ export function AdminUtilisateurs() {
     setForm(buildFormFromUser(u));
     setError('');
     setShowForm(true);
+    window.requestAnimationFrame(() => {
+      document.getElementById('admin-user-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
   };
 
   const onRoleChange = (role) => {
@@ -583,23 +1047,33 @@ export function AdminUtilisateurs() {
         });
       }
       setShowForm(false);
+      setEditing(null);
       load();
     } catch (err) {
       const errors = err.response?.data?.errors;
       const firstFieldError = errors && Object.values(errors).flat()?.[0];
       setError(firstFieldError || err.response?.data?.message || 'Erreur lors de la sauvegarde');
+      document.getElementById('admin-user-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   };
 
   const toggle = async (id) => {
-    await api.put(`/admin/utilisateurs/${id}/toggle`);
-    load();
+    try {
+      await api.put(`/admin/utilisateurs/${id}/toggle`);
+      load();
+    } catch (err) {
+      window.alert(err.response?.data?.message || 'Impossible de modifier le statut');
+    }
   };
 
   const remove = async (u) => {
     if (!window.confirm(`Supprimer définitivement « ${u.name} » (${u.email}) ?`)) return;
     try {
       await api.delete(`/admin/utilisateurs/${u.id}`);
+      if (editing?.id === u.id) {
+        setShowForm(false);
+        setEditing(null);
+      }
       load();
     } catch (err) {
       window.alert(err.response?.data?.message || 'Suppression impossible');
@@ -609,6 +1083,16 @@ export function AdminUtilisateurs() {
   const needsDept = requiresDepartement(form.role);
   const superviseurs = items.filter((u) => !editing || u.id !== editing.id);
 
+  const byDept = useMemo(() => {
+    const map = {};
+    (items || []).forEach((u) => {
+      const key = u.departement?.nom || 'Sans département';
+      if (!map[key]) map[key] = [];
+      map[key].push(u);
+    });
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0], 'fr'));
+  }, [items]);
+
   return (
     <Layout title="Utilisateurs">
       <div className="mb-6 flex flex-wrap justify-between items-center gap-3">
@@ -616,7 +1100,7 @@ export function AdminUtilisateurs() {
           <h2 className="text-2xl font-bold text-slate-900">Gestion des utilisateurs</h2>
           <p className="mt-1 text-sm text-slate-500">Fiche personnel complète : identité, accès, service et profil métier.</p>
         </div>
-        <button onClick={openCreate} className="rounded-xl bg-medical-primary px-5 py-2.5 text-sm font-bold text-white">
+        <button type="button" onClick={openCreate} className="rounded-xl bg-medical-primary px-5 py-2.5 text-sm font-bold text-white">
           + Nouvel utilisateur
         </button>
       </div>
@@ -636,7 +1120,7 @@ export function AdminUtilisateurs() {
       </div>
 
       {showForm && (
-        <form onSubmit={save} className="mb-6 space-y-4 rounded-2xl border bg-white p-6 shadow-sm">
+        <form id="admin-user-form" onSubmit={save} className="mb-6 space-y-4 rounded-2xl border bg-white p-6 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
             <h3 className="text-lg font-bold text-slate-900">
               {editing ? 'Modifier la fiche' : 'Nouveau personnel'}
@@ -941,45 +1425,61 @@ export function AdminUtilisateurs() {
       {loading ? <p>Chargement...</p> : items.length === 0 ? (
         <p className="rounded-xl border bg-white p-8 text-center text-slate-500">Aucun utilisateur.</p>
       ) : (
-        <div className="space-y-2">
-          {items.map((u) => (
-            <article key={u.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4">
-              <div>
-                <p className="font-semibold text-slate-900">{u.name}</p>
-                <p className="text-sm text-slate-500">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
-                <div className="mt-1.5 flex flex-wrap gap-1.5">
-                  <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-                    {getRoleLabel(u.role)}
-                  </span>
-                  {u.departement?.nom && (
-                    <span className="inline-block rounded-full bg-sky-50 px-2 py-0.5 text-xs font-medium text-sky-700">{u.departement.nom}</span>
-                  )}
-                  {u.sexe && (
-                    <span className="inline-block rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
-                      {u.sexe === 'F' ? 'Féminin' : 'Masculin'}
-                    </span>
-                  )}
-                  <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${u.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
-                    {u.statut || (u.is_active ? 'actif' : 'inactif')}
-                  </span>
-                </div>
+        <div className="space-y-6">
+          {byDept.map(([dept, list]) => (
+            <section key={dept}>
+              <p className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">
+                {dept} · {list.length}
+              </p>
+              <div className="space-y-2">
+                {list.map((u) => (
+                  <article key={u.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-white p-4">
+                    <div>
+                      <p className="font-semibold text-slate-900">{u.name}</p>
+                      <p className="text-sm text-slate-500">{u.email}{u.phone ? ` · ${u.phone}` : ''}</p>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        <span className="inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
+                          {getRoleLabel(u.role)}
+                        </span>
+                        {u.sexe && (
+                          <span className="inline-block rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700">
+                            {u.sexe === 'F' ? 'Féminin' : 'Masculin'}
+                          </span>
+                        )}
+                        <span className={`inline-block rounded-full px-2 py-0.5 text-xs font-medium ${u.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'}`}>
+                          {u.is_active
+                            ? (u.statut && u.statut !== 'inactif' ? u.statut : 'actif')
+                            : 'inactif'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      <button type="button" onClick={() => openEdit(u)} className="rounded-lg border px-3 py-1.5 text-xs font-bold hover:bg-slate-50">Modifier</button>
+                      <button
+                        type="button"
+                        onClick={() => toggle(u.id)}
+                        className={`rounded-lg px-3 py-1.5 text-xs font-bold ${u.is_active ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}
+                      >
+                        {u.is_active ? 'Désactiver' : 'Activer'}
+                      </button>
+                      {u.role !== 'patient' ? (
+                        <button
+                          type="button"
+                          onClick={() => remove(u)}
+                          className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"
+                        >
+                          Supprimer
+                        </button>
+                      ) : (
+                        <span className="self-center text-[11px] text-slate-400" title="Gérez les patients via Admin → Patients">
+                          Voir Patients
+                        </span>
+                      )}
+                    </div>
+                  </article>
+                ))}
               </div>
-              <div className="flex flex-wrap gap-2 justify-end">
-                <button onClick={() => openEdit(u)} className="rounded-lg border px-3 py-1.5 text-xs font-bold hover:bg-slate-50">Modifier</button>
-                <button
-                  onClick={() => toggle(u.id)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-bold ${u.is_active ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}
-                >
-                  {u.is_active ? 'Désactiver' : 'Activer'}
-                </button>
-                <button
-                  onClick={() => remove(u)}
-                  className="rounded-lg border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-bold text-red-700 hover:bg-red-100"
-                >
-                  Supprimer
-                </button>
-              </div>
-            </article>
+            </section>
           ))}
         </div>
       )}

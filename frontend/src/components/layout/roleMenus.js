@@ -5,7 +5,6 @@ export const MENUS = {
     { label: 'Tableau de bord', icon: 'home', to: '/patient/dashboard' },
     { label: 'Mes Rendez-vous', icon: 'calendar', to: '/patient/rendez-vous' },
     { label: 'Mon Dossier Médical', icon: 'clipboard', to: '/patient/dossier' },
-    { label: 'Mes Prescriptions', icon: 'pill', to: '/patient/prescriptions' },
     { label: 'Mes Factures', icon: 'receipt', to: '/patient/factures' },
     { label: 'Téléconsultation', icon: 'video', to: '/patient/teleconsultation' },
   ],
@@ -29,11 +28,13 @@ export const MENUS = {
   ],
   laborantin: [
     { label: 'Tableau de bord', icon: 'home', to: '/laboratoire/dashboard' },
+    { label: 'Patients', icon: 'users', to: '/laboratoire/patients' },
     { label: 'Parcours patient', icon: 'route', to: '/parcours' },
     { label: 'Analyses', icon: 'microscope', to: '/laboratoire/analyses' },
   ],
   pharmacien: [
     { label: 'Tableau de bord', icon: 'home', to: '/pharmacie/dashboard' },
+    { label: 'Patients', icon: 'users', to: '/pharmacie/patients' },
     { label: 'Parcours patient', icon: 'route', to: '/parcours' },
     { label: 'Stock', icon: 'pill', to: '/pharmacie/stock' },
     { label: 'Ordonnances', icon: 'clipboard', to: '/pharmacie/ordonnances' },
@@ -81,6 +82,7 @@ export const MENUS = {
   ],
   dentisterie: [
     { label: 'Tableau de bord', icon: 'home', to: '/dentisterie/dashboard' },
+    { label: 'Patients', icon: 'users', to: '/dentisterie/patients' },
     { label: 'Planning RDV', icon: 'calendar', to: '/dentisterie/planning' },
     { label: 'Soins', icon: 'tooth', to: '/dentisterie/soins' },
   ],

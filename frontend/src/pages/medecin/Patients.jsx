@@ -51,8 +51,8 @@ export default function MedecinPatients() {
         <div className="space-y-3">
           {patients.map((p) => (
             <article key={p.id} className="medecin-card p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="flex min-w-0 flex-1 items-start gap-3">
                   {p.photo ? (
                     <img src={p.photo} alt="" className="h-12 w-12 shrink-0 rounded-xl border border-[#C5D9D0] object-cover" />
                   ) : (
@@ -60,16 +60,16 @@ export default function MedecinPatients() {
                       {(p.user?.name || '?').charAt(0).toUpperCase()}
                     </div>
                   )}
-                  <div className="min-w-0">
-                    <p className="font-semibold text-[#0D3B3A]">{p.user?.name}</p>
-                    <p className="text-sm text-[#5A8A7A]">
+                  <div className="min-w-0 flex-1 overflow-hidden">
+                    <p className="truncate font-semibold text-[#0D3B3A]">{p.user?.name}</p>
+                    <p className="truncate text-sm text-[#5A8A7A]">
                       <span className="font-mono">{p.numero_patient}</span>
                       {p.user?.phone ? ` · ${p.user.phone}` : ''}
                       {p.sexe ? ` · ${p.sexe === 'F' ? 'F' : 'M'}` : ''}
                     </p>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex shrink-0 flex-wrap gap-2">
                   <Link to={`/medecin/patients/${p.id}`} className="medecin-btn text-xs">
                     Ouvrir le dossier →
                   </Link>

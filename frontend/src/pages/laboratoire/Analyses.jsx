@@ -36,6 +36,7 @@ export default function LaboratoireAnalyses() {
 
   const load = async () => {
     setLoading(true);
+    setError('');
     try {
       const [aRes, fRes] = await Promise.all([
         api.get('/laboratoire/analyses'),
@@ -43,6 +44,10 @@ export default function LaboratoireAnalyses() {
       ]);
       setAnalyses(aRes.data.data || []);
       setFile(fRes.data.data || []);
+    } catch (err) {
+      setAnalyses([]);
+      setFile([]);
+      setError(err.response?.data?.message || 'Impossible de charger les examens laboratoire.');
     } finally {
       setLoading(false);
     }

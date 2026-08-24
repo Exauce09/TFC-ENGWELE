@@ -68,10 +68,16 @@ class PublicController extends Controller
                 return [
                     'id' => (int) $m->id,
                     'name' => $m->user?->name,
+                    'nom' => $m->user?->name,
                     'specialite' => $m->specialite,
                     'departement_id' => $effectiveDeptId ? (int) $effectiveDeptId : null,
                     'departement' => $effectiveDeptNom,
                     'tarif_consultation' => $m->tarif_consultation,
+                    'user' => [
+                        'id' => $m->user?->id,
+                        'name' => $m->user?->name,
+                        'departement_id' => $m->user?->departement_id ? (int) $m->user->departement_id : null,
+                    ],
                 ];
             })
             ->values()

@@ -4,7 +4,7 @@ import MedecinLayout from '../../components/layout/MedecinLayout';
 import { OrdonnanceCard } from '../../components/medecin/OrdonnanceForm';
 import api from '../../services/api';
 import { nomMedecin } from '../../utils/format';
-import { buildDossierHtml, downloadHtml, printHtml } from '../../utils/printDownload';
+import { buildDossierHtml, downloadDossierDocx, downloadDossierPdf, printHtml } from '../../utils/printDownload';
 
 function ageFrom(patient) {
   if (patient?.date_naissance) {
@@ -196,12 +196,16 @@ export default function MedecinPatientDetail() {
               <button
                 type="button"
                 className="medecin-btn-ghost text-xs"
-                onClick={() => {
-                  const title = `Dossier ${patient.numero_patient || patient.id}`;
-                  downloadHtml(`${title}.html`, title, buildDossierHtml(data));
-                }}
+                onClick={() => void downloadDossierPdf(data)}
               >
-                Télécharger
+                PDF
+              </button>
+              <button
+                type="button"
+                className="medecin-btn-ghost text-xs"
+                onClick={() => void downloadDossierDocx(data)}
+              >
+                Word
               </button>
             </div>
           </div>

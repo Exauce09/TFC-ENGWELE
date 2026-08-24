@@ -44,4 +44,34 @@ final class PatientCredentials
     {
         return $login.'@patient.amen.cd';
     }
+
+    /** Fiche staff : login + mot de passe par défaut tant que le patient ne l’a pas changé. */
+    public static function accesPourStaff(?User $user): ?array
+    {
+        if (! $user) {
+            return null;
+        }
+
+        $pending = (bool) $user->must_change_password;
+
+        return [
+            'login' => $user->login_identifiant,
+            'email' => $user->email,
+            'password' => $pending ? self::DEFAULT_PASSWORD : null,
+            'must_change_password' => $pending,
+            'message' => $pending
+                ? 'Remettez ces identifiants au patient. Il changera le mot de passe à la 1re connexion.'
+                : 'Le patient a déjà changé son mot de passe. Réinitialisez-le pour lui renvoyer Amen2026.',
+        ];
+    }
+
+    public static function resetPassword(User $user): array
+    {
+        $user->password = self::DEFAULT_PASSWORD;
+        $user->must_change_password = true;
+        $user->save();
+        $user->tokens()->delete();
+
+        return self::accesPourStaff($user->fresh()) ?? [];
+    }
 }
